@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { loadEnv, requireKeys, resolveModels } from "../config.js";
 import { logContext, progressContext, type Progress } from "../files.js";
-import { addListingPhoto, createListing, updateListingDetails, listingDir, listListings, LISTINGS_DIR, readListing, saveSelection, type Listing } from "../listing/listing.js";
+import { addListingPhoto, createListing, deleteListing, restoreListing, updateListingDetails, listingDir, listListings, LISTINGS_DIR, readListing, saveListingOrder, saveSelection, type Listing } from "../listing/listing.js";
 import { listProfiles, listRuns, loadProfile, runListingRedesign, RUNS_DIR, type RunSummary } from "../redesign/job.js";
 import { renderReport } from "../report.js";
 import { TIERS } from "../redesign/tiers.js";
@@ -19,6 +19,8 @@ import { TasteProfile } from "../taste/schema.js";
 import {
   addReference,
   createTasteProfile,
+  deleteTasteProfile,
+  restoreTasteProfile,
   listTasteProfiles,
   PROFILES_DIR,
   profileDir,
@@ -30,6 +32,7 @@ import {
   restoreReference,
   saveBrief,
   saveProfileJson,
+  saveTasteProfileOrder,
 } from "../taste/store.js";
 
 const PORT = Number(process.env.PORT ?? 4310);
@@ -242,9 +245,25 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       const listing = await createListing(body);
       return send(res, 201, { id: listing.id });
     }
+    if (req.method === "PUT" && parts[1] === "listings" && parts[2] === "order" && parts.length === 3) {
+      const body = z.object({ ids: z.array(z.string().max(200)).max(1000) }).parse(await readBody(req));
+      await saveListingOrder(body.ids);
+      return send(res, 200, { saved: true });
+    }
     if (parts[1] === "listings" && parts[2]) {
       const dir = listingDir(parts[2]);
       if (!existsSync(dir)) return send(res, 404, { error: "Listing not found" });
+      if (req.method === "POST" && parts[3] === "restore" && parts.length === 4) {
+        if (isRunning("redesign", parts[2])) return send(res, 409, { error: "Wait for the running redesign to finish." });
+        await restoreListing(parts[2]);
+        return send(res, 200, listingJson(await readListing(dir), await listRuns(parts[2])));
+      }
+      if ((await readListing(dir)).deletedAt) return send(res, 404, { error: "Listing not found" });
+      if (req.method === "DELETE" && parts.length === 3) {
+        if (isRunning("redesign", parts[2])) return send(res, 409, { error: "Wait for the running redesign to finish before deleting this listing." });
+        await deleteListing(parts[2]);
+        return send(res, 200, { deleted: true });
+      }
       if (req.method === "GET" && parts.length === 3) return send(res, 200, listingJson(await readListing(dir), await listRuns(parts[2])));
       if (req.method === "PATCH" && parts.length === 3) {
         const body = z.object({ name: z.string().max(80), location: z.string().max(120).nullable().optional(), description: z.string().max(300).optional() }).parse(await readBody(req));
@@ -291,9 +310,26 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       const job = jobs.get(parts[2]);
       return job ? send(res, 200, jobView(job)) : send(res, 404, { error: "Job not found" });
     }
-    if (req.method === "GET" && parts[1] === "profiles") return send(res, 200, await listProfiles());
+    if (req.method === "GET" && parts[1] === "profiles") {
+      const profiles = await listProfiles();
+      return send(res, 200, await Promise.all(profiles.map(async (profile) => {
+        const stored = await readTasteProfile(profile.id);
+        return {
+          ...profile,
+          description: stored?.meta.description ?? "",
+          referenceCount: stored?.references.length ?? 0,
+          previews: (stored?.references ?? []).slice(0, 3).map((file) =>
+            `/thumb/profiles/${encodeURIComponent(profile.id)}/references/${encodeURIComponent(file)}?w=480`),
+        };
+      })));
+    }
 
     if (parts[1] === "taste-profiles") {
+      if (req.method === "PUT" && parts[2] === "order" && parts.length === 3) {
+        const body = z.object({ ids: z.array(z.string().max(200)).max(1000) }).parse(await readBody(req));
+        await saveTasteProfileOrder(body.ids);
+        return send(res, 200, { saved: true });
+      }
       if (parts.length === 2) {
         if (req.method === "GET") {
           const list = await listTasteProfiles();
@@ -308,6 +344,18 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       const id = parts[2]!;
       if (!existsSync(path.join(profileDir(id), "meta.json"))) return send(res, 404, { error: "Profile not found" });
       const busy = () => isRunning("taste", id) && send(res, 409, { error: "This profile is rebuilding. Wait for it to finish." });
+
+      if (req.method === "POST" && parts[3] === "restore" && parts.length === 4) {
+        if (busy()) return;
+        await restoreTasteProfile(id);
+        return send(res, 200, await tasteProfileJson(id));
+      }
+      if (!(await readTasteProfile(id))) return send(res, 404, { error: "Profile not found" });
+      if (req.method === "DELETE" && parts.length === 3) {
+        if (busy()) return;
+        await deleteTasteProfile(id);
+        return send(res, 200, { deleted: true });
+      }
 
       if (req.method === "GET" && parts.length === 3) return send(res, 200, await tasteProfileJson(id));
       if (req.method === "PATCH" && parts.length === 3) {
@@ -408,4 +456,3 @@ createServer((req, res) => {
 }).listen(PORT, HOST, () => {
   process.stderr.write(`[remodel-lens] Listing picker at http://localhost:${PORT}\n`);
 });
-

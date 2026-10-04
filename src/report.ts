@@ -270,13 +270,13 @@ export function renderReport(input: {
   const table = `
   <section class="by-room card" aria-labelledby="byroom-h">
     <details class="fold section-fold">
-    <summary><h2 id="byroom-h">By room</h2><span class="fold-meta num">${photos.length} photos${tiers.map((t) => { const x = totals.get(t); return x ? ` · ${tierName(t)} ${formatRange(x.range)}` : ""; }).join("")}</span></summary>
+    <summary><h2 id="byroom-h">By room</h2><span class="fold-meta num">${photos.length} photos · Costs and verification by scope</span></summary>
     <div class="table-scroll" tabindex="0" role="region" aria-labelledby="byroom-h">
       <table>
         <thead><tr><th scope="col">Room</th>${tiers.map((t) => `<th scope="col">${tierName(t)}</th>`).join("")}</tr></thead>
         <tbody>${photos.map((p) => `
           <tr>
-            <th scope="row"><a href="#${p.id}">${esc(roomName(p))}</a></th>
+            <th scope="row"><a class="room-link" href="#${p.id}"><img class="room-thumb" src="${esc(p.original)}" alt="" width="64" height="48" loading="lazy" decoding="async"><span>${esc(roomName(p))}</span></a></th>
             ${tiers.map((tier) => {
               const t = p.tiers.find((x) => x.tier === tier);
               const cost = t ? planCost(t.plan) : null;
@@ -365,6 +365,30 @@ export function renderReport(input: {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>${esc(docTitle)}</title>
+<script>
+(() => {
+  const system = matchMedia('(prefers-color-scheme: dark)');
+  const apply = () => {
+    let mode = 'system';
+    try {
+      const saved = document.cookie.split('; ').find(value => value.startsWith('remodel-lens-display='));
+      mode = saved ? saved.split('=')[1] : localStorage.getItem('remodel-lens-display') || 'system';
+    } catch {}
+    if (!['system', 'light', 'dark'].includes(mode)) mode = 'system';
+    document.documentElement.dataset.display = mode;
+    document.documentElement.dataset.theme = mode === 'system' ? (system.matches ? 'dark' : 'light') : mode;
+    document.querySelectorAll('[data-display]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.display === mode)));
+  };
+  apply();
+  system.addEventListener('change', apply);
+  addEventListener('storage', apply);
+  addEventListener('display-change', apply);
+  addEventListener('focus', apply);
+  document.addEventListener('visibilitychange', apply);
+  setInterval(apply, 1000); // Cookies share the preference across local preview ports.
+  document.addEventListener('DOMContentLoaded', apply);
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
@@ -372,21 +396,21 @@ export function renderReport(input: {
   :root {
     --bg:#f5f4f1; --surface:#ffffff; --surface-2:#f3f1ed; --text:#1b1a19; --muted:#625e58;
     --line:rgba(27,26,25,.1); --line-strong:rgba(27,26,25,.22);
-    --primary:#2f5a44; --primary-soft:#e4eee7; --accent:var(--primary);
+    --primary:#2f5a44; --primary-text:#ffffff; --primary-soft:#e4eee7; --accent:var(--primary);
     --ok:#3d6a4c; --warn:#8a6216; --bad:#9a3b2f;
     --font:"Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    color-scheme:light dark;
+    color-scheme:light;
   }
-  @media (prefers-color-scheme: dark) { :root {
+  :root[data-theme="dark"] { color-scheme:dark;
     --bg:#0e0e0d; --surface:#1b1a19; --surface-2:#242321; --text:#ecebe8; --muted:#a39f99;
     --line:rgba(236,235,232,.1); --line-strong:rgba(236,235,232,.22);
-    --primary:#8cc3a1; --primary-soft:#1b2a21; --accent:var(--primary);
+    --primary:#8cc3a1; --primary-text:#0d1a12; --primary-soft:#1b2a21; --accent:var(--primary);
     --ok:#8fc49f; --warn:#e0bd78; --bad:#ee9d90;
-  } }
+  }
   * { box-sizing:border-box; }
   [hidden] { display:none !important; }
   html { -webkit-tap-highlight-color:transparent; scrollbar-color:var(--line-strong) transparent; scrollbar-gutter:stable; }
-  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.55 var(--font); caret-color:var(--text); }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.55 var(--font); caret-color:var(--text); text-wrap:pretty; }
   ::selection { background:color-mix(in srgb, var(--accent) 28%, transparent); }
   a { color:inherit; text-underline-offset:3px; text-decoration-thickness:1px; }
   :focus-visible { outline:2px solid var(--text); outline-offset:2px; border-radius:4px; }
@@ -427,10 +451,9 @@ export function renderReport(input: {
   .plate-sub { color:var(--muted); font-size:13px; }
   .plate-total { font-size:22px; font-weight:500; letter-spacing:-.01em; margin-top:10px; line-height:1.25; }
   .plate-tally { font-size:13px; margin-top:8px; color:var(--muted); }
-  .legend { display:flex; flex-wrap:wrap; gap:8px 28px; margin:28px 0 0; padding:14px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
-  .legend div { display:flex; gap:8px; align-items:center; } .legend dt, .legend dd { margin:0; line-height:20px; } .legend dt .status { line-height:20px; } .legend dd { color:var(--muted); font-size:13px; }
-  .method { max-width:72ch; }
-  .method p { color:var(--muted); font-size:14px; margin:0 0 10px; }
+  .legend { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:16px 24px; margin:24px 0 0; padding:16px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .legend div { display:grid; gap:4px; align-content:start; } .legend dt, .legend dd { margin:0; line-height:20px; } .legend dt .status { line-height:20px; } .legend dd { color:var(--muted); font-size:13px; }
+  .method p { color:var(--muted); font-size:14px; margin:0 0 10px; max-width:72ch; }
   .section-fold { border-bottom:0 !important; }
   .section-fold > summary { min-height:56px !important; flex-wrap:wrap; gap:4px 14px !important; }
   .section-fold > summary h2 { scroll-margin-top:72px; }
@@ -446,15 +469,13 @@ export function renderReport(input: {
 
   /* By room */
   .by-room { margin-top:20px; padding-top:4px; padding-bottom:4px; }
-  .table-scroll { margin-top:14px; overflow-x:auto; background:
-      linear-gradient(to right, var(--bg) 30%, transparent) left / 32px 100% no-repeat local,
-      linear-gradient(to left, var(--bg) 30%, transparent) right / 32px 100% no-repeat local,
-      radial-gradient(farthest-side at 0 50%, var(--line-strong), transparent) left / 10px 100% no-repeat scroll,
-      radial-gradient(farthest-side at 100% 50%, var(--line-strong), transparent) right / 10px 100% no-repeat scroll; }
+  .table-scroll { margin-top:8px; overflow-x:auto; }
   table { width:100%; min-width:560px; border-collapse:collapse; font-size:14px; }
   th, td { text-align:left; vertical-align:top; padding:12px 16px 12px 0; border-bottom:1px solid var(--line); }
   thead th { font-weight:500; color:var(--muted); font-size:13px; padding-bottom:8px; }
   tbody th { font-weight:500; } tbody th a { text-decoration:none; } tbody th a:hover { text-decoration:underline; }
+  .room-link { display:flex; align-items:center; gap:12px; }
+  .room-thumb { width:64px; height:48px; object-fit:cover; border-radius:5px; background:var(--surface-2); flex:none; }
   .cell-cost { margin-top:4px; color:var(--muted); font-size:13px; }
   tfoot th, tfoot td { border-bottom:0; padding-top:14px; font-weight:600; font-size:15px; }
 
@@ -462,10 +483,10 @@ export function renderReport(input: {
   .toolbar { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; margin:20px -20px 0; padding:10px 20px; background:color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter:saturate(1.2) blur(10px); border-bottom:1px solid var(--line); }
   .toolbar .crumb { margin-right:auto; }
   select { font:inherit; font-size:14px; min-height:36px; padding:6px 30px 6px 10px; border-radius:8px; border:1px solid var(--line-strong); color:inherit; background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2366625d' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E") no-repeat right 8px center; appearance:none; }
-  .seg { display:inline-flex; padding:2px; border-radius:9px; background:var(--surface-2); }
-  .seg button { font:inherit; font-size:13px; font-weight:500; min-height:32px; padding:4px 12px; border:0; border-radius:7px; background:transparent; color:var(--muted); cursor:pointer; touch-action:manipulation; }
-  .seg button:hover { color:var(--text); }
-  .seg button[aria-pressed="true"] { background:var(--surface); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .seg { display:inline-flex; padding:3px; border:1px solid var(--line-strong); border-radius:9px; background:var(--surface); }
+  .seg button { font:inherit; font-size:13px; font-weight:500; min-height:32px; padding:4px 12px; border:0; border-radius:6px; background:transparent; color:var(--text); cursor:pointer; touch-action:manipulation; }
+  .seg button:hover { background:var(--surface-2); }
+  .seg button[aria-pressed="true"] { background:var(--primary); color:var(--primary-text); font-weight:600; }
   .seg-label { font-size:13px; color:var(--muted); }
 
   /* Rooms */
@@ -473,16 +494,17 @@ export function renderReport(input: {
   .room-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:end; gap:12px 24px; margin-bottom:16px; }
   .room-title { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
   .file { font-size:13px; color:var(--muted); }
-  .tabs { display:inline-flex; padding:2px; border-radius:9px; background:var(--surface-2); }
-  .tabs [role="tab"] { display:inline-flex; align-items:center; gap:6px; font:inherit; font-size:13px; font-weight:500; min-height:34px; padding:4px 12px; border:0; border-radius:7px; background:transparent; color:var(--muted); cursor:pointer; touch-action:manipulation; }
-  .tabs [role="tab"]:hover { color:var(--text); }
-  .tabs [role="tab"][aria-selected="true"] { background:var(--surface); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.1); }
-  .room .tabs, .room .seg { background:var(--surface-2); }
+  .tabs { display:inline-flex; padding:3px; border:1px solid var(--line-strong); border-radius:9px; background:var(--surface); }
+  .tabs [role="tab"] { display:inline-flex; align-items:center; gap:6px; font:inherit; font-size:13px; font-weight:500; min-height:34px; padding:4px 12px; border:0; border-radius:6px; background:transparent; color:var(--text); cursor:pointer; touch-action:manipulation; }
+  .tabs [role="tab"]:hover { background:var(--surface-2); }
+  .tabs [role="tab"][aria-selected="true"] { background:var(--primary); color:var(--primary-text); font-weight:600; }
+  .tabs [aria-selected="true"] .tab-mark { color:inherit; }
   .tab-mark { display:inline-flex; } .tab-mark .icon { width:13px; height:13px; }
   .pair { display:grid; gap:12px; grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .frame { margin:0; min-width:0; }
   .frame figcaption, .figcap { margin:8px 0 0; font-size:13px; line-height:20px; color:var(--muted); min-height:20px; }
-  .info { display:grid; gap:12px 32px; grid-template-columns:repeat(2, minmax(0, 1fr)); margin-top:20px; align-items:start; }
+  .info { display:grid; gap:12px; grid-template-columns:repeat(2, minmax(0, 1fr)); margin-top:16px; align-items:start; }
+  .info > * { min-width:0; }
   .info-tier { grid-column:2; grid-row:1; }
   .info-listing { grid-column:1; grid-row:1; }
   .verdict { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:4px 16px; min-height:44px; padding:6px 0; border-bottom:1px solid var(--line); }
@@ -490,7 +512,7 @@ export function renderReport(input: {
   .verdict-cost { font-size:18px; font-weight:500; }
 
   details.fold { border-bottom:1px solid var(--line); }
-  details.fold > summary { display:flex; align-items:center; gap:8px; min-height:44px; cursor:pointer; list-style:none; font-weight:500; font-size:14px; }
+  details.fold > summary { display:flex; align-items:center; gap:8px; min-height:44px; padding:0; cursor:pointer; list-style:none; font-weight:500; font-size:14px; }
   details.fold > summary::-webkit-details-marker { display:none; }
   details.fold > summary::after { content:""; margin-left:auto; width:7px; height:7px; border-right:1.5px solid var(--muted); border-bottom:1.5px solid var(--muted); transform:translateY(-2px) rotate(45deg); transition:transform .2s; }
   details.fold[open] > summary::after { transform:translateY(2px) rotate(-135deg); }
@@ -525,6 +547,7 @@ export function renderReport(input: {
     .decide-grid { grid-template-columns:minmax(0, 1fr); }
   }
   @media (max-width: 680px) {
+    .legend { grid-template-columns:minmax(0, 1fr); gap:12px; }
     main { padding-top:16px; }
     .pair, .info { grid-template-columns:minmax(0, 1fr); }
     .info-tier, .info-listing { grid-column:1; grid-row:auto; }
@@ -572,9 +595,9 @@ export function renderReport(input: {
   :root { --ease:cubic-bezier(0.22, 1, 0.36, 1); --ease-pop:cubic-bezier(0.35, 1.55, 0.65, 1); --fast:120ms; --base:240ms; --slow:360ms;
     --shadow:0 1px 2px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.02), 0 0 0 0.5px rgba(0,0,0,0.08);
     --shadow-hover:0 2px 4px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.08); }
-  @media (prefers-color-scheme: dark) { :root {
+  :root[data-theme="dark"] { color-scheme:dark;
     --shadow:0 1px 2px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(255,255,255,0.08);
-    --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.12); } }
+    --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.12); }
   /* Every clickable element presses to 98% on the fast duration. */
   button, .btn, a.nav-link, .tier, .pick, .zoom, summary, [role="tab"] { transition:transform var(--fast) var(--ease), box-shadow var(--base) var(--ease), background-color var(--base) var(--ease), border-color var(--base) var(--ease), color var(--base) var(--ease), opacity var(--base) var(--ease); }
   button:active:not(:disabled), .btn:active, a.nav-link:active, .tier:active, .pick:active, .zoom:active, summary:active, [role="tab"]:active { transform:scale(0.98); }
@@ -630,6 +653,10 @@ export function renderReport(input: {
   const STATUS = ${JSON.stringify(Object.fromEntries(Object.entries(STATUS).map(([k, v]) => [k, { label: v.label, meaning: v.meaning, icon: icon(v.icon) }])))};
 
   /* Scope tabs: WAI-ARIA tabs with automatic activation */
+  function syncScopeControls() {
+    const selected = [...document.querySelectorAll('.room [role="tab"][aria-selected="true"]')];
+    document.querySelectorAll("[data-all-tier]").forEach((b) => b.setAttribute("aria-pressed", String(selected.length > 0 && selected.every((t) => t.dataset.tier === b.dataset.allTier))));
+  }
   function selectTier(room, tier, focus) {
     const tabs = [...document.querySelectorAll('[role="tab"][data-room="' + room + '"]')];
     if (!tabs.some((t) => t.dataset.tier === tier)) return;
@@ -640,13 +667,14 @@ export function renderReport(input: {
       if (on && focus) t.focus();
     });
     document.querySelectorAll('[data-panel^="' + room + ':"]').forEach((p) => (p.hidden = p.dataset.panel !== room + ":" + tier));
+    syncScopeControls();
   }
   function setAll(tier) {
     document.querySelectorAll(".tabs").forEach((list) => {
       const first = list.querySelector('[role="tab"]');
       if (first) selectTier(first.dataset.room, tier, false);
     });
-    document.querySelectorAll("[data-all-tier]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.allTier === tier)));
+    syncScopeControls();
     const url = new URL(location.href);
     url.searchParams.set("scope", tier);
     history.replaceState(null, "", url);
@@ -664,6 +692,7 @@ export function renderReport(input: {
   });
   const initial = new URL(location.href).searchParams.get("scope");
   if (initial) setAll(initial);
+  else syncScopeControls();
 
   document.getElementById("room-jump")?.addEventListener("change", (e) => {
     const id = e.target.value;

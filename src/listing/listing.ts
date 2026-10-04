@@ -5,11 +5,12 @@ import sharp from "sharp";
 import { z } from "zod";
 
 import { ROOT } from "../config.js";
-import { IMAGE_EXTENSIONS, imageFingerprint, isNearDuplicate } from "../files.js";
+import { IMAGE_EXTENSIONS, imageFingerprint, isNearDuplicate, readSidebarOrder, saveSidebarOrder } from "../files.js";
 
 export const LISTINGS_DIR = path.join(ROOT, "listings");
 
 const ListingFile = z.object({
+  deletedAt: z.string().nullable().optional(),
   name: z.string().optional(),
   source: z.string().optional(),
   location: z.string().optional(),
@@ -18,7 +19,7 @@ const ListingFile = z.object({
 });
 
 export type ListingPhoto = { file: string; room: string; selected: boolean };
-export type Listing = { id: string; name: string; source: string | null; location: string | null; description: string; dir: string; photos: ListingPhoto[] };
+export type Listing = { id: string; name: string; source: string | null; location: string | null; description: string; deletedAt: string | null; dir: string; photos: ListingPhoto[] };
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9._-]*$/i;
 
@@ -27,16 +28,23 @@ export function listingDir(id: string): string {
   return path.join(LISTINGS_DIR, id);
 }
 
-export async function listListings(): Promise<Listing[]> {
-  if (!existsSync(LISTINGS_DIR)) return [];
-  const entries = await readdir(LISTINGS_DIR, { withFileTypes: true });
+export async function listListings(dir = LISTINGS_DIR): Promise<Listing[]> {
+  if (!existsSync(dir)) return [];
+  const order = await readSidebarOrder(dir);
+  const rank = new Map(order.map((id, index) => [id, index]));
+  const entries = await readdir(dir, { withFileTypes: true });
   const listings = await Promise.all(
-    entries.filter((e) => e.isDirectory() && ID_PATTERN.test(e.name)).map((e) => readListing(path.join(LISTINGS_DIR, e.name))),
+    entries.filter((e) => e.isDirectory() && ID_PATTERN.test(e.name)).map((e) => readListing(path.join(dir, e.name))),
   );
   // A listing exists once it has metadata or photos, so newly created empty listings still show up.
   return listings
-    .filter((l) => l.photos.length > 0 || existsSync(path.join(l.dir, "listing.json")))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .filter((l) => !l.deletedAt && (l.photos.length > 0 || existsSync(path.join(l.dir, "listing.json"))))
+    .sort((a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity) || a.name.localeCompare(b.name));
+}
+
+export async function saveListingOrder(ids: string[], dir = LISTINGS_DIR): Promise<void> {
+  const listings = await listListings(dir);
+  await saveSidebarOrder(dir, ids, listings.map((listing) => listing.id));
 }
 
 /** Folder contents are the source of truth for which photos exist; listing.json only adds labels and selection. */
@@ -54,6 +62,7 @@ export async function readListing(dir: string): Promise<Listing> {
     location: meta.location ?? null,
     description: meta.description ?? "",
     dir,
+    deletedAt: meta.deletedAt ?? null,
     photos: files.map((file) => ({ file, room: meta.photos[file]?.room ?? "", selected: meta.photos[file]?.selected ?? true })),
   };
 }
@@ -149,4 +158,21 @@ export async function updateListingDetails(dir: string, input: { name: string; l
   if (description) meta.description = description; else delete meta.description;
   await writeFile(metaPath, `${JSON.stringify(meta, null, 2)}\n`);
   return readListing(dir);
+}
+
+/** Retain source photos and run history so deletion can be undone. */
+async function setListingDeletedAt(id: string, deletedAt: string | null): Promise<void> {
+  const dir = listingDir(id);
+  if (!existsSync(dir)) throw Object.assign(new Error("Listing not found"), { status: 404 });
+  const metaPath = path.join(dir, "listing.json");
+  const meta = existsSync(metaPath) ? JSON.parse(await readFile(metaPath, "utf8")) : {};
+  await writeFile(metaPath, `${JSON.stringify({ ...meta, deletedAt }, null, 2)}\n`);
+}
+
+export async function deleteListing(id: string): Promise<void> {
+  await setListingDeletedAt(id, new Date().toISOString());
+}
+
+export async function restoreListing(id: string): Promise<void> {
+  await setListingDeletedAt(id, null);
 }

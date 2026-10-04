@@ -7,6 +7,25 @@ import sharp from "sharp";
 
 import type { ImageInput } from "./providers.js";
 
+export async function readSidebarOrder(dir: string): Promise<string[]> {
+  try {
+    const order: unknown = JSON.parse(await readFile(path.join(dir, ".order.json"), "utf8"));
+    if (!Array.isArray(order) || order.some((id) => typeof id !== "string")) throw new Error("Invalid sidebar order.");
+    return order;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
+}
+
+export async function saveSidebarOrder(dir: string, ids: string[], existingIds: string[]): Promise<void> {
+  const existing = new Set(existingIds);
+  if (ids.length !== existing.size || new Set(ids).size !== ids.length || ids.some((id) => !existing.has(id))) {
+    throw Object.assign(new Error("Sidebar items changed. Reload and try reordering again."), { status: 409 });
+  }
+  await writeFile(path.join(dir, ".order.json"), `${JSON.stringify(ids, null, 2)}\n`);
+}
+
 const MEDIA_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",

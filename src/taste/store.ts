@@ -7,7 +7,7 @@ import sharp from "sharp";
 import { z } from "zod";
 
 import { ROOT } from "../config.js";
-import { IMAGE_EXTENSIONS, imageFingerprint, isNearDuplicate } from "../files.js";
+import { IMAGE_EXTENSIONS, imageFingerprint, isNearDuplicate, readSidebarOrder, saveSidebarOrder } from "../files.js";
 import { renderProfileMarkdown } from "./pipeline.js";
 import { TasteProfile } from "./schema.js";
 
@@ -21,6 +21,7 @@ const Meta = z.object({
   description: z.string().default(""),
   createdAt: z.string(),
   updatedAt: z.string(),
+  deletedAt: z.string().nullable().optional(),
   lastBuild: z
     .object({ at: z.string(), source: z.enum(["pipeline", "manual"]), signature: z.string(), imageCount: z.number() })
     .nullable()
@@ -101,11 +102,12 @@ export async function readProfileJson(id: string): Promise<TasteProfile | null> 
 
 export async function listTasteProfiles(): Promise<ProfileSummary[]> {
   if (!existsSync(PROFILES_DIR)) return [];
+  const rank = new Map((await readSidebarOrder(PROFILES_DIR)).map((id, index) => [id, index]));
   const out: ProfileSummary[] = [];
   for (const entry of await readdir(PROFILES_DIR, { withFileTypes: true })) {
     if (!entry.isDirectory() || !ID_PATTERN.test(entry.name)) continue;
     const meta = await readMeta(entry.name).catch(() => null);
-    if (!meta) continue;
+    if (!meta || meta.deletedAt) continue;
     const profile = await readProfileJson(entry.name).catch(() => null);
     out.push({
       id: entry.name,
@@ -117,7 +119,11 @@ export async function listTasteProfiles(): Promise<ProfileSummary[]> {
       updatedAt: meta.updatedAt,
     });
   }
-  return out.sort((a, b) => a.name.localeCompare(b.name));
+  return out.sort((a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity) || a.name.localeCompare(b.name));
+}
+
+export async function saveTasteProfileOrder(ids: string[]): Promise<void> {
+  await saveSidebarOrder(PROFILES_DIR, ids, (await listTasteProfiles()).map((profile) => profile.id));
 }
 
 export async function createTasteProfile(name: string, fromId?: string | null, description = ""): Promise<string> {
@@ -149,6 +155,15 @@ export async function renameTasteProfile(id: string, name: string, description?:
   const clean = name.trim().slice(0, 60);
   if (!clean) throw Object.assign(new Error("Give the profile a name."), { status: 400 });
   await touch(id, { name: clean, ...(description !== undefined ? { description: description.trim().slice(0, 300) } : {}) });
+}
+
+/** Keep profile files for Undo and reports from past redesigns. */
+export async function deleteTasteProfile(id: string): Promise<void> {
+  await touch(id, { deletedAt: new Date().toISOString() });
+}
+
+export async function restoreTasteProfile(id: string): Promise<void> {
+  await touch(id, { deletedAt: null });
 }
 
 export async function saveBrief(id: string, text: string): Promise<void> {
@@ -242,7 +257,7 @@ export async function restoreReference(id: string, file: string): Promise<void> 
 
 export async function readTasteProfile(id: string) {
   const meta = await readMeta(id);
-  if (!meta) return null;
+  if (!meta || meta.deletedAt) return null;
   const signature = await inputSignature(id);
   return {
     id,
