@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.local
+.runs/
+.impeccable/
+listings/*
+!listings/.gitkeep
+
+# Taste profiles are personal. Only the empty example is shared.
+profiles/*
+!profiles/example/
+profiles/*/references/
+profiles/*/profile.prev.json

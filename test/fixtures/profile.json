@@ -1,0 +1,28 @@
+{
+  "summary": "Test fixture: a neutral profile used only by the test suite.",
+  "era": "contemporary",
+  "palette": {
+    "walls": ["warm white"],
+    "woodTones": ["natural oak"],
+    "metals": ["brushed nickel"],
+    "accents": ["sage"],
+    "contrast": "medium",
+    "saturation": "muted"
+  },
+  "categories": [
+    {
+      "category": "cabinetry_millwork",
+      "rules": [{ "rule": "Use flat-slab cabinet doors.", "support": 3, "fromBrief": false }],
+      "avoid": ["raised panels"]
+    }
+  ],
+  "expressions": [],
+  "globalAvoid": ["faux finishes"],
+  "roomNotes": [
+    { "room": "kitchen", "notes": ["Include a concealed coffee station where useful."] },
+    { "room": "living room", "notes": ["Deep sofa facing the main window."] },
+    { "room": "home office", "notes": ["Desk faces daylight."] }
+  ],
+  "imagePromptSummary": "warm white walls, natural oak, flat-slab cabinetry, brushed nickel, sage accents",
+  "imageCount": 3
+}

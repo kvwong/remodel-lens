@@ -1,0 +1,34 @@
+{
+  "name": "remodel-lens",
+  "version": "1.0.0",
+  "scripts": {
+    "taste": "tsx src/cli/taste.ts",
+    "redesign": "tsx src/cli/redesign.ts",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "app": "tsx src/app/server.ts",
+    "import": "tsx src/cli/import.ts"
+  },
+  "type": "module",
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.71",
+    "@ai-sdk/openai": "^4.0.83",
+    "ai": "^7.0.127",
+    "openai": "^7.27.0",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  }
+}

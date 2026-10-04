@@ -1,0 +1,1018 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Listings · Remodel Lens</title>
+<style>
+  :root {
+    --bg: #f6f4ef; --surface: #fffdf9; --surface-2: #efebe3; --text: #1f1c17; --muted: #625b50;
+    --border: rgba(45, 36, 22, .13); --border-strong: rgba(45, 36, 22, .28);
+    --accent: #3d5a3c; --accent-text: #fff; --accent-soft: #e2ebdf;
+    --warn: #7d5300; --warn-bg: #f9eccf; --bad: #9c2a1f; --bad-bg: #f8e1dd; --ok: #2c6a3f; --ok-bg: #e0f0e4;
+    --shadow: 0 1px 2px rgba(45, 36, 22, .06), 0 6px 20px rgba(45, 36, 22, .06);
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161411; --surface: #1f1c18; --surface-2: #2a2620; --text: #f0ece4; --muted: #aaa294;
+      --border: rgba(240, 232, 218, .12); --border-strong: rgba(240, 232, 218, .3);
+      --accent: #9cc49a; --accent-text: #14200f; --accent-soft: #24331f;
+      --warn: #f1c46b; --warn-bg: #3b2d10; --bad: #f19b90; --bad-bg: #3c1a16; --ok: #8fd3a3; --ok-bg: #173322;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; } /* author display rules must not resurrect hidden elements */
+  html { -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  button, input, select { font: inherit; color: inherit; touch-action: manipulation; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .skip { position: absolute; left: -9999px; top: 8px; z-index: 10; background: var(--surface); padding: 8px 12px; border-radius: 8px; }
+  .skip:focus { left: 8px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .muted { color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+  h1, h2, h3 { line-height: 1.2; margin: 0; scroll-margin-top: 16px; }
+  h1 { font-size: 28px; letter-spacing: -.01em; } h2 { font-size: 17px; }
+
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px max(16px, env(safe-area-inset-left)); border-bottom: 1px solid var(--border); }
+  .brand { font-weight: 650; text-decoration: none; }
+  .banner { margin: 16px max(16px, env(safe-area-inset-left)) 0; padding: 10px 14px; border-radius: 10px; background: var(--warn-bg); color: var(--warn); }
+  .banner code { font-size: 13px; }
+
+  .layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 24px; max-width: 1400px; margin: 0 auto; padding: 20px max(16px, env(safe-area-inset-left)) 64px; }
+  @media (max-width: 800px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+  nav h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+  nav ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .listing-link { display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: 10px; text-decoration: none; min-height: 44px; }
+  .listing-link:hover { background: var(--surface-2); }
+  .listing-link[aria-current="page"] { background: var(--surface); box-shadow: var(--shadow); border: 1px solid var(--border); }
+  .listing-link img { width: 48px; height: 36px; object-fit: cover; border-radius: 6px; background: var(--surface-2); flex: none; }
+  .listing-link small { display: block; color: var(--muted); }
+
+  main { min-width: 0; display: grid; gap: 28px; align-content: start; }
+  .head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+  .section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
+  .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .disclosure { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; margin: -8px 0 -8px -8px; padding: 8px; border: 0; border-radius: 10px; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+  .disclosure:hover { background: var(--surface-2); }
+  .chevron { width: 20px; height: 20px; flex: none; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border-strong); font-size: 11px; transition: transform .18s ease-out; transform-origin: 50% 50%; }
+  .disclosure[aria-expanded="false"] .chevron { transform: rotate(-90deg); }
+  .strip { display: flex; gap: 6px; overflow: hidden; mask-image: linear-gradient(to right, #000 85%, transparent); }
+  .strip img { width: 54px; height: 36px; object-fit: cover; border-radius: 6px; flex: none; background: var(--surface-2); }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); cursor: pointer; font-weight: 550; text-decoration: none; }
+  .btn:hover { border-color: var(--text); }
+  .btn-primary { background: var(--accent); color: var(--accent-text); border-color: transparent; min-height: 44px; padding: 8px 20px; }
+  .btn-primary:hover { filter: brightness(1.08); border-color: transparent; }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } * { transition: none !important; } }
+
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); transition: border-color .15s, opacity .15s; }
+  .card[data-selected="false"] { opacity: .62; }
+  .card[data-selected="false"]:hover, .card[data-selected="false"]:focus-within { opacity: 1; }
+  .card[data-selected="true"] { border-color: var(--accent); }
+  .pick { position: relative; display: block; cursor: pointer; aspect-ratio: 3 / 2; background: var(--surface-2); }
+  .pick img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pick input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .check { position: absolute; top: 10px; left: 10px; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.92); border: 2px solid rgba(0,0,0,.35); display: grid; place-items: center; font-weight: 700; color: transparent; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+  .pick input:checked ~ .check { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .pick input:focus-visible ~ .check { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .pick .state { position: absolute; bottom: 8px; left: 8px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: rgba(0,0,0,.6); color: #fff; }
+  .meta { padding: 10px 12px 12px; display: grid; gap: 6px; }
+  .meta label { font-size: 12px; color: var(--muted); }
+  .room { width: 100%; min-height: 36px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--bg); font-size: 16px; }
+  .file { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
+  .file a { color: var(--muted); }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+  .run-form { display: grid; gap: 18px; }
+  fieldset { border: 0; margin: 0; padding: 0; }
+  legend { font-weight: 600; margin-bottom: 8px; padding: 0; }
+  .tiers { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+  .tier { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid var(--border-strong); border-radius: 10px; cursor: pointer; min-height: 44px; }
+  .tier:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+  .tier input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
+  .tier small { display: block; color: var(--muted); }
+  select { min-height: 40px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--bg); max-width: 100%; font-size: 16px; }
+  .run-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+  .error { color: var(--bad); }
+
+  .log { margin: 12px 0 0; max-height: 280px; overflow: auto; overscroll-behavior: contain; padding: 12px; background: var(--bg); border-radius: 8px; font: 12.5px/1.55 ui-monospace, "SF Mono", Menlo, monospace; white-space: pre-wrap; }
+  .runs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .run { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .badge { font-size: 12.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); white-space: nowrap; }
+  .badge-verified { background: var(--ok-bg); color: var(--ok); }
+  .badge-review, .badge-unchanged { background: var(--warn-bg); color: var(--warn); }
+  .badge-failed, .badge-error { background: var(--bad-bg); color: var(--bad); }
+  .empty { padding: 32px; text-align: center; border: 1px dashed var(--border-strong); border-radius: var(--radius); color: var(--muted); }
+  .empty code { color: var(--text); }
+
+  /* Sidebar sections */
+  .side { display:grid; gap:24px; align-content:start; }
+  .side-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; }
+  .side-head h2 { margin:0; }
+  .btn-small { min-height:32px; padding:4px 12px; font-size:13px; }
+  .profile-link small .stale { color:var(--warn); }
+  .eyebrow { margin:0 0 4px; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+
+  /* Progress */
+  .progress { margin-top:16px; display:grid; gap:6px; }
+  .progress-head { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; font-weight:600; }
+  .bar { height:10px; border-radius:999px; background:var(--surface-2); overflow:hidden; }
+  .bar > span { display:block; height:100%; background:var(--accent); transform-origin:0 50%; transition:transform .5s ease-out; }
+  .bar.error > span { background:var(--bad); }
+  .progress-label { margin:0; font-size:13px; }
+  details.log-details { margin-top:10px; }
+  details.log-details > summary { cursor:pointer; min-height:32px; display:flex; align-items:center; gap:8px; font-weight:600; font-size:14px; }
+
+  /* Taste profile view */
+  .title-input { font:inherit; font-size:28px; font-weight:700; letter-spacing:-.01em; border:1px solid transparent; border-radius:8px; background:transparent; color:inherit; padding:2px 6px; margin-left:-7px; width:min(100%, 28ch); }
+  .title-input:hover { border-color:var(--border-strong); }
+  .title-input:focus { border-color:var(--accent); outline:none; background:var(--surface); }
+  .stats { display:flex; flex-wrap:wrap; gap:6px 16px; margin:6px 0 0; color:var(--muted); font-size:14px; }
+  .notice { padding:10px 14px; border-radius:10px; background:var(--warn-bg); color:var(--warn); margin:0; }
+  .ref-grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
+  .ref { position:relative; border-radius:10px; overflow:hidden; background:var(--surface-2); aspect-ratio:4 / 5; border:1px solid var(--border); }
+  .ref a { display:block; height:100%; }
+  .ref img { width:100%; height:100%; object-fit:cover; display:block; }
+  .ref .remove { position:absolute; top:6px; right:6px; width:32px; height:32px; border-radius:50%; border:0; background:rgba(0,0,0,.62); color:#fff; font-size:16px; line-height:1; cursor:pointer; display:grid; place-items:center; }
+  .ref .remove:hover, .ref .remove:focus-visible { background:var(--bad); }
+  .ref .name { position:absolute; left:6px; bottom:6px; font-size:11px; padding:1px 6px; border-radius:999px; background:rgba(0,0,0,.55); color:#fff; }
+  .dropzone { border:2px dashed var(--border-strong); border-radius:12px; padding:18px; text-align:center; color:var(--muted); transition:border-color .15s, background .15s; }
+  .dropzone.over { border-color:var(--accent); background:var(--accent-soft); color:var(--text); }
+  .upload-list { list-style:none; margin:8px 0 0; padding:0; font-size:13px; display:grid; gap:2px; }
+  .upload-list .bad { color:var(--bad); }
+  .toast { position:fixed; left:50%; bottom:max(20px, env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--text); color:var(--bg); padding:10px 12px 10px 16px; border-radius:12px; display:flex; gap:12px; align-items:center; box-shadow:var(--shadow); z-index:20; }
+  .toast button { background:transparent; color:inherit; border:1px solid currentColor; border-radius:999px; padding:4px 12px; min-height:32px; font:inherit; font-weight:600; cursor:pointer; }
+  textarea { width:100%; font:inherit; font-size:16px; line-height:1.5; color:inherit; background:var(--bg); border:1px solid var(--border-strong); border-radius:10px; padding:10px 12px; resize:vertical; }
+  textarea:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .brief { min-height:320px; font-size:15px; }
+  .save-row { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; margin-top:10px; }
+  .dirty { color:var(--warn); font-weight:600; font-size:13px; }
+  details.category { border-top:1px solid var(--border); padding:10px 0; }
+  details.category > summary { cursor:pointer; min-height:32px; display:flex; align-items:center; gap:8px; font-weight:600; text-transform:capitalize; }
+  .rule-row { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:8px; align-items:start; margin-top:8px; }
+  .rule-row textarea { min-height:0; padding:8px 10px; font-size:15px; }
+  .rule-meta { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+  .icon-btn { width:36px; height:36px; border-radius:50%; border:1px solid var(--border-strong); background:var(--surface); color:inherit; cursor:pointer; display:grid; place-items:center; font-size:16px; }
+  .icon-btn:hover, .icon-btn:focus-visible { border-color:var(--bad); color:var(--bad); }
+  .field-label { display:block; font-weight:600; margin:14px 0 6px; }
+  .hint { margin:4px 0 0; font-size:13px; color:var(--muted); }
+  dialog.modal { border:1px solid var(--border); border-radius:14px; padding:20px; width:min(440px, calc(100vw - 32px)); background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
+  dialog.modal::backdrop { background:rgba(0,0,0,.45); }
+  dialog.modal input[type="text"], dialog.modal select { width:100%; min-height:42px; font-size:16px; padding:8px 10px; border-radius:8px; border:1px solid var(--border-strong); background:var(--bg); color:inherit; }
+</style>
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/">Remodel Lens</a>
+  <span id="save-status" class="muted" role="status" aria-live="polite"></span>
+</header>
+<div id="banner" class="banner" hidden></div>
+<div class="layout">
+  <div class="side">
+    <nav aria-label="Listings">
+      <div class="side-head"><h2>Listings</h2></div>
+      <ul id="listings"><li class="muted">Loading…</li></ul>
+    </nav>
+    <nav aria-label="Taste profiles">
+      <div class="side-head"><h2>Taste profiles</h2><button class="btn btn-small" type="button" data-action="new-profile">New…</button></div>
+      <ul id="profiles-nav"><li class="muted">Loading…</li></ul>
+    </nav>
+  </div>
+  <main id="content" tabindex="-1">
+    <p class="muted">Loading…</p>
+  </main>
+</div>
+<div id="progress-live" class="sr-only" aria-live="polite"></div>
+
+<dialog class="modal" id="new-profile-dialog" aria-labelledby="new-profile-h">
+  <form method="dialog" id="new-profile-form" novalidate>
+    <h2 id="new-profile-h" style="margin:0 0 12px;font-size:18px">New taste profile</h2>
+    <label class="field-label" for="np-name" style="margin-top:0">Name</label>
+    <input type="text" id="np-name" name="name" maxlength="60" autocomplete="off" spellcheck="false" placeholder="e.g. Coastal modern…" required>
+    <label class="field-label" for="np-from">Start from</label>
+    <select id="np-from" name="from"></select>
+    <p class="hint">A copy brings its reference photos, brief, and rules. You can change any of them afterwards.</p>
+    <p id="np-error" class="error" role="alert" hidden></p>
+    <div class="save-row" style="justify-content:flex-end;margin-top:16px">
+      <button class="btn" type="button" data-action="close-dialog">Cancel</button>
+      <button class="btn btn-primary" type="submit" value="create">Create profile</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module">
+const TIERS = [
+  { id: "cosmetic", label: "Cosmetic refresh", help: "Paint, lighting, furniture, hardware. Strong evidence." },
+  { id: "moderate", label: "Cabinetry and finishes", help: "Floors, cabinets, counters, tile, trim, flush built-ins." },
+  { id: "major", label: "Substantial remodel", help: "Window frames, ceilings, walls, plumbing. Speculative." },
+];
+const STATUS_LABELS = { verified: "Verified", review: "Needs review", failed: "Unverified", unchanged: "No changes", error: "Error" };
+const CATEGORY_LABELS = {
+  walls_ceilings: "Walls, ceilings and trim", flooring: "Flooring", cabinetry_millwork: "Cabinetry and built-ins",
+  countertops_surfaces: "Countertops", tile_backsplash: "Tile", lighting: "Lighting", hardware_fixtures: "Hardware, fixtures and windows",
+  furniture: "Furniture", textiles_soft_goods: "Textiles", decor_density: "Styling", layout_openness: "Layout",
+};
+
+const $ = (sel, root = document) => root.querySelector(sel);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const fmtDate = (iso) => new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
+const nf = new Intl.NumberFormat();
+const pf = new Intl.NumberFormat(undefined, { style: "percent", maximumFractionDigits: 0 });
+
+let state = {
+  view: "listing", listings: [], listing: null, profiles: [], tasteProfiles: [], taste: null,
+  keysError: null, job: null, logOpen: false, runError: null,
+  rulesDraft: null, rulesDirty: false, briefDirty: false, uploads: [],
+};
+
+function params() { return new URL(location.href).searchParams; }
+function setParams(updates, push = false) {
+  const url = new URL(location.href);
+  for (const [k, v] of Object.entries(updates)) v == null || v === "" ? url.searchParams.delete(k) : url.searchParams.set(k, v);
+  history[push ? "pushState" : "replaceState"](null, "", url);
+}
+function selectedTiers() {
+  const raw = params().get("tiers");
+  return (raw ? raw.split(",") : ["cosmetic", "moderate"]).filter((t) => TIERS.some((x) => x.id === t));
+}
+
+async function api(path, options = {}) {
+  const res = await fetch(path, { ...options, headers: { "content-type": "application/json", ...(options.headers ?? {}) } });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error ?? `Request failed (${res.status})`);
+  return body;
+}
+
+function announce(text) {
+  const el = $("#save-status");
+  el.textContent = text;
+  clearTimeout(announce.t);
+  announce.t = setTimeout(() => (el.textContent = ""), 2500);
+}
+
+/* ---------- Sidebar ---------- */
+
+function renderListings() {
+  const current = state.view === "listing" ? state.listing?.id : null;
+  $("#listings").innerHTML = state.listings.length
+    ? state.listings.map((l) => `
+      <li><a class="listing-link" href="?listing=${encodeURIComponent(l.id)}${params().get("photos") === "hidden" ? "&photos=hidden" : ""}" ${l.id === current ? 'aria-current="page"' : ""}>
+        ${l.cover ? `<img src="${esc(l.cover)}" alt="" width="48" height="36">` : ""}
+        <span>${esc(l.name)}<small class="num">${l.id === current ? state.listing.photos.filter((p) => p.selected).length : l.selectedCount} of ${l.photoCount} selected</small></span>
+      </a></li>`).join("")
+    : `<li class="muted">No listings yet.</li>`;
+}
+
+function renderProfilesNav() {
+  const current = state.view === "taste" ? state.taste?.id : null;
+  $("#profiles-nav").innerHTML = state.tasteProfiles.length
+    ? state.tasteProfiles.map((p) => `
+      <li><a class="listing-link profile-link" href="?taste=${encodeURIComponent(p.id)}" ${p.id === current ? 'aria-current="page"' : ""}>
+        <span>${esc(p.name)}<small class="num">${p.referenceCount} refs · ${p.built ? `${p.ruleCount} rules` : "not built"}${p.running ? " · rebuilding…" : p.stale ? ' · <span class="stale">out of date</span>' : ""}</small></span>
+      </a></li>`).join("")
+    : `<li class="muted">No profiles yet.</li>`;
+}
+
+/* ---------- Job progress (shared by redesign runs and profile rebuilds) ---------- */
+
+function fmtDuration(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
+}
+
+let lastAnnounced = -1;
+function jobPanel(job, doneHtml) {
+  const p = job.progress ?? { total: 0, done: 0, label: "" };
+  const f = p.total ? Math.min(1, p.done / p.total) : 0;
+  const elapsed = Date.now() - job.startedAt;
+  const running = job.status === "running";
+  // Early steps (room inventory) are slow relative to their weight, so hold the estimate until it's meaningful.
+  const eta = running && f >= 0.2 ? ` · about ${fmtDuration((elapsed * (1 - f)) / f)} left` : "";
+  const head = running ? "Running…" : job.status === "done" ? "Finished" : "Stopped with an error";
+  const last = job.log.at(-1)?.replace(/^\d{1,2}:\d{2}(?::\d{2})?(?:\s?[AP]M)?\s+/i, "") ?? "";
+  // Announce at 25% steps and at the end, not on every poll.
+  const bucket = running ? Math.floor(f * 4) : 99;
+  if (bucket !== lastAnnounced) {
+    lastAnnounced = bucket;
+    $("#progress-live").textContent = running ? `${head} ${pf.format(f)} complete` : head;
+  }
+  return `<div class="progress">
+      <div class="progress-head"><span>${head}</span><span class="num muted">${pf.format(job.status === "done" ? 1 : f)} · ${fmtDuration(elapsed)} elapsed${eta}</span></div>
+      <div class="bar ${job.status === "error" ? "error" : ""}" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(f * 100)}" aria-valuetext="${pf.format(f)}${p.label ? `, ${esc(p.label)}` : ""}">
+        <span style="transform:scaleX(${job.status === "done" ? 1 : f})"></span>
+      </div>
+      <p class="progress-label muted">${esc(job.error ?? p.label ?? "")}</p>
+      ${job.status === "done" ? doneHtml ?? "" : ""}
+    </div>
+    <details class="log-details" ${state.logOpen ? "open" : ""}>
+      <summary>Log <span class="muted" style="font-weight:400">· ${esc(last.slice(0, 80) || "starting…")}</span></summary>
+      <pre class="log" tabindex="0" aria-label="Run log">${esc(job.log.join("\n") || "Starting…")}</pre>
+    </details>`;
+}
+
+function renderJobInto(el, job, doneHtml) {
+  if (!el) return;
+  if (!job) { el.innerHTML = ""; return; }
+  const log = el.querySelector(".log");
+  const atBottom = !log || log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+  el.innerHTML = jobPanel(job, doneHtml);
+  const next = el.querySelector(".log");
+  if (next && atBottom) next.scrollTop = next.scrollHeight;
+}
+
+// <details> "toggle" doesn't bubble; capture it to remember the log's open state across re-renders.
+document.addEventListener("toggle", (e) => { if (e.target.matches?.("details.log-details")) state.logOpen = e.target.open; }, true);
+
+async function pollJob() {
+  if (!state.job || state.job.status !== "running") return;
+  try {
+    state.job = await api(`/api/jobs/${state.job.id}`);
+  } catch {
+    return;
+  }
+  if (state.job.status === "running") {
+    renderJob();
+    setTimeout(pollJob, 2000);
+    return;
+  }
+  if (state.view === "listing") {
+    state.listing = await api(`/api/listings/${encodeURIComponent(state.listing.id)}`);
+    renderListing();
+  } else {
+    const job = state.job;
+    await loadTaste(state.taste.id);
+    state.job = job;
+    renderTaste();
+    state.tasteProfiles = await api("/api/taste-profiles");
+    state.profiles = await api("/api/profiles");
+    renderProfilesNav();
+  }
+}
+
+function renderJob() {
+  if (state.view === "listing") {
+    const button = $('#run-form button[type="submit"]');
+    const running = state.job?.status === "running";
+    if (button) {
+      button.disabled = running;
+      button.innerHTML = `${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Run redesign`;
+    }
+    renderJobInto($("#job"), state.job, state.job?.reportUrl ? `<p><a class="btn" href="${esc(state.job.reportUrl)}">Open report</a></p>` : "");
+  } else {
+    const button = $('[data-action="build"]');
+    const running = state.job?.status === "running";
+    if (button) {
+      button.disabled = running;
+      button.innerHTML = `${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Rebuild rules`;
+    }
+    renderJobInto($("#taste-job"), state.job, "");
+  }
+}
+
+/* ---------- Listing view ---------- */
+
+function renderEmpty() {
+  document.title = "Listings · Remodel Lens";
+  $("#content").innerHTML = `<div class="empty">
+    <h1 style="font-size:20px;margin-bottom:8px">No listings yet</h1>
+    <p>Run <code>npm run import -- ~/Desktop/&lt;folder&gt; --id &lt;listing-id&gt;</code>, then reload.</p>
+  </div>`;
+}
+
+function renderListing() {
+  const l = state.listing;
+  document.title = `${l.name} · Remodel Lens`;
+  const selected = l.photos.filter((p) => p.selected).length;
+  const tiers = selectedTiers();
+  const wanted = params().get("profile");
+  const profile = state.profiles.find((p) => p.id === wanted) ?? state.profiles[0];
+  const total = selected * tiers.length;
+  const running = state.job?.status === "running";
+  const photosHidden = params().get("photos") === "hidden";
+
+  $("#content").innerHTML = `
+    <div class="head">
+      <div>
+        <h1>${esc(l.name)}</h1>
+        ${l.source || l.location ? `<p class="muted" style="margin:4px 0 0">${esc([l.location, l.source].filter(Boolean).join(" · "))}</p>` : ""}
+      </div>
+    </div>
+
+    <section aria-labelledby="photos-h">
+      <div class="section-head">
+        <h2 id="photos-h"><button class="disclosure" type="button" aria-expanded="${!photosHidden}" aria-controls="photos-body" data-toggle="photos">
+          <span class="chevron" aria-hidden="true">▼</span>
+          <span>Photos to redesign <span class="muted num">· ${selected} of ${l.photos.length} selected</span></span>
+        </button></h2>
+        <div class="tools" data-photos-only ${photosHidden ? "hidden" : ""}>
+          <button class="btn" type="button" data-action="all" ${selected === l.photos.length ? "disabled" : ""}>Select all</button>
+          <button class="btn" type="button" data-action="none" ${selected === 0 ? "disabled" : ""}>Clear</button>
+        </div>
+      </div>
+      <div class="strip" aria-hidden="true" data-photos-strip ${photosHidden ? "" : "hidden"}>
+        ${l.photos.filter((p) => p.selected).map((p) => `<img src="${esc(p.thumb.replace("w=640", "w=160"))}" alt="" width="54" height="36" loading="lazy">`).join("")}
+      </div>
+      <div id="photos-body" ${photosHidden ? "hidden" : ""}>
+      <p class="muted" style="margin:-4px 0 12px">Room labels guide which part of your taste profile applies. "Great room" uses living-room direction, "den" uses office and living.</p>
+      <div class="grid">
+        ${l.photos.map((p, i) => `
+          <div class="card" data-selected="${p.selected}">
+            <label class="pick">
+              <input type="checkbox" data-file="${esc(p.file)}" ${p.selected ? "checked" : ""} aria-describedby="room-${i}">
+              <img src="${esc(p.thumb)}" alt="${esc(p.room || p.file)}" width="640" height="427" loading="${i < 6 ? "eager" : "lazy"}" decoding="async">
+              <span class="check" aria-hidden="true">✓</span>
+              <span class="state" aria-hidden="true">${p.selected ? "Selected" : "Skipped"}</span>
+              <span class="sr-only">Redesign ${esc(p.file)}</span>
+            </label>
+            <div class="meta">
+              <label for="room-${i}">Room</label>
+              <input class="room" id="room-${i}" name="room-${esc(p.file)}" data-room="${esc(p.file)}" value="${esc(p.room)}" placeholder="e.g. kitchen…" autocomplete="off" spellcheck="false" maxlength="80">
+              <div class="file"><span>${esc(p.file)}</span><a href="${esc(p.full)}" target="_blank" rel="noopener">Full size</a></div>
+            </div>
+          </div>`).join("")}
+      </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="run-h" class="panel">
+      <form class="run-form" id="run-form" novalidate>
+        <h2 id="run-h">Redesign</h2>
+        <fieldset>
+          <legend>Scope</legend>
+          <div class="tiers">
+            ${TIERS.map((t) => `
+              <label class="tier"><input type="checkbox" name="tier" value="${t.id}" ${tiers.includes(t.id) ? "checked" : ""}>
+                <span>${t.label}<small>${t.help}</small></span></label>`).join("")}
+          </div>
+        </fieldset>
+        <div>
+          <label for="profile" style="display:block;font-weight:600;margin-bottom:6px">Taste profile</label>
+          ${state.profiles.length
+            ? `<select id="profile" name="profile">${state.profiles.map((p) => `<option value="${esc(p.id)}" ${p.id === profile?.id ? "selected" : ""}>${esc(p.name)}${p.stale ? " (rules out of date)" : ""}</option>`).join("")}</select>
+               ${profile ? `<a class="hint" style="display:inline-block;margin-left:10px" href="?taste=${encodeURIComponent(profile.id)}">Edit profile</a>` : ""}`
+            : `<p class="error">No built taste profiles yet. ${state.tasteProfiles.length ? `<a href="?taste=${encodeURIComponent(state.tasteProfiles[0].id)}">Add references and build one</a>` : "Create one under Taste profiles"}.</p>`}
+        </div>
+        <div class="run-row">
+          <button class="btn btn-primary" type="submit" ${running ? "disabled" : ""} aria-describedby="run-help">
+            ${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Run redesign
+          </button>
+          <span id="run-help" class="muted num">${total ? `${nf.format(selected)} photos × ${tiers.length} ${tiers.length === 1 ? "tier" : "tiers"} = ${nf.format(total)} redesigns (up to ${nf.format(total * 2)} image generations with retries)` : "Select photos and at least one scope."}</span>
+        </div>
+        <p id="run-error" class="error" role="alert" ${state.runError ? "" : "hidden"}>${esc(state.runError)}</p>
+      </form>
+      <div id="job"></div>
+    </section>
+
+    <section aria-labelledby="runs-h">
+      <div class="section-head"><h2 id="runs-h">Past runs</h2></div>
+      ${l.runs.length
+        ? `<ul class="runs">${l.runs.map((r) => `
+          <li class="run">
+            <div>
+              <strong>${esc(fmtDate(r.startedAt))}</strong>
+              <span class="muted"> · ${r.photos.length} photos · ${esc(r.tiers.join(", "))}</span>
+              <div class="badges" style="margin-top:6px">
+                ${r.error ? `<span class="badge badge-error">Error: ${esc(r.error)}</span>` : !r.finishedAt ? `<span class="badge">In progress or interrupted</span>` : Object.entries(r.counts).map(([k, v]) => `<span class="badge badge-${esc(k)}">${v} ${esc(STATUS_LABELS[k] ?? k)}</span>`).join("")}
+              </div>
+            </div>
+            ${r.reportUrl ? `<a class="btn" href="${esc(r.reportUrl)}">Open report</a>` : ""}
+          </li>`).join("")}</ul>`
+        : `<p class="muted">No runs yet. Your report will show up here after the first redesign.</p>`}
+    </section>`;
+
+  renderJob();
+}
+
+let saveTimer;
+const pending = new Map();
+function queueSave(file, patch) {
+  pending.set(file, { ...(pending.get(file) ?? { file }), ...patch });
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushSave, 350);
+}
+async function flushSave() {
+  if (!pending.size || !state.listing) return;
+  const photos = [...pending.values()];
+  pending.clear();
+  try {
+    const listing = await api(`/api/listings/${encodeURIComponent(state.listing.id)}/selection`, { method: "PUT", body: JSON.stringify({ photos }) });
+    state.listing = { ...listing, runs: state.listing.runs };
+    announce("Saved");
+    renderListings();
+  } catch (error) {
+    announce(`Couldn't save: ${error.message}`);
+  }
+}
+
+function updateSelection(files, selected) {
+  for (const p of state.listing.photos) if (files.includes(p.file)) p.selected = selected;
+  files.forEach((file) => queueSave(file, { selected }));
+  const focused = document.activeElement?.dataset?.file;
+  renderListing();
+  renderListings();
+  if (focused) document.querySelector(`input[data-file="${CSS.escape(focused)}"]`)?.focus();
+}
+
+function setPhotosHidden(hidden) {
+  setParams({ photos: hidden ? "hidden" : null });
+  $('[data-toggle="photos"]')?.setAttribute("aria-expanded", String(!hidden));
+  for (const el of document.querySelectorAll("#photos-body, [data-photos-only]")) el.hidden = hidden;
+  const strip = $("[data-photos-strip]");
+  if (strip) strip.hidden = !hidden;
+  renderListings();
+}
+
+/* ---------- Taste profile view ---------- */
+
+async function loadTaste(id) {
+  state.taste = await api(`/api/taste-profiles/${encodeURIComponent(id)}`);
+  state.rulesDraft = state.taste.profile ? structuredClone(state.taste.profile) : null;
+  state.rulesDirty = false;
+  state.briefDirty = false;
+}
+
+function renderTaste() {
+  const t = state.taste;
+  document.title = `${t.meta.name} · Taste profile · Remodel Lens`;
+  const running = state.job?.status === "running";
+  const lb = t.meta.lastBuild;
+  const ruleCount = t.profile ? t.profile.categories.reduce((n, c) => n + c.rules.length, 0) : 0;
+  const cost = Math.max(1, Math.round(t.references.length * 0.08 + 0.4));
+
+  $("#content").innerHTML = `
+    <div class="head">
+      <div style="min-width:0;flex:1">
+        <p class="eyebrow">Taste profile</p>
+        <h1><input class="title-input" id="profile-name" value="${esc(t.meta.name)}" aria-label="Profile name" maxlength="60" autocomplete="off" spellcheck="false"></h1>
+        <p class="stats num">
+          <span>${t.references.length} reference photos</span>
+          <span>${t.profile ? `${ruleCount} rules` : "No rules yet"}</span>
+          ${lb ? `<span>${lb.source === "pipeline" ? "Built" : "Rules set"} ${esc(fmtDate(lb.at))}</span>` : ""}
+        </p>
+      </div>
+    </div>
+    ${t.stale && !running ? `<p class="notice" role="status">Photos or the brief changed since these rules were built. Rebuild to bring the rules up to date.</p>` : ""}
+
+    <section aria-labelledby="refs-h">
+      <div class="section-head">
+        <h2 id="refs-h">Reference photos <span class="muted num">· ${t.references.length}</span></h2>
+        <div class="tools">
+          <button class="btn" type="button" data-action="pick-files" ${running ? "disabled" : ""}>Add photos…</button>
+          <input id="ref-input" type="file" accept="image/jpeg,image/png,image/webp,image/tiff" multiple hidden>
+        </div>
+      </div>
+      <div class="dropzone" id="dropzone">
+        ${t.references.length
+          ? `<div class="ref-grid">${t.references.map((r) => `
+              <div class="ref">
+                <a href="${esc(r.full)}" target="_blank" rel="noopener" aria-label="Open ${esc(r.file)} full size"><img src="${esc(r.thumb)}" alt="" loading="lazy" decoding="async"></a>
+                <span class="name" aria-hidden="true">${esc(r.file.replace(/\.\w+$/, ""))}</span>
+                <button class="remove" type="button" data-remove="${esc(r.file)}" aria-label="Remove ${esc(r.file)}" ${running ? "disabled" : ""}>✕</button>
+              </div>`).join("")}</div>
+             <p class="hint" style="margin-top:12px">Drop images here to add them. Rooms and close-ups of materials both help.</p>`
+          : `<p style="margin:12px 0">Drop 10–20 photos of interiors you love here, or use <strong>Add photos…</strong></p>`}
+        <ul class="upload-list" aria-live="polite">${state.uploads.map((u) => `<li class="${u.ok ? "" : "bad"}">${esc(u.text)}</li>`).join("")}</ul>
+      </div>
+    </section>
+
+    <section aria-labelledby="brief-h" class="panel">
+      <h2 id="brief-h">Brief</h2>
+      <p class="hint" style="margin-bottom:10px">Describe your taste in your own words. The rebuild treats the brief as the strongest signal and uses the photos to confirm and sharpen it.</p>
+      <label for="brief" class="sr-only">Brief</label>
+      <textarea id="brief" class="brief" spellcheck="true" placeholder="e.g. Warm, architectural rooms with natural oak, plaster walls…">${esc(t.brief)}</textarea>
+      <div class="save-row">
+        <button class="btn btn-primary" type="button" data-action="save-brief" ${running ? "disabled" : ""}>Save brief</button>
+        <span class="muted num" id="brief-count">${nf.format(t.brief.length)} characters</span>
+        <span class="dirty" id="brief-dirty" ${state.briefDirty ? "" : "hidden"}>Unsaved changes</span>
+        <span class="hint" style="margin:0">⌘/Ctrl&nbsp;+&nbsp;Enter saves</span>
+      </div>
+    </section>
+
+    <section aria-labelledby="build-h" class="panel">
+      <h2 id="build-h">Rebuild rules</h2>
+      <p class="hint">Two vision models analyze each reference, then the analyses are merged with the brief into rules. With ${t.references.length} photos this takes a few minutes and costs roughly $${cost}. Manual rule edits below are replaced; the previous version is kept and can be restored.</p>
+      <div class="save-row">
+        <button class="btn btn-primary" type="button" data-action="build" ${running || t.references.length < 3 ? "disabled" : ""}>${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Rebuild rules</button>
+        ${t.hasPrevious && !running ? `<button class="btn" type="button" data-action="restore-previous">Restore previous rules</button>` : ""}
+        ${t.references.length < 3 ? `<span class="hint" style="margin:0">Add at least 3 photos first.</span>` : ""}
+      </div>
+      <p id="build-error" class="error" role="alert" hidden></p>
+      <div id="taste-job"></div>
+    </section>
+
+    <section aria-labelledby="rules-h">
+      <div class="section-head">
+        <h2 id="rules-h">Rules</h2>
+        ${state.rulesDraft ? `<div class="tools">
+          <span class="dirty" id="rules-dirty" ${state.rulesDirty ? "" : "hidden"}>Unsaved changes</span>
+          <button class="btn" type="button" data-action="discard-rules" ${state.rulesDirty ? "" : "disabled"}>Discard</button>
+          <button class="btn btn-primary" type="button" data-action="save-rules" ${state.rulesDirty && !running ? "" : "disabled"}>Save rules</button>
+        </div>` : ""}
+      </div>
+      <div id="rules">${renderRulesBody()}</div>
+    </section>`;
+
+  renderJob();
+}
+
+function renderRulesBody() {
+  const d = state.rulesDraft;
+  if (!d) return `<p class="muted">No rules yet. Add reference photos and a brief, then rebuild.</p>`;
+  const total = d.imageCount ?? 0;
+  const strong = (r) => r.fromBrief || r.support >= Math.max(2, Math.ceil(total * 0.25));
+  const lines = (path, list, label, hint) => `
+    <label class="field-label" for="f-${path}">${label}</label>
+    <textarea id="f-${path}" data-lines="${path}" rows="${Math.min(10, Math.max(3, list.length + 1))}">${esc(list.join("\n"))}</textarea>
+    <p class="hint">${hint}</p>`;
+  return `
+    <div class="panel">
+      <label class="field-label" for="f-summary" style="margin-top:0">Summary</label>
+      <textarea id="f-summary" data-path="summary" rows="3">${esc(d.summary)}</textarea>
+      <label class="field-label" for="f-ips">Image direction</label>
+      <textarea id="f-ips" data-path="imagePromptSummary" rows="4">${esc(d.imagePromptSummary)}</textarea>
+      <p class="hint">Sent to the image model with every redesign. Keep it concrete: materials, colors, finishes, shapes.</p>
+      ${lines("globalAvoid", d.globalAvoid, "Avoid everywhere", "One item per line.")}
+    </div>
+    ${d.categories.map((c, ci) => `
+      <details class="category" open>
+        <summary>${esc(CATEGORY_LABELS[c.category] ?? c.category)} <span class="muted num" style="font-weight:400">· ${c.rules.length}</span></summary>
+        ${c.rules.map((r, ri) => `
+          <div class="rule-row">
+            <label class="sr-only" for="rule-${ci}-${ri}">Rule ${ri + 1}</label>
+            <textarea id="rule-${ci}-${ri}" data-path="categories.${ci}.rules.${ri}.rule" rows="2">${esc(r.rule)}</textarea>
+            <div class="rule-meta">
+              <button class="icon-btn" type="button" data-delete-rule="${ci}.${ri}" aria-label="Delete rule ${ri + 1} in ${esc(CATEGORY_LABELS[c.category] ?? c.category)}">✕</button>
+              <span class="badge num" title="Reference photos showing this rule">${r.support}/${total}${r.fromBrief ? " · brief" : ""}</span>
+              ${strong(r) ? "" : `<span class="badge badge-review">weak</span>`}
+            </div>
+          </div>`).join("")}
+        <button class="btn btn-small" type="button" data-add-rule="${ci}" style="margin-top:10px">Add rule</button>
+        ${lines(`categories.${ci}.avoid`, c.avoid, "Avoid", "One item per line.")}
+      </details>`).join("")}
+    <details class="category" open>
+      <summary>Room direction</summary>
+      ${d.roomNotes.map((r, i) => lines(`roomNotes.${i}.notes`, r.notes, esc(r.room[0].toUpperCase() + r.room.slice(1)), "One note per line. Used for photos labeled with this room.")).join("")}
+    </details>`;
+}
+
+function setPath(obj, path, value) {
+  const keys = path.split(".");
+  let o = obj;
+  for (const k of keys.slice(0, -1)) o = o[k];
+  o[keys.at(-1)] = value;
+}
+function getPath(obj, path) { return path.split(".").reduce((o, k) => o?.[k], obj); }
+
+function markRulesDirty() {
+  state.rulesDirty = true;
+  $("#rules-dirty")?.removeAttribute("hidden");
+  const save = $('[data-action="save-rules"]');
+  if (save) save.disabled = state.job?.status === "running";
+  const discard = $('[data-action="discard-rules"]');
+  if (discard) discard.disabled = false;
+}
+
+function rerenderRules(focusSelector) {
+  $("#rules").innerHTML = renderRulesBody();
+  markRulesDirty();
+  if (focusSelector) $(focusSelector)?.focus();
+}
+
+async function uploadFiles(files) {
+  const list = [...files].filter((f) => f.type.startsWith("image/") || /\.(tiff?|jpe?g|png|webp)$/i.test(f.name));
+  if (!list.length) return;
+  state.uploads = [];
+  for (const [i, file] of list.entries()) {
+    announce(`Uploading ${i + 1} of ${list.length}…`);
+    try {
+      const res = await fetch(`/api/taste-profiles/${encodeURIComponent(state.taste.id)}/references`, { method: "POST", headers: { "content-type": "application/octet-stream" }, body: file });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? `Upload failed (${res.status})`);
+      state.uploads.push({ ok: true, text: `${file.name} → ${body.file}` });
+    } catch (error) {
+      state.uploads.push({ ok: false, text: `${file.name}: ${error.message}` });
+    }
+  }
+  const keepRules = state.rulesDirty ? state.rulesDraft : null;
+  await refreshTaste(keepRules);
+  announce(`${state.uploads.filter((u) => u.ok).length} of ${list.length} added`);
+}
+
+/** Reload the profile without discarding unsaved rule or brief edits. */
+async function refreshTaste(keepRules) {
+  const brief = state.briefDirty ? $("#brief")?.value : null;
+  const id = state.taste.id;
+  state.taste = await api(`/api/taste-profiles/${encodeURIComponent(id)}`);
+  state.rulesDraft = keepRules ?? (state.taste.profile ? structuredClone(state.taste.profile) : null);
+  state.rulesDirty = !!keepRules;
+  renderTaste();
+  if (brief != null) { $("#brief").value = brief; state.briefDirty = true; $("#brief-dirty").hidden = false; }
+  state.tasteProfiles = await api("/api/taste-profiles");
+  renderProfilesNav();
+}
+
+let toastTimer;
+function showUndo(text, undo) {
+  document.querySelector(".toast")?.remove();
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.setAttribute("role", "status");
+  el.innerHTML = `<span>${esc(text)}</span><button type="button">Undo</button>`;
+  el.querySelector("button").addEventListener("click", async () => { el.remove(); await undo(); });
+  document.body.append(el);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.remove(), 8000);
+}
+
+async function saveBriefNow() {
+  const text = $("#brief").value;
+  try {
+    state.taste = await api(`/api/taste-profiles/${encodeURIComponent(state.taste.id)}/brief`, { method: "PUT", body: JSON.stringify({ text }) });
+    state.briefDirty = false;
+    $("#brief-dirty").hidden = true;
+    announce("Brief saved");
+    state.tasteProfiles = await api("/api/taste-profiles");
+    renderProfilesNav();
+    const wasStale = $(".notice");
+    if (state.taste.stale && !wasStale) renderTaste();
+  } catch (error) {
+    announce(`Couldn't save: ${error.message}`);
+  }
+}
+
+/* ---------- Events ---------- */
+
+document.addEventListener("change", (event) => {
+  const t = event.target;
+  if (t.matches("input[data-file]")) updateSelection([t.dataset.file], t.checked);
+  if (t.matches('input[name="tier"]')) {
+    const tiers = [...document.querySelectorAll('input[name="tier"]:checked')].map((i) => i.value);
+    setParams({ tiers: tiers.join(",") || "none" });
+    state.runError = null;
+    renderListing();
+    document.querySelector(`input[name="tier"][value="${t.value}"]`)?.focus();
+  }
+  if (t.matches("#profile")) { setParams({ profile: t.value }); renderListing(); $("#profile")?.focus(); }
+  if (t.matches("#ref-input")) { uploadFiles(t.files); t.value = ""; }
+  if (t.matches("#profile-name")) {
+    const name = t.value.trim();
+    if (!name) { t.value = state.taste.meta.name; return; }
+    api(`/api/taste-profiles/${encodeURIComponent(state.taste.id)}`, { method: "PATCH", body: JSON.stringify({ name }) })
+      .then(async (p) => { state.taste.meta = p.meta; announce("Renamed"); state.tasteProfiles = await api("/api/taste-profiles"); state.profiles = await api("/api/profiles"); renderProfilesNav(); document.title = `${name} · Taste profile · Remodel Lens`; })
+      .catch((e) => announce(`Couldn't rename: ${e.message}`));
+  }
+});
+
+document.addEventListener("input", (event) => {
+  const t = event.target;
+  if (t.matches("input[data-room]")) {
+    const photo = state.listing.photos.find((p) => p.file === t.dataset.room);
+    if (photo) photo.room = t.value;
+    queueSave(t.dataset.room, { room: t.value.trim() });
+  }
+  if (t.matches("#brief")) {
+    state.briefDirty = true;
+    $("#brief-dirty").hidden = false;
+    $("#brief-count").textContent = `${nf.format(t.value.length)} characters`;
+  }
+  if (t.matches("[data-path]") && state.rulesDraft) { setPath(state.rulesDraft, t.dataset.path, t.value); markRulesDirty(); }
+  if (t.matches("[data-lines]") && state.rulesDraft) {
+    setPath(state.rulesDraft, t.dataset.lines, t.value.split("\n").map((l) => l.trim()).filter(Boolean));
+    markRulesDirty();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && event.target.matches("input[data-room]")) { event.preventDefault(); flushSave(); event.target.blur(); }
+  if (event.key === "Enter" && event.target.matches("#profile-name")) { event.preventDefault(); event.target.blur(); }
+  if (event.key === "Escape" && event.target.matches("#profile-name")) { event.target.value = state.taste.meta.name; event.target.blur(); }
+  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+    if (event.target.matches("#brief")) { event.preventDefault(); saveBriefNow(); }
+    else if (event.target.closest("#rules") && state.rulesDirty) { event.preventDefault(); $('[data-action="save-rules"]')?.click(); }
+  }
+});
+
+document.addEventListener("click", async (event) => {
+  const toggle = event.target.closest('[data-toggle="photos"]');
+  if (toggle) return setPhotosHidden(toggle.getAttribute("aria-expanded") === "true");
+
+  const remove = event.target.closest("[data-remove]");
+  if (remove) {
+    const file = remove.dataset.remove;
+    const id = state.taste.id;
+    try {
+      await api(`/api/taste-profiles/${encodeURIComponent(id)}/references/${encodeURIComponent(file)}`, { method: "DELETE" });
+      await refreshTaste(state.rulesDirty ? state.rulesDraft : null);
+      $("#refs-h")?.scrollIntoView({ block: "nearest" });
+      showUndo(`Removed ${file}`, async () => {
+        await api(`/api/taste-profiles/${encodeURIComponent(id)}/references/${encodeURIComponent(file)}/restore`, { method: "POST" });
+        if (state.taste?.id === id) await refreshTaste(state.rulesDirty ? state.rulesDraft : null);
+        announce(`Restored ${file}`);
+      });
+    } catch (error) {
+      announce(`Couldn't remove: ${error.message}`);
+    }
+    return;
+  }
+
+  const del = event.target.closest("[data-delete-rule]");
+  if (del) {
+    const [ci, ri] = del.dataset.deleteRule.split(".").map(Number);
+    state.rulesDraft.categories[ci].rules.splice(ri, 1);
+    const next = state.rulesDraft.categories[ci].rules.length ? `#rule-${ci}-${Math.max(0, ri - 1)}` : `[data-add-rule="${ci}"]`;
+    return rerenderRules(next);
+  }
+  const add = event.target.closest("[data-add-rule]");
+  if (add) {
+    const ci = Number(add.dataset.addRule);
+    state.rulesDraft.categories[ci].rules.push({ rule: "", support: 0, fromBrief: true });
+    return rerenderRules(`#rule-${ci}-${state.rulesDraft.categories[ci].rules.length - 1}`);
+  }
+
+  const action = event.target.closest("[data-action]")?.dataset.action;
+  if (!action) return;
+  if (action === "all" || action === "none") return updateSelection(state.listing.photos.map((p) => p.file), action === "all");
+  if (action === "new-profile") return openNewProfile();
+  if (action === "pick-files") return $("#ref-input").click();
+  if (action === "close-dialog") return $("#new-profile-dialog").close();
+  if (action === "save-brief") return saveBriefNow();
+  if (action === "discard-rules") {
+    state.rulesDraft = structuredClone(state.taste.profile);
+    state.rulesDirty = false;
+    return renderTaste();
+  }
+  if (action === "save-rules") {
+    const draft = structuredClone(state.rulesDraft);
+    for (const c of draft.categories) c.rules = c.rules.filter((r) => r.rule.trim());
+    try {
+      const { imageCount, ...profile } = draft;
+      state.taste = await api(`/api/taste-profiles/${encodeURIComponent(state.taste.id)}/rules`, { method: "PUT", body: JSON.stringify(profile) });
+      state.rulesDraft = structuredClone(state.taste.profile);
+      state.rulesDirty = false;
+      renderTaste();
+      announce("Rules saved");
+      state.tasteProfiles = await api("/api/taste-profiles");
+      renderProfilesNav();
+    } catch (error) {
+      announce(`Couldn't save rules: ${error.message}`);
+    }
+    return;
+  }
+  if (action === "restore-previous") {
+    if (state.rulesDirty && !confirm("Discard your unsaved rule edits and restore the previous version?")) return;
+    try {
+      await api(`/api/taste-profiles/${encodeURIComponent(state.taste.id)}/restore-previous`, { method: "POST" });
+      await refreshTaste(null);
+      announce("Previous rules restored. Restore again to switch back.");
+    } catch (error) {
+      announce(error.message);
+    }
+    return;
+  }
+  if (action === "build") {
+    if (state.briefDirty) await saveBriefNow();
+    if (state.rulesDirty && !confirm("Rebuilding replaces your unsaved rule edits. Continue?")) return;
+    const err = $("#build-error");
+    try {
+      if (state.keysError) throw new Error(state.keysError);
+      state.job = await api(`/api/taste-profiles/${encodeURIComponent(state.taste.id)}/build`, { method: "POST" });
+      state.logOpen = false;
+      err.hidden = true;
+      renderJob();
+      pollJob();
+    } catch (error) {
+      err.textContent = error.message;
+      err.hidden = false;
+      err.focus?.();
+    }
+  }
+});
+
+document.addEventListener("submit", async (event) => {
+  if (event.target.id === "new-profile-form") {
+    event.preventDefault();
+    const name = $("#np-name").value.trim();
+    const err = $("#np-error");
+    if (!name) { err.textContent = "Give the profile a name."; err.hidden = false; $("#np-name").focus(); return; }
+    try {
+      const created = await api("/api/taste-profiles", { method: "POST", body: JSON.stringify({ name, from: $("#np-from").value || null }) });
+      $("#new-profile-dialog").close();
+      location.href = `?taste=${encodeURIComponent(created.id)}`;
+    } catch (error) {
+      err.textContent = error.message;
+      err.hidden = false;
+    }
+    return;
+  }
+  if (event.target.id !== "run-form") return;
+  event.preventDefault();
+  await flushSave();
+  const tiers = [...document.querySelectorAll('input[name="tier"]:checked')].map((i) => i.value);
+  const profile = $("#profile")?.value;
+  const selected = state.listing.photos.filter((p) => p.selected).length;
+  state.runError =
+    state.keysError ? state.keysError :
+    !selected ? "Select at least one photo above." :
+    !tiers.length ? "Choose at least one scope." :
+    !profile ? "Add a taste profile first." : null;
+  if (state.runError) {
+    if (!selected) setParams({ photos: null });
+    renderListing();
+    (!selected ? $("input[data-file]") : !tiers.length ? $('input[name="tier"]') : $("#run-error"))?.focus();
+    return;
+  }
+  const button = event.target.querySelector('button[type="submit"]');
+  button.disabled = true;
+  button.insertAdjacentHTML("afterbegin", '<span class="spinner" aria-hidden="true"></span>');
+  try {
+    state.job = await api(`/api/listings/${encodeURIComponent(state.listing.id)}/runs`, { method: "POST", body: JSON.stringify({ tiers, profile }) });
+    state.runError = null;
+    state.logOpen = false;
+    pollJob();
+  } catch (error) {
+    state.runError = error.message;
+  }
+  renderListing();
+});
+
+function openNewProfile() {
+  const from = $("#np-from");
+  const current = state.view === "taste" ? state.taste?.id : null;
+  from.innerHTML = `<option value="">Empty profile</option>` + state.tasteProfiles.map((p) => `<option value="${esc(p.id)}" ${p.id === current ? "selected" : ""}>Copy of ${esc(p.name)}</option>`).join("");
+  $("#np-name").value = "";
+  $("#np-error").hidden = true;
+  $("#new-profile-dialog").showModal();
+  if (matchMedia("(pointer: fine)").matches) $("#np-name").focus();
+}
+
+// Drag and drop onto the reference area.
+document.addEventListener("dragover", (e) => {
+  const zone = e.target.closest?.("#dropzone");
+  if (!zone || state.job?.status === "running") return;
+  e.preventDefault();
+  zone.classList.add("over");
+});
+document.addEventListener("dragleave", (e) => { if (e.target.closest?.("#dropzone") && !e.relatedTarget?.closest?.("#dropzone")) $("#dropzone").classList.remove("over"); });
+document.addEventListener("drop", (e) => {
+  const zone = e.target.closest?.("#dropzone");
+  if (!zone) return;
+  e.preventDefault();
+  zone.classList.remove("over");
+  uploadFiles(e.dataTransfer.files);
+});
+
+window.addEventListener("beforeunload", (event) => {
+  if (pending.size) { flushSave(); event.preventDefault(); }
+  if (state.briefDirty || state.rulesDirty) event.preventDefault();
+});
+window.addEventListener("popstate", load);
+
+async function load() {
+  try {
+    const [listings, profiles, tasteProfiles, status] = await Promise.all([api("/api/listings"), api("/api/profiles"), api("/api/taste-profiles"), api("/api/status")]);
+    Object.assign(state, { listings, profiles, tasteProfiles, keysError: status.keysError });
+    const banner = $("#banner");
+    banner.hidden = !status.keysError;
+    banner.innerHTML = status.keysError ? `You can pick photos and edit profiles now. To run redesigns or rebuild rules, add <code>OPENAI_API_KEY</code> and <code>ANTHROPIC_API_KEY</code> to <code>.env.local</code> and restart <code>npm run app</code>.` : "";
+
+    const tasteId = params().get("taste");
+    if (tasteId) {
+      state.view = "taste";
+      await loadTaste(tasteId);
+      state.job = state.taste.activeJob;
+      renderListings();
+      renderProfilesNav();
+      renderTaste();
+      return pollJob();
+    }
+
+    state.view = "listing";
+    const id = params().get("listing") ?? listings[0]?.id;
+    renderProfilesNav();
+    if (!id) { state.listing = null; renderListings(); return renderEmpty(); }
+    if (!params().get("listing")) setParams({ listing: id });
+    state.listing = await api(`/api/listings/${encodeURIComponent(id)}`);
+    state.job = state.listing.activeJob;
+    renderListings();
+    renderListing();
+    pollJob();
+  } catch (error) {
+    $("#content").innerHTML = `<div class="empty"><h1 style="font-size:20px;margin-bottom:8px">Couldn't load</h1><p>${esc(error.message)}</p><p><a class="btn" href="/">Back to listings</a></p></div>`;
+  }
+}
+load();
+</script>
+</body>
+</html>
