@@ -11,25 +11,29 @@
 <style>
   /* Gallery system: near-white neutrals, hairlines instead of shadows, color reserved for status and progress. */
   :root {
-    --bg:#fafaf9; --surface:#ffffff; --surface-2:#f1f0ee; --text:#1b1a19; --muted:#66625d;
-    --line:rgba(27,26,25,.09); --line-strong:rgba(27,26,25,.2);
-    --ink:#1b1a19; --ink-text:#fafaf9; --accent:#4c6249; --accent-soft:#eef1ec;
+    --bg:#f5f4f1; --surface:#ffffff; --surface-2:#f5f3ef; --text:#1b1a19; --muted:#625e58;
+    --line:rgba(27,26,25,.1); --line-strong:rgba(27,26,25,.22);
+    --ink:#1b1a19; --ink-text:#fafaf9;
+    /* Primary: deep forest green from the taste palette, for primary actions, selection, and progress only. */
+    --primary:#2f5a44; --primary-hover:#244a37; --primary-text:#ffffff; --primary-soft:#e4eee7;
+    --accent:var(--primary); --accent-soft:var(--primary-soft);
     --ok:#3d6a4c; --warn:#8a6216; --warn-bg:#f7f0e2; --bad:#9a3b2f; --bad-bg:#f7ebe8;
     --font:"Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono:ui-monospace, "SF Mono", Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg:#121211; --surface:#1a1a19; --surface-2:#242322; --text:#ecebe8; --muted:#a39f99;
-      --line:rgba(236,235,232,.09); --line-strong:rgba(236,235,232,.22);
-      --ink:#ecebe8; --ink-text:#121211; --accent:#9db59a; --accent-soft:#1f2a1e;
+      --bg:#0e0e0d; --surface:#1b1a19; --surface-2:#242321; --text:#ecebe8; --muted:#a39f99;
+      --line:rgba(236,235,232,.1); --line-strong:rgba(236,235,232,.22);
+      --ink:#ecebe8; --ink-text:#121211;
+      --primary:#8cc3a1; --primary-hover:#a3d1b5; --primary-text:#0d1a12; --primary-soft:#1b2a21;
       --ok:#8fc49f; --warn:#e0bd78; --warn-bg:#2c2414; --bad:#ee9d90; --bad-bg:#321b17;
     }
   }
   * { box-sizing:border-box; }
   [hidden] { display:none !important; } /* author display rules must not resurrect hidden elements */
-  html { -webkit-tap-highlight-color:transparent; scrollbar-color:var(--line-strong) transparent; }
-  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.55 var(--font); caret-color:var(--text); accent-color:var(--ink); }
+  html { -webkit-tap-highlight-color:transparent; scrollbar-color:var(--line-strong) transparent; scrollbar-gutter:stable; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.55 var(--font); caret-color:var(--text); accent-color:var(--primary); }
   ::selection { background:color-mix(in srgb, var(--accent) 28%, transparent); }
   button, input, select, textarea { font:inherit; color:inherit; touch-action:manipulation; }
   a { color:inherit; text-underline-offset:3px; text-decoration-thickness:1px; }
@@ -46,37 +50,53 @@
   h3 { font-size:15px; }
 
   /* Shell */
-  .top { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px max(20px, env(safe-area-inset-left)); border-bottom:1px solid var(--line); }
+  .top { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px; min-height:52px; padding:0 max(20px, env(safe-area-inset-left)); background:var(--surface); border-bottom:1px solid var(--line); }
   .brand { font-weight:600; text-decoration:none; letter-spacing:-.01em; }
+  #save-status { grid-column:3; justify-self:end; }
   .banner { margin:16px max(20px, env(safe-area-inset-left)) 0; padding:10px 14px; border-radius:8px; background:var(--warn-bg); color:var(--warn); font-size:14px; }
   .banner code { font-family:var(--mono); font-size:13px; }
-  .layout { display:grid; grid-template-columns:232px minmax(0, 1fr); gap:40px; max-width:1360px; margin:0 auto; padding:24px max(20px, env(safe-area-inset-left)) 96px; }
+  .layout { display:grid; grid-template-columns:248px minmax(0, 1fr); gap:32px; max-width:1360px; margin:0 auto; padding:24px max(20px, env(safe-area-inset-left)) 96px; }
   @media (max-width: 860px) { .layout { grid-template-columns:minmax(0, 1fr); gap:24px; } }
-  .side { display:grid; gap:28px; align-content:start; }
-  .side-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; min-height:32px; }
-  .side-head h2 { font-size:12px; font-weight:500; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); }
+  .side { display:grid; gap:24px; align-content:start; align-self:start; position:sticky; top:24px; padding:2px 0; } /* no scroll container: shadows and the press scale render unclipped */
+  .side .brand { display:block; padding-left:10px; font-size:17px; min-height:32px; line-height:32px; }
+  @media (max-width: 860px) { .side { position:static; max-height:none; } }
+  .side-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; min-height:32px; padding-left:10px; }
+  .side-head h2 { font-size:14px; font-weight:500; color:var(--muted); }
   nav ul { list-style:none; margin:0; padding:0; display:grid; gap:2px; }
-  .nav-link { display:flex; gap:10px; align-items:center; padding:7px 8px; margin:0 -8px; border-radius:8px; text-decoration:none; min-height:44px; }
-  .nav-link:hover { background:var(--surface-2); }
-  .nav-link[aria-current="page"] { background:var(--surface-2); }
+  nav ul { position:relative; }
+  .nav-link { position:relative; z-index:1; display:flex; gap:12px; align-items:center; padding:8px 10px; border-radius:10px; text-decoration:none; min-height:52px; }
+  .nav-link:hover:not([aria-current="page"]) { background:color-mix(in srgb, var(--surface) 60%, transparent); }
+  .nav-indicator { position:absolute; left:0; right:0; top:0; height:0; border-radius:10px; background:var(--surface); box-shadow:var(--shadow); pointer-events:none; opacity:0; }
   .nav-link[aria-current="page"] .nav-name { font-weight:600; }
-  .nav-link img { width:44px; height:33px; object-fit:cover; border-radius:3px; background:var(--surface-2); flex:none; }
+  .nav-link img { width:48px; height:36px; object-fit:cover; border-radius:6px; background:var(--surface-2); flex:none; }
   .nav-link small { display:block; color:var(--muted); font-size:13px; }
   .nav-link .stale { color:var(--warn); }
 
-  main { min-width:0; display:grid; grid-template-columns:minmax(0, 1fr); gap:40px; align-content:start; }
-  main > * { min-width:0; } /* sections must shrink to the column, not size it */
-  .head { display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:12px; }
+  main { min-width:0; display:grid; grid-template-columns:minmax(0, 1fr); gap:20px; align-content:start; }
+  main > * { min-width:0; }
+  /* Programmatic focus target after in-page navigation (for screen readers); not a control, so no ring. */
+  #content:focus, #content:focus-visible { outline:none; }
+  main > .head + * { margin-top:var(--main-offset, 0px); } /* sections must shrink to the column, not size it */
+  /* Page title matches the brand: same size, same 32px line box, same top offset, so baselines align. */
+  /* Rename: small, revealed on hover or keyboard focus; always visible on touch screens. */
+  .title-row .icon-plain { width:24px; height:24px; border-radius:6px; opacity:0; }
+  .title-row .icon-plain .icon { width:14px; height:14px; }
+  .title-row:hover .icon-plain, .title-row .icon-plain:focus-visible { opacity:1; }
+  @media (hover: none) { .title-row .icon-plain { opacity:1; } }
+  .head h1 { font-size:17px; line-height:32px; letter-spacing:-.01em; }
+  .title-input { font-size:17px !important; line-height:30px; }
+  .head { padding-top:2px; display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:12px; }
   .subhead { margin:6px 0 0; color:var(--muted); font-size:14px; }
   .section-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; margin-bottom:14px; }
   .tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .hint { margin:6px 0 0; font-size:13px; color:var(--muted); max-width:68ch; }
 
   /* Controls */
-  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:36px; padding:6px 14px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); cursor:pointer; font-size:14px; font-weight:500; text-decoration:none; white-space:nowrap; }
-  .btn:hover { border-color:var(--text); }
-  .btn-primary { background:var(--ink); color:var(--ink-text); border-color:var(--ink); min-height:40px; padding:8px 18px; }
-  .btn-primary:hover { opacity:.88; border-color:var(--ink); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:38px; padding:6px 14px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); cursor:pointer; font-size:14px; font-weight:500; text-decoration:none; white-space:nowrap; }
+  .btn:hover { border-color:var(--text); box-shadow:var(--shadow-hover); }
+  .btn-primary { background:var(--primary); color:var(--primary-text); border-color:var(--primary); padding:6px 16px; font-weight:600; box-shadow:0 1px 2px rgba(20,40,28,.18); }
+  .btn-primary:hover { background:var(--primary-hover); border-color:var(--primary-hover); }
+  .btn-primary:active { transform:translateY(1px); }
   .btn-quiet { border-color:transparent; background:transparent; padding-inline:8px; }
   .btn-quiet:hover { background:var(--surface-2); border-color:transparent; }
   .btn-small { min-height:32px; padding:4px 10px; font-size:13px; }
@@ -86,17 +106,26 @@
   select { min-height:40px; padding:6px 32px 6px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2366625d' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E") no-repeat right 10px center; appearance:none; max-width:100%; font-size:16px; }
   textarea { width:100%; font-size:15px; line-height:1.55; background:var(--surface); border:1px solid var(--line-strong); border-radius:8px; padding:10px 12px; resize:vertical; }
   textarea:focus, select:focus, input[type="text"]:focus { outline:2px solid var(--text); outline-offset:1px; }
-  .panel { border:1px solid var(--line); border-radius:10px; padding:20px; background:var(--surface); }
+  .panel { border:0; border-radius:12px; padding:24px 28px; background:var(--surface); box-shadow:var(--shadow); }
+  @media (max-width: 600px) { .panel { padding:18px 16px; } }
+  .zone-divider { height:1px; background:var(--line); margin:24px 0; border:0; }
   .error { color:var(--bad); margin:0; }
   .notice { padding:10px 14px; border-radius:8px; background:var(--warn-bg); color:var(--warn); margin:0; font-size:14px; }
 
   /* Listing: photo selection */
   .disclosure { display:inline-flex; align-items:center; gap:10px; min-height:44px; margin:-8px 0 -8px -8px; padding:8px; border:0; border-radius:8px; background:none; text-align:left; cursor:pointer; font-weight:600; }
-  .disclosure:hover { background:var(--surface-2); }
-  .chevron { display:inline-grid; place-items:center; transition:transform .2s cubic-bezier(.16,1,.3,1); }
+  .disclosure:hover:not(:disabled) { background:var(--surface-2); }
+  .disclosure:disabled { cursor:default; }
+  .disclosure:disabled .chevron { visibility:hidden; }
+  .chevron { display:inline-grid; place-items:center; transition:transform .2s var(--ease); }
   .disclosure[aria-expanded="false"] .chevron { transform:rotate(-90deg); }
   .strip { display:flex; gap:6px; overflow:hidden; mask-image:linear-gradient(to right, #000 85%, transparent); }
   .strip img { width:54px; height:36px; object-fit:cover; border-radius:3px; flex:none; background:var(--surface-2); }
+  .collapse { display:grid; grid-template-rows:1fr; opacity:1; transition:grid-template-rows .34s var(--ease), opacity .22s var(--ease); }
+  .collapse > .collapse-inner { overflow:hidden; min-height:0; padding:4px; margin:-4px; } /* room for focus rings */
+  .collapse[data-collapsed="true"] { grid-template-rows:0fr; opacity:0; visibility:hidden; transition:grid-template-rows .34s var(--ease), opacity .16s var(--ease), visibility 0s linear .34s; }
+  .fade { transition:opacity .2s var(--ease), visibility 0s; }
+  .fade[data-collapsed="true"] { opacity:0; visibility:hidden; transition:opacity .16s var(--ease), visibility 0s linear .16s; }
   .skip-inline { position:absolute; left:-9999px; }
   .skip-inline:focus { position:static; display:inline-flex; margin-bottom:10px; }
   .grid { display:grid; gap:20px 16px; grid-template-columns:repeat(auto-fill, minmax(min(100%, 230px), 1fr)); }
@@ -107,13 +136,14 @@
   .pick input { position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; }
   .check { position:absolute; top:10px; left:10px; width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,.92); border:1.5px solid rgba(0,0,0,.3); display:grid; place-items:center; color:transparent; }
   .check .icon { width:15px; height:15px; }
-  .pick input:checked ~ .check { background:var(--ink); border-color:var(--ink); color:var(--ink-text); }
+  .pick input:checked ~ .check { background:var(--primary); border-color:var(--primary); color:var(--primary-text); }
   .pick input:focus-visible ~ .check { outline:2px solid var(--text); outline-offset:3px; }
-  .meta { padding-top:10px; display:grid; gap:4px; }
+  .meta { padding-top:10px; display:grid; gap:6px; }
   .meta label { font-size:12px; color:var(--muted); }
   .room { width:100%; min-height:36px; padding:6px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); font-size:16px; }
   .room:focus { outline:2px solid var(--text); outline-offset:1px; }
-  .file { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+  .file { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12px; color:var(--muted); min-height:24px; }
+  .file-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
   .file a { display:inline-flex; align-items:center; gap:4px; color:var(--muted); min-height:24px; }
   .file a:hover { color:var(--text); }
   .file .icon { width:13px; height:13px; }
@@ -124,8 +154,8 @@
   legend { font-weight:500; margin-bottom:8px; padding:0; font-size:14px; }
   .tiers { display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
   .tier { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border:1px solid var(--line-strong); border-radius:8px; cursor:pointer; min-height:44px; transition:border-color .15s, background .15s; }
-  .tier:hover { border-color:var(--text); }
-  .tier:has(input:checked) { border-color:var(--ink); background:var(--accent-soft); }
+  .tier:hover { border-color:var(--text); box-shadow:var(--shadow-hover); }
+  .tier:has(input:checked) { border-color:var(--primary); background:var(--primary-soft); }
   .tier input { width:16px; height:16px; margin:3px 0 0; flex:none; }
   .tier strong { font-weight:500; }
   .tier small { display:block; color:var(--muted); font-size:13px; }
@@ -143,7 +173,7 @@
   .progress-head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
   .progress-head strong { font-weight:500; }
   .bar { height:4px; border-radius:999px; background:var(--surface-2); overflow:hidden; }
-  .bar > span { display:block; height:100%; background:var(--accent); transform-origin:0 50%; transition:transform .6s cubic-bezier(.16,1,.3,1); }
+  .bar > span { display:block; height:100%; background:var(--primary); transform-origin:0 50%; transition:transform .6s var(--ease); }
   .bar.error > span { background:var(--bad); }
   .progress-label { margin:0; font-size:13px; color:var(--muted); }
   details.log-details { margin-top:6px; }
@@ -155,6 +185,7 @@
 
   /* Past runs */
   .runs { list-style:none; margin:0; padding:0; border-top:1px solid var(--line); }
+  .runs .run:last-child { border-bottom:0; padding-bottom:0; }
   .run { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px 20px; padding:14px 0; border-bottom:1px solid var(--line); }
   .run-main { min-width:0; display:grid; gap:4px; }
   .run-title { font-weight:500; text-decoration:none; justify-self:start; }
@@ -173,6 +204,7 @@
   .title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .title-input { font-size:clamp(26px, 3vw, 32px); font-weight:600; letter-spacing:-.02em; border:1px solid var(--line-strong); border-radius:8px; background:var(--surface); padding:2px 8px; width:min(100%, 22ch); }
   .stats { display:flex; flex-wrap:wrap; gap:4px 0; margin:6px 0 0; color:var(--muted); font-size:14px; }
+  .stats span { min-width:0; overflow-wrap:anywhere; }
   .stats span + span::before { content:"·"; margin:0 8px; opacity:.6; }
   .ref-grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fill, minmax(min(100%, 132px), 1fr)); }
   .ref { position:relative; border-radius:3px; overflow:hidden; background:var(--surface-2); aspect-ratio:4 / 5; }
@@ -185,7 +217,9 @@
   .ref .remove .icon { width:14px; height:14px; }
   .ref .name { position:absolute; left:6px; bottom:6px; font-size:11px; padding:1px 6px; border-radius:999px; background:rgba(18,18,17,.55); color:#fff; }
   .dropzone { border:1px dashed var(--line-strong); border-radius:10px; padding:16px; transition:border-color .15s, background .15s; }
-  .dropzone.over { border-color:var(--ink); background:var(--accent-soft); }
+  .dropzone.over { border-color:var(--primary); background:var(--primary-soft); }
+  .dropzone-quiet { border-radius:10px; transition:background .15s, outline-color .15s; outline:2px dashed transparent; outline-offset:4px; }
+  .dropzone-quiet.over { outline-color:var(--primary); background:var(--primary-soft); }
   .dropzone-empty { display:grid; place-items:center; gap:10px; padding:40px 16px; text-align:center; color:var(--muted); }
   .dropzone-empty .icon { width:22px; height:22px; }
   .upload-list { list-style:none; margin:10px 0 0; padding:0; font-size:13px; display:grid; gap:2px; }
@@ -208,34 +242,50 @@
   .tag-weak { color:var(--warn); }
   .icon-btn { width:32px; height:32px; border-radius:8px; border:0; background:transparent; color:var(--muted); cursor:pointer; display:grid; place-items:center; }
   .icon-btn:hover, .icon-btn:focus-visible { color:var(--bad); background:var(--bad-bg); }
+  .icon-plain:hover, .icon-plain:focus-visible { color:var(--text); background:var(--surface-2); }
   .sub-label { display:block; font-size:13px; font-weight:500; margin:16px 0 6px; }
+  .savebar:not([hidden]) { animation:pop-in var(--base) var(--ease-pop); }
   .savebar { position:sticky; bottom:16px; z-index:6; display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; padding:10px 10px 10px 18px; border-radius:10px; background:var(--ink); color:var(--ink-text); box-shadow:0 2px 4px rgba(0,0,0,.08), 0 12px 32px rgba(0,0,0,.16); }
   .savebar p { margin:0; flex:1 1 220px; font-size:14px; }
   .savebar .btn { background:transparent; color:var(--ink-text); border-color:color-mix(in srgb, var(--ink-text) 35%, transparent); }
   .savebar .btn-primary { background:var(--ink-text); color:var(--ink); border-color:var(--ink-text); }
-  .toast { position:fixed; left:50%; bottom:max(20px, env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:var(--ink-text); padding:10px 10px 10px 16px; border-radius:10px; display:flex; gap:12px; align-items:center; box-shadow:0 2px 4px rgba(0,0,0,.08), 0 12px 32px rgba(0,0,0,.16); z-index:20; font-size:14px; }
+  .toast { animation:pop-in var(--base) var(--ease-pop); position:fixed; left:50%; bottom:max(20px, env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:var(--ink-text); padding:10px 10px 10px 16px; border-radius:10px; display:flex; gap:12px; align-items:center; box-shadow:0 2px 4px rgba(0,0,0,.08), 0 12px 32px rgba(0,0,0,.16); z-index:20; font-size:14px; }
   .toast button { background:transparent; color:inherit; border:1px solid color-mix(in srgb, currentColor 40%, transparent); border-radius:7px; padding:4px 12px; min-height:32px; font-weight:500; cursor:pointer; }
   dialog.modal { border:1px solid var(--line); border-radius:12px; padding:24px; width:min(440px, calc(100vw - 32px)); background:var(--surface); color:var(--text); box-shadow:0 2px 4px rgba(0,0,0,.06), 0 16px 48px rgba(0,0,0,.16); }
   dialog.modal::backdrop { background:rgba(0,0,0,.4); }
   dialog.modal input[type="text"], dialog.modal select { width:100%; min-height:42px; font-size:16px; padding:8px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); }
   @media (prefers-reduced-motion: reduce) { .spinner { animation-duration:2.4s; } * { transition:none !important; } }
+
+  /* Motion + depth system */
+  :root { --ease:cubic-bezier(0.22, 1, 0.36, 1); --ease-pop:cubic-bezier(0.35, 1.55, 0.65, 1); --fast:120ms; --base:240ms; --slow:360ms;
+    --shadow:0 1px 2px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.02), 0 0 0 0.5px rgba(0,0,0,0.08);
+    --shadow-hover:0 2px 4px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.08); }
+  @media (prefers-color-scheme: dark) { :root {
+    --shadow:0 1px 2px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(255,255,255,0.08);
+    --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.12); } }
+  /* Every clickable element presses to 98% on the fast duration. */
+  button, .btn, a.nav-link, .tier, .pick, .zoom, summary, [role="tab"] { transition:transform var(--fast) var(--ease), box-shadow var(--base) var(--ease), background-color var(--base) var(--ease), border-color var(--base) var(--ease), color var(--base) var(--ease), opacity var(--base) var(--ease); }
+  button:active:not(:disabled), .btn:active, a.nav-link:active, .tier:active, .pick:active, .zoom:active, summary:active, [role="tab"]:active { transform:scale(0.98); }
+  /* Tooltips: fade, lift 4px, clear a 2px blur. First one waits; never instant. */
+  [data-tip] { position:relative; }
+  [data-tip]::after { content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 6px); translate:-50% 4px; filter:blur(2px); opacity:0; pointer-events:none; white-space:nowrap; font-size:12px; font-weight:500; padding:4px 8px; border-radius:6px; background:var(--ink, #1b1a19); color:var(--ink-text, #fafaf9); box-shadow:var(--shadow); transition:opacity var(--base) var(--ease), translate var(--base) var(--ease), filter var(--base) var(--ease); transition-delay:0s; z-index:40; }
+  [data-tip]:hover::after, [data-tip]:focus-visible::after { opacity:1; translate:-50% 0; filter:blur(0); transition-delay:400ms; }
+  @keyframes pop-in { from { opacity:0; transform:translateY(6px) scale(0.96); } to { opacity:1; transform:none; } }
 </style>
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
-<header class="top">
-  <a class="brand" href="/">Remodel Lens</a>
-  <span id="save-status" class="muted" role="status" aria-live="polite" style="font-size:13px"></span>
-</header>
+<span id="save-status" class="muted" role="status" aria-live="polite" style="position:fixed;top:12px;right:16px;font-size:13px;z-index:30"></span>
 <div id="banner" class="banner" hidden></div>
 <div class="layout">
   <div class="side">
-    <nav aria-label="Listings">
-      <div class="side-head"><h2>Listings</h2></div>
+    <a class="brand" href="/">Remodel Lens</a>
+    <nav aria-label="Listings" id="listings-nav" style="margin-top:var(--side-offset, 0px)">
+      <div class="side-head"><h2>Listings</h2><button class="icon-btn icon-plain" type="button" data-action="new-listing" aria-label="New listing" data-tip="New listing"><span data-icon="plus"></span></button></div>
       <ul id="listings"><li class="muted">Loading…</li></ul>
     </nav>
     <nav aria-label="Taste profiles">
-      <div class="side-head"><h2>Taste profiles</h2><button class="btn btn-quiet btn-small" type="button" data-action="new-profile"><span data-icon="plus"></span>New</button></div>
+      <div class="side-head"><h2>Taste profiles</h2><button class="icon-btn icon-plain" type="button" data-action="new-profile" aria-label="New taste profile" data-tip="New taste profile"><span data-icon="plus"></span></button></div>
       <ul id="profiles-nav"><li class="muted">Loading…</li></ul>
     </nav>
   </div>
@@ -245,18 +295,40 @@
 </div>
 <div id="progress-live" class="sr-only" aria-live="polite"></div>
 
+<dialog class="modal" id="new-listing-dialog" aria-labelledby="new-listing-h">
+  <form method="dialog" id="new-listing-form" novalidate>
+    <h2 id="new-listing-h" style="margin:0 0 16px;font-size:18px">New listing</h2>
+    <label class="field-label" for="nl-name">Name</label>
+    <input type="text" id="nl-name" name="name" maxlength="80" autocomplete="off" placeholder="e.g. 123 Main St…" required>
+    <label class="field-label" for="nl-location" style="margin-top:16px">Location <span class="muted" style="font-weight:400">(optional)</span></label>
+    <input type="text" id="nl-location" name="location" maxlength="120" autocomplete="address-level2" placeholder="e.g. Bellevue, WA…">
+    <p class="hint">Used to estimate local remodel costs.</p>
+    <label class="field-label" for="nl-desc" style="margin-top:16px">Description <span class="muted" style="font-weight:400">(optional)</span></label>
+    <textarea id="nl-desc" name="description" rows="2" maxlength="300" placeholder="e.g. 4 bed rambler, open house Saturday…"></textarea>
+    <p id="nl-error" class="error" role="alert" hidden style="margin-top:10px"></p>
+    <div class="field-row" style="justify-content:flex-end;margin-top:20px">
+      <button class="btn" type="button" data-action="close-dialog">Cancel</button>
+      <button class="btn btn-primary" type="submit" id="nl-submit">Create listing</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog class="modal" id="new-profile-dialog" aria-labelledby="new-profile-h">
   <form method="dialog" id="new-profile-form" novalidate>
     <h2 id="new-profile-h" style="margin:0 0 16px;font-size:18px">New taste profile</h2>
     <label class="field-label" for="np-name">Name</label>
     <input type="text" id="np-name" name="name" maxlength="60" autocomplete="off" spellcheck="false" placeholder="e.g. Coastal modern…" required>
-    <label class="field-label" for="np-from" style="margin-top:16px">Start from</label>
-    <select id="np-from" name="from"></select>
-    <p class="hint">A copy brings its reference photos, brief, and rules. You can change any of them afterwards.</p>
+    <label class="field-label" for="np-desc" style="margin-top:16px">Description <span class="muted" style="font-weight:400">(optional)</span></label>
+    <textarea id="np-desc" name="description" rows="2" maxlength="300" placeholder="e.g. Warm oak and plaster for the Bellevue search…"></textarea>
+    <div id="np-from-field">
+      <label class="field-label" for="np-from" style="margin-top:16px">Start from</label>
+      <select id="np-from" name="from"></select>
+      <p class="hint">A copy brings its reference photos, brief, and rules. You can change any of them afterwards.</p>
+    </div>
     <p id="np-error" class="error" role="alert" hidden style="margin-top:10px"></p>
     <div class="field-row" style="justify-content:flex-end;margin-top:20px">
       <button class="btn" type="button" data-action="close-dialog">Cancel</button>
-      <button class="btn btn-primary" type="submit" value="create">Create profile</button>
+      <button class="btn btn-primary" type="submit" value="create" id="np-submit">Create profile</button>
     </div>
   </form>
 </dialog>
@@ -361,6 +433,7 @@ function rerenderTaste() {
 
 function renderListings() {
   const current = state.view === "listing" ? state.listing?.id : null;
+  const keepL = $("#listings .nav-indicator");
   $("#listings").innerHTML = state.listings.length
     ? state.listings.map((l) => `
       <li><a class="nav-link" href="?listing=${encodeURIComponent(l.id)}${params().get("photos") === "hidden" ? "&photos=hidden" : ""}" ${l.id === current ? 'aria-current="page"' : ""}>
@@ -368,16 +441,67 @@ function renderListings() {
         <span><span class="nav-name">${esc(l.name)}</span><small class="num">${l.id === current ? state.listing.photos.filter((p) => p.selected).length : l.selectedCount} of ${l.photoCount} selected</small></span>
       </a></li>`).join("")
     : `<li class="muted" style="font-size:14px">No listings yet.</li>`;
+  if (keepL) $("#listings").prepend(keepL);
+  placeIndicators();
 }
+
+/** Place each nav's highlight on the current item immediately. */
+function placeIndicators() {
+  for (const ul of document.querySelectorAll("#listings, #profiles-nav")) {
+    let ind = ul.querySelector(".nav-indicator");
+    if (!ind) { ind = document.createElement("li"); ind.className = "nav-indicator"; ind.setAttribute("aria-hidden", "true"); ul.prepend(ind); }
+    const cur = ul.querySelector('.nav-link[aria-current="page"]');
+    if (!cur) { ind.style.opacity = "0"; continue; }
+    ind.style.transform = `translateY(${cur.offsetTop}px)`;
+    ind.style.height = `${cur.offsetHeight}px`;
+    ind.style.opacity = "1";
+  }
+}
+
+/** Line the "Listings" label up with the first metadata line under the page title. */
+function alignSidebar() {
+  const root = document.documentElement;
+  const nav = $("#listings-nav");
+  const label = nav?.querySelector(".side-head h2");
+  const target = $("#content .head .subhead, #content .head .stats");
+  if (!nav || !label) return;
+  if (!target || matchMedia("(max-width: 860px)").matches) {
+    root.style.setProperty("--side-offset", "0px");
+    root.style.setProperty("--main-offset", "0px");
+    return;
+  }
+  const current = parseFloat(getComputedStyle(nav).marginTop) || 0;
+  const mid = (el) => { const r = el.getBoundingClientRect(); return r.top + r.height / 2; };
+  // Match vertical centers of the two text lines (same 14px size, so baselines line up too).
+  const targetMid = target.getBoundingClientRect().top + parseFloat(getComputedStyle(target).lineHeight) / 2;
+  const offset = current + targetMid - mid(label);
+  document.documentElement.style.setProperty("--side-offset", `${Math.round(offset)}px`);
+
+  // Then start the main column's first panel level with the top of the first sidebar item.
+  const link = nav.querySelector(".nav-link");
+  const first = [...$("#content").children].find((el) => !el.classList.contains("head"));
+  if (!link || !first) return;
+  const curMain = parseFloat(getComputedStyle(root).getPropertyValue("--main-offset")) || 0;
+  const naturalTop = first.getBoundingClientRect().top - curMain;
+  const minPanelTop = $("#content .head").getBoundingClientRect().bottom + 8;
+  const clearance = Math.max(0, minPanelTop - link.getBoundingClientRect().top);
+  if (clearance) root.style.setProperty("--side-offset", `${Math.round(offset) + clearance}px`);
+  const linkTopFinal = link.getBoundingClientRect().top;
+  root.style.setProperty("--main-offset", `${linkTopFinal - naturalTop}px`);
+}
+addEventListener("resize", () => requestAnimationFrame(alignSidebar));
 
 function renderProfilesNav() {
   const current = state.view === "taste" ? state.taste?.id : null;
+  const keepP = $("#profiles-nav .nav-indicator");
   $("#profiles-nav").innerHTML = state.tasteProfiles.length
     ? state.tasteProfiles.map((p) => `
       <li><a class="nav-link" href="?taste=${encodeURIComponent(p.id)}" ${p.id === current ? 'aria-current="page"' : ""}>
         <span><span class="nav-name">${esc(p.name)}</span><small class="num">${p.referenceCount} photos · ${p.built ? `${p.ruleCount} rules` : "no rules yet"}${p.running ? " · rebuilding…" : p.stale ? ' · <span class="stale">out of date</span>' : ""}</small></span>
       </a></li>`).join("")
     : `<li class="muted" style="font-size:14px">No profiles yet.</li>`;
+  if (keepP) $("#profiles-nav").prepend(keepP);
+  placeIndicators();
 }
 
 /* ---------- Job progress (shared by redesign runs and profile rebuilds) ---------- */
@@ -432,16 +556,22 @@ function renderJobInto(el, job, doneHtml) {
 // <details> "toggle" doesn't bubble; capture it to remember the log's open state across re-renders.
 document.addEventListener("toggle", (e) => { if (e.target.matches?.("details.log-details")) state.logOpen = e.target.open; }, true);
 
+let pollTimer;
 async function pollJob() {
+  clearTimeout(pollTimer); // one polling loop, even across in-place navigation
   if (!state.job || state.job.status !== "running") return;
+  const id = state.job.id;
+  let next;
   try {
-    state.job = await api(`/api/jobs/${state.job.id}`);
+    next = await api(`/api/jobs/${id}`);
   } catch {
     return;
   }
+  if (state.job?.id !== id) return; // navigated to another listing or profile meanwhile
+  state.job = next;
   if (state.job.status === "running") {
     renderJob();
-    setTimeout(pollJob, 2000);
+    pollTimer = setTimeout(pollJob, 2000);
     return;
   }
   if (state.view === "listing") {
@@ -519,52 +649,65 @@ function renderListing() {
 
   $("#content").innerHTML = `
     <div class="head">
-      <div>
-        <h1>${esc(l.name)}</h1>
-        ${l.location || l.source ? `<p class="subhead">${esc([l.location?.replace(/\s*\(.*\)$/, ""), l.source].filter(Boolean).join(" · "))}</p>` : ""}
+      <div style="min-width:0;flex:1">
+        <div class="title-row" style="gap:4px"><h1>${esc(l.name)}</h1><button class="icon-btn icon-plain" type="button" data-action="edit-listing" aria-label="Edit listing details" data-tip="Edit">${icon("pencil")}</button></div>
+        ${l.location || l.source || l.description ? `<p class="stats">${[l.location?.replace(/\s*\(.*\)$/, ""), l.source, l.description].filter(Boolean).map((text) => `<span>${esc(text)}</span>`).join("")}</p>` : ""}
       </div>
     </div>
 
-    <section aria-labelledby="photos-h">
+    <section class="panel zone" aria-labelledby="photos-h" id="photos-zone">
       <div class="section-head">
-        <h2 id="photos-h"><button class="disclosure" type="button" aria-expanded="${!photosHidden}" aria-controls="photos-body" data-toggle="photos">
+        <h2 id="photos-h"><button class="disclosure" type="button" aria-expanded="${!photosHidden}" aria-controls="photos-body" data-toggle="photos" ${l.photos.length ? "" : "disabled"}>
           <span class="chevron">${icon("chevron")}</span>
           <span>Photos to redesign <span class="muted num" style="font-weight:400">· ${selected} of ${l.photos.length}</span></span>
         </button></h2>
-        <div class="tools" data-photos-only ${photosHidden ? "hidden" : ""}>
-          <button class="btn btn-small" type="button" data-action="all" ${selected === l.photos.length ? "disabled" : ""}>Select all</button>
-          <button class="btn btn-small" type="button" data-action="none" ${selected === 0 ? "disabled" : ""}>Clear</button>
+        <div class="tools">
+          <span class="tools fade" data-photos-only data-collapsed="${photosHidden}">
+            <button class="btn btn-small" type="button" data-action="all" ${selected === l.photos.length ? "disabled" : ""}>Select all</button>
+            <button class="btn btn-small" type="button" data-action="none" ${selected === 0 ? "disabled" : ""}>Clear</button>
+          </span>
+          <button class="btn btn-small" type="button" data-action="pick-photos" ${running ? "disabled" : ""}>${icon("plus")}Add photos</button>
+          <input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp,image/tiff" multiple hidden>
         </div>
       </div>
-      <div class="strip" aria-hidden="true" data-photos-strip ${photosHidden ? "" : "hidden"}>
-        ${l.photos.filter((p) => p.selected).map((p) => `<img src="${esc(p.thumb.replace("w=640", "w=160"))}" alt="" width="54" height="36" loading="lazy">`).join("")}
+      ${l.photos.length ? `
+      <div class="collapse" data-photos-strip data-collapsed="${!photosHidden}" aria-hidden="true">
+        <div class="collapse-inner"><div class="strip">
+          ${l.photos.filter((p) => p.selected).map((p) => `<img src="${esc(p.thumb.replace("w=640", "w=160"))}" alt="" width="54" height="36" loading="lazy">`).join("")}
+        </div></div>
       </div>
-      <div id="photos-body" ${photosHidden ? "hidden" : ""}>
-        <a class="skip-inline btn btn-small" href="#run-h">Skip to redesign settings</a>
-        <p class="hint" style="margin:-4px 0 16px">Room labels decide which part of your taste profile applies: "great room" uses living-room direction, "den" uses office and living.</p>
-        <div class="grid">
-          ${l.photos.map((p, i) => {
-            const label = p.room || p.file;
-            return `
-            <div class="card" data-selected="${p.selected}">
-              <label class="pick">
-                <input type="checkbox" data-file="${esc(p.file)}" ${p.selected ? "checked" : ""}>
-                <img src="${esc(p.thumb)}" alt="" width="640" height="427" loading="${i < 6 ? "eager" : "lazy"}" decoding="async">
-                <span class="check" aria-hidden="true">${icon("check")}</span>
-                <span class="sr-only">Redesign ${esc(label)} (${esc(p.file)})</span>
-              </label>
-              <div class="meta">
-                <label for="room-${i}">Room</label>
-                <input class="room" id="room-${i}" name="room-${esc(p.file)}" data-room="${esc(p.file)}" value="${esc(p.room)}" placeholder="e.g. kitchen…" autocomplete="off" spellcheck="false" maxlength="80">
-                <div class="file"><span>${p.selected ? "" : "Skipped · "}${esc(p.file)}</span><a href="${esc(p.full)}" target="_blank" rel="noopener" aria-label="View ${esc(label)} full size (opens in a new tab)">${icon("expand")}View</a></div>
-              </div>
-            </div>`;
-          }).join("")}
+      <div class="collapse" id="photos-body" data-collapsed="${photosHidden}">
+        <div class="collapse-inner dropzone-quiet" id="photo-drop">
+          <a class="skip-inline btn btn-small" href="#run-h">Skip to redesign settings</a>
+          <p class="hint" style="margin:0 0 16px">Room labels decide which part of your taste profile applies: "great room" uses living-room direction, "den" uses office and living. Drop more photos here to add them.</p>
+          <div class="grid">
+            ${l.photos.map((p, i) => {
+              const label = p.room || p.file;
+              return `
+              <div class="card" data-selected="${p.selected}">
+                <label class="pick">
+                  <input type="checkbox" data-file="${esc(p.file)}" ${p.selected ? "checked" : ""}>
+                  <img src="${esc(p.thumb)}" alt="" width="640" height="427" loading="${i < 6 ? "eager" : "lazy"}" decoding="async">
+                  <span class="check" aria-hidden="true">${icon("check")}</span>
+                  <span class="sr-only">Redesign ${esc(label)} (${esc(p.file)})</span>
+                </label>
+                <div class="meta">
+                  <label for="room-${i}">Room</label>
+                  <input class="room" id="room-${i}" name="room-${esc(p.file)}" data-room="${esc(p.file)}" value="${esc(p.room)}" placeholder="e.g. kitchen…" autocomplete="off" spellcheck="false" maxlength="80">
+                  <div class="file"><span class="file-name">${p.selected ? "" : "Skipped · "}${esc(p.file)}</span><a href="${esc(p.full)}" target="_blank" rel="noopener" aria-label="View ${esc(label)} full size (opens in a new tab)">${icon("expand")}View</a></div>
+                </div>
+              </div>`;
+            }).join("")}
+          </div>
         </div>
-      </div>
-    </section>
+      </div>` : `
+      <div class="dropzone" id="photo-drop">
+        <div class="dropzone-empty">${icon("image")}<p style="margin:0">Drop the listing's photos here, or use <strong>Add photos</strong>. JPG, PNG, WebP, or TIFF.</p></div>
+      </div>`}
+      <ul class="upload-list" aria-live="polite">${state.uploads.map((u) => `<li class="${u.ok ? "" : "bad"}">${esc(u.text)}</li>`).join("")}</ul>
 
-    <section aria-labelledby="run-h" class="panel">
+      <hr class="zone-divider">
+
       <form class="run-form" id="run-form" novalidate>
         <h2 id="run-h" tabindex="-1">Redesign</h2>
         <fieldset>
@@ -579,8 +722,8 @@ function renderListing() {
           <label for="profile" class="field-label">Taste profile</label>
           ${state.profiles.length
             ? `<div class="field-row"><select id="profile" name="profile">${state.profiles.map((p) => `<option value="${esc(p.id)}" ${p.id === profile?.id ? "selected" : ""}>${esc(p.name)}${p.stale ? " (rules out of date)" : ""}</option>`).join("")}</select>
-               ${profile ? `<a href="?taste=${encodeURIComponent(profile.id)}" style="font-size:14px">Edit ${esc(profile.name)}</a>` : ""}</div>`
-            : `<p class="error">No taste profiles with rules yet. ${state.tasteProfiles.length ? `<a href="?taste=${encodeURIComponent(state.tasteProfiles[0].id)}">Add references and build one</a>` : "Create one under Taste profiles"}.</p>`}
+               ${profile ? `<a href="?taste=${encodeURIComponent(profile.id)}" class="nav-inline" style="font-size:14px">Edit ${esc(profile.name)}</a>` : ""}</div>`
+            : `<p class="error">No taste profiles with rules yet. ${state.tasteProfiles.length ? `<a href="?taste=${encodeURIComponent(state.tasteProfiles[0].id)}" class="nav-inline">Add references and build one</a>` : `<button class="btn btn-quiet btn-small" type="button" data-action="new-profile">Create a taste profile</button>`}.</p>`}
         </div>
         ${state.confirming === "run"
           ? `<div class="confirm" role="group" aria-labelledby="confirm-text">
@@ -592,21 +735,22 @@ function renderListing() {
               <button class="btn btn-primary" type="submit" ${running ? "disabled" : ""} aria-describedby="run-help">${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Run redesign</button>
               <span id="run-help" class="estimate num">${est.n
                 ? `<strong>${nf.format(selected)} photos × ${tiers.length} ${tiers.length === 1 ? "scope" : "scopes"}</strong> = ${nf.format(est.n)} redesigns · about ${money(est.low)}–${money(est.high)} · ${fmtMinutes(est.minutes)}`
-                : "Select photos and at least one scope."}</span>
+                : l.photos.length ? "Select photos and at least one scope." : "Add photos to get started."}</span>
             </div>`}
         <p id="run-error" class="error" role="alert" ${state.runError ? "" : "hidden"}>${esc(state.runError)}</p>
       </form>
       <div id="job"></div>
     </section>
 
-    <section aria-labelledby="runs-h">
-      <div class="section-head"><h2 id="runs-h">Past runs</h2></div>
+    <section class="panel zone" aria-labelledby="runs-h">
+      <div class="section-head"><h2 id="runs-h">Past runs <span class="muted num" style="font-weight:400">· ${l.runs.length}</span></h2></div>
       ${l.runs.length
         ? `<ul class="runs">${l.runs.map(runRow).join("")}</ul>`
         : `<p class="muted" style="margin:0">No runs yet. Reports appear here after the first redesign.</p>`}
     </section>`;
 
   renderJob();
+  alignSidebar();
 }
 
 let saveTimer;
@@ -643,9 +787,10 @@ function updateSelection(files, selected) {
 function setPhotosHidden(hidden) {
   setParams({ photos: hidden ? "hidden" : null });
   $('[data-toggle="photos"]')?.setAttribute("aria-expanded", String(!hidden));
-  for (const el of document.querySelectorAll("#photos-body, [data-photos-only]")) el.hidden = hidden;
+  // Animated via CSS grid rows; visibility:hidden at rest keeps collapsed content out of the tab order.
+  for (const el of document.querySelectorAll("#photos-body, [data-photos-only]")) el.dataset.collapsed = String(hidden);
   const strip = $("[data-photos-strip]");
-  if (strip) strip.hidden = !hidden;
+  if (strip) strip.dataset.collapsed = String(!hidden);
   renderListings();
 }
 
@@ -674,12 +819,13 @@ function renderTaste() {
         ${state.renaming
           ? `<div class="title-row"><label for="profile-name" class="sr-only">Profile name</label><input type="text" class="title-input" id="profile-name" value="${esc(t.meta.name)}" maxlength="60" autocomplete="off" spellcheck="false"></div>
              <p class="hint">Enter to save, Esc to cancel.</p>`
-          : `<div class="title-row"><h1>${esc(t.meta.name)}</h1><button class="btn btn-quiet btn-small" type="button" data-action="rename">${icon("pencil")}Rename</button></div>`}
+          : `<div class="title-row" style="gap:4px"><h1>${esc(t.meta.name)}</h1><button class="icon-btn icon-plain" type="button" data-action="rename" aria-label="Edit name and description" data-tip="Edit">${icon("pencil")}</button></div>`}
         <p class="stats num">
           <span>Taste profile</span>
           <span>${t.references.length} reference photos</span>
           <span>${t.profile ? `${ruleCount} rules` : "No rules yet"}</span>
           ${lb ? `<span>${lb.source === "pipeline" ? "Built" : "Rules set"} ${esc(fmtDate(lb.at))}</span>` : ""}
+          ${t.meta.description ? `<span>${esc(t.meta.description)}</span>` : ""}
         </p>
       </div>
     </div>
@@ -746,6 +892,7 @@ function renderTaste() {
   document.querySelectorAll("#rules details").forEach((d) => { if (open.has(d.dataset.key)) d.open = true; });
   updateSaveBar();
   renderJob();
+  alignSidebar();
   if (state.renaming) { const input = $("#profile-name"); input.focus(); input.select(); }
 }
 
@@ -829,10 +976,13 @@ async function uploadFiles(files) {
   const list = [...files].filter((f) => f.type.startsWith("image/") || /\.(tiff?|jpe?g|png|webp)$/i.test(f.name));
   if (!list.length) return;
   state.uploads = [];
+  const endpoint = state.view === "listing"
+    ? `/api/listings/${encodeURIComponent(state.listing.id)}/photos`
+    : `/api/taste-profiles/${encodeURIComponent(state.taste.id)}/references`;
   for (const [i, file] of list.entries()) {
     announce(`Uploading ${i + 1} of ${list.length}…`);
     try {
-      const res = await fetch(`/api/taste-profiles/${encodeURIComponent(state.taste.id)}/references`, { method: "POST", headers: { "content-type": "application/octet-stream" }, body: file });
+      const res = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/octet-stream" }, body: file });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? `Upload failed (${res.status})`);
       state.uploads.push({ ok: true, text: `${file.name} added as ${body.file}` });
@@ -840,7 +990,14 @@ async function uploadFiles(files) {
       state.uploads.push({ ok: false, text: `${file.name}: ${error.message}` });
     }
   }
-  await refreshTaste();
+  if (state.view === "listing") {
+    await flushSave();
+    [state.listing, state.listings] = await Promise.all([api(`/api/listings/${encodeURIComponent(state.listing.id)}`), api("/api/listings")]);
+    renderListing();
+    renderListings();
+  } else {
+    await refreshTaste();
+  }
   announce(`${state.uploads.filter((u) => u.ok).length} of ${list.length} added`);
 }
 
@@ -936,7 +1093,7 @@ document.addEventListener("change", (event) => {
     document.querySelector(`input[name="tier"][value="${t.value}"]`)?.focus();
   }
   if (t.matches("#profile")) { setParams({ profile: t.value }); renderListing(); $("#profile")?.focus(); }
-  if (t.matches("#ref-input")) { uploadFiles(t.files); t.value = ""; }
+  if (t.matches("#ref-input, #photo-input")) { uploadFiles(t.files); t.value = ""; }
 });
 
 document.addEventListener("input", (event) => {
@@ -1010,9 +1167,24 @@ document.addEventListener("click", async (event) => {
   if (!action) return;
   if (action === "all" || action === "none") return updateSelection(state.listing.photos.map((p) => p.file), action === "all");
   if (action === "new-profile") return openNewProfile();
-  if (action === "close-dialog") return $("#new-profile-dialog").close();
+  if (action === "new-listing" || action === "edit-listing") {
+    // One dialog for creating a listing and editing its details.
+    const editing = action === "edit-listing";
+    const l = editing ? state.listing : null;
+    const dlg = $("#new-listing-dialog");
+    dlg.dataset.mode = editing ? "edit" : "create";
+    $("#new-listing-h").textContent = editing ? "Edit listing" : "New listing";
+    $("#nl-submit").textContent = editing ? "Save" : "Create listing";
+    $("#nl-name").value = l?.name ?? ""; $("#nl-location").value = l?.location ?? ""; $("#nl-desc").value = l?.description ?? "";
+    $("#nl-error").hidden = true;
+    dlg.showModal();
+    if (matchMedia("(pointer: fine)").matches) $("#nl-name").focus();
+    return;
+  }
+  if (action === "pick-photos") return $("#photo-input").click();
+  if (action === "close-dialog") return event.target.closest("dialog")?.close();
   if (action === "pick-files") return $("#ref-input").click();
-  if (action === "rename") { state.renaming = true; renameDone = false; return rerenderTaste(); }
+  if (action === "rename") return openProfileDialog("edit");
   if (action === "save-all") return saveAll();
   if (action === "discard-all") {
     state.rulesDraft = state.taste.profile ? structuredClone(state.taste.profile) : null;
@@ -1077,15 +1249,54 @@ document.addEventListener("click", async (event) => {
 });
 
 document.addEventListener("submit", async (event) => {
+  if (event.target.id === "new-listing-form") {
+    event.preventDefault();
+    const name = $("#nl-name").value.trim();
+    const err = $("#nl-error");
+    if (!name) { err.textContent = "Give the listing a name."; err.hidden = false; $("#nl-name").focus(); return; }
+    const details = { name, location: $("#nl-location").value.trim() || null, description: $("#nl-desc").value.trim() };
+    try {
+      if ($("#new-listing-dialog").dataset.mode === "edit") {
+        const updated = await api(`/api/listings/${encodeURIComponent(state.listing.id)}`, { method: "PATCH", body: JSON.stringify(details) });
+        state.listing = updated;
+        state.listings = await api("/api/listings");
+        $("#new-listing-dialog").close();
+        renderListing();
+        renderListings();
+        $('[data-action="edit-listing"]')?.focus();
+        announce("Saved");
+        return;
+      }
+      const created = await api("/api/listings", { method: "POST", body: JSON.stringify(details) });
+      $("#new-listing-dialog").close();
+      navigate(`?listing=${encodeURIComponent(created.id)}`);
+    } catch (error) {
+      err.textContent = error.message;
+      err.hidden = false;
+    }
+    return;
+  }
   if (event.target.id === "new-profile-form") {
     event.preventDefault();
     const name = $("#np-name").value.trim();
     const err = $("#np-error");
     if (!name) { err.textContent = "Give the profile a name."; err.hidden = false; $("#np-name").focus(); return; }
+    const description = $("#np-desc").value.trim();
     try {
-      const created = await api("/api/taste-profiles", { method: "POST", body: JSON.stringify({ name, from: $("#np-from").value || null }) });
+      if ($("#new-profile-dialog").dataset.mode === "edit") {
+        const p = await api(`/api/taste-profiles/${encodeURIComponent(state.taste.id)}`, { method: "PATCH", body: JSON.stringify({ name, description }) });
+        state.taste.meta = p.meta;
+        $("#new-profile-dialog").close();
+        [state.tasteProfiles, state.profiles] = await Promise.all([api("/api/taste-profiles"), api("/api/profiles")]);
+        renderProfilesNav();
+        rerenderTaste();
+        $('[data-action="rename"]')?.focus();
+        announce("Saved");
+        return;
+      }
+      const created = await api("/api/taste-profiles", { method: "POST", body: JSON.stringify({ name, description, from: $("#np-from").value || null }) });
       $("#new-profile-dialog").close();
-      location.href = `?taste=${encodeURIComponent(created.id)}`;
+      navigate(`?taste=${encodeURIComponent(created.id)}`);
     } catch (error) {
       err.textContent = error.message;
       err.hidden = false;
@@ -1131,11 +1342,21 @@ document.addEventListener("submit", async (event) => {
   renderListing();
 });
 
-function openNewProfile() {
+function openNewProfile() { openProfileDialog("create"); }
+
+/** One dialog for creating a profile and editing its name and description. */
+function openProfileDialog(mode) {
+  const editing = mode === "edit";
+  const dlg = $("#new-profile-dialog");
+  dlg.dataset.mode = mode;
+  $("#new-profile-h").textContent = editing ? "Edit taste profile" : "New taste profile";
+  $("#np-submit").textContent = editing ? "Save" : "Create profile";
+  $("#np-from-field").hidden = editing;
   const from = $("#np-from");
   const current = state.view === "taste" ? state.taste?.id : null;
   from.innerHTML = `<option value="">Empty profile</option>` + state.tasteProfiles.map((p) => `<option value="${esc(p.id)}" ${p.id === current ? "selected" : ""}>Copy of ${esc(p.name)}</option>`).join("");
-  $("#np-name").value = "";
+  $("#np-name").value = editing ? state.taste.meta.name : "";
+  $("#np-desc").value = editing ? state.taste.meta.description ?? "" : "";
   $("#np-error").hidden = true;
   $("#new-profile-dialog").showModal();
   if (matchMedia("(pointer: fine)").matches) $("#np-name").focus();
@@ -1143,14 +1364,17 @@ function openNewProfile() {
 
 // Drag and drop onto the reference area.
 document.addEventListener("dragover", (e) => {
-  const zone = e.target.closest?.("#dropzone");
+  const zone = e.target.closest?.("#dropzone, #photo-drop");
   if (!zone || state.job?.status === "running") return;
   e.preventDefault();
   zone.classList.add("over");
 });
-document.addEventListener("dragleave", (e) => { if (e.target.closest?.("#dropzone") && !e.relatedTarget?.closest?.("#dropzone")) $("#dropzone").classList.remove("over"); });
+document.addEventListener("dragleave", (e) => {
+  const zone = e.target.closest?.("#dropzone, #photo-drop");
+  if (zone && !zone.contains(e.relatedTarget)) zone.classList.remove("over");
+});
 document.addEventListener("drop", (e) => {
-  const zone = e.target.closest?.("#dropzone");
+  const zone = e.target.closest?.("#dropzone, #photo-drop");
   if (!zone) return;
   e.preventDefault();
   zone.classList.remove("over");
@@ -1161,7 +1385,27 @@ window.addEventListener("beforeunload", (event) => {
   if (pending.size) { flushSave(); event.preventDefault(); }
   if (state.briefDirty || state.rulesDirty) event.preventDefault();
 });
-window.addEventListener("popstate", load);
+window.addEventListener("popstate", () => load());
+
+function navigate(href) {
+  history.pushState(null, "", href);
+  Object.assign(state, { confirming: null, uploads: [], renaming: false, briefDirty: false, rulesDirty: false, runError: null });
+  return load().then(() => {
+    scrollTo({ top: 0 });
+    $("#content").focus({ preventScroll: true });
+  });
+}
+
+document.addEventListener("click", (e) => {
+  const a = e.target.closest?.("a.nav-link, a.nav-inline, a.brand");
+  if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const url = new URL(a.href, location.href);
+  if (url.origin !== location.origin || url.pathname !== "/") return;
+  e.preventDefault();
+  if ((state.briefDirty || state.rulesDirty) && !confirm("Leave without saving your changes?")) return;
+  flushSave();
+  navigate(url.search || "/");
+}, true);
 
 async function load() {
   try {

@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import sharp from "sharp";
+
 import type { ImageInput } from "./providers.js";
 
 const MEDIA_TYPES: Record<string, string> = {
@@ -134,4 +136,29 @@ export function createLimiter(limit: number) {
       else active -= 1;
     }
   };
+}
+
+/**
+ * Perceptual fingerprint for near-duplicate detection. Blurring before the final shrink makes re-encodes
+ * (WebP→JPEG, quality changes, alpha channels) land within ~1 point, while different photos, even two angles
+ * of one room, stay above ~19 (measured on real listing photos).
+ */
+export async function imageFingerprint(input: string | Buffer): Promise<Buffer> {
+  return sharp(input)
+    .rotate()
+    .flatten({ background: "#fff" })
+    .greyscale()
+    .resize(256, 192, { fit: "fill" })
+    .blur(2)
+    .resize(32, 24, { fit: "fill" })
+    .removeAlpha()
+    .raw()
+    .toBuffer();
+}
+
+export function isNearDuplicate(a: Buffer, b: Buffer): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff += Math.abs(a[i]! - b[i]!);
+  return diff / a.length < 6;
 }

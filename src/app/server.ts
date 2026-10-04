@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { loadEnv, requireKeys, resolveModels } from "../config.js";
 import { logContext, progressContext, type Progress } from "../files.js";
-import { listingDir, listListings, LISTINGS_DIR, readListing, saveSelection, type Listing } from "../listing/listing.js";
+import { addListingPhoto, createListing, updateListingDetails, listingDir, listListings, LISTINGS_DIR, readListing, saveSelection, type Listing } from "../listing/listing.js";
 import { listProfiles, listRuns, loadProfile, runListingRedesign, RUNS_DIR, type RunSummary } from "../redesign/job.js";
 import { renderReport } from "../report.js";
 import { TIERS } from "../redesign/tiers.js";
@@ -144,6 +144,8 @@ function listingJson(listing: Listing, runs: RunSummary[]) {
     id: listing.id,
     name: listing.name,
     source: listing.source,
+    location: listing.location,
+    description: listing.description,
     photos: listing.photos.map((p) => ({
       ...p,
       thumb: `/thumb/listings/${listing.id}/${encodeURIComponent(p.file)}?w=640`,
@@ -210,7 +212,7 @@ const SelectionBody = z.object({
   photos: z.array(z.object({ file: z.string().max(200), room: z.string().max(200).optional(), selected: z.boolean().optional() })).max(200),
 });
 const RunBody = z.object({ tiers: z.array(z.enum(TIERS)).min(1), profile: z.string().max(60) });
-const CreateProfileBody = z.object({ name: z.string().max(60), from: z.string().max(60).nullable().optional() });
+const CreateProfileBody = z.object({ name: z.string().max(60), description: z.string().max(300).optional(), from: z.string().max(60).nullable().optional() });
 
 async function handle(req: IncomingMessage, res: ServerResponse) {
   // Refuse foreign Host headers so a DNS-rebinding page can't reach this server.
@@ -235,10 +237,25 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         cover: l.photos[0] ? `/thumb/listings/${l.id}/${encodeURIComponent(l.photos[0].file)}?w=160` : null,
       })));
     }
+    if (req.method === "POST" && parts[1] === "listings" && parts.length === 2) {
+      const body = z.object({ name: z.string().max(80), location: z.string().max(120).nullable().optional(), description: z.string().max(300).optional() }).parse(await readBody(req));
+      const listing = await createListing(body);
+      return send(res, 201, { id: listing.id });
+    }
     if (parts[1] === "listings" && parts[2]) {
       const dir = listingDir(parts[2]);
       if (!existsSync(dir)) return send(res, 404, { error: "Listing not found" });
       if (req.method === "GET" && parts.length === 3) return send(res, 200, listingJson(await readListing(dir), await listRuns(parts[2])));
+      if (req.method === "PATCH" && parts.length === 3) {
+        const body = z.object({ name: z.string().max(80), location: z.string().max(120).nullable().optional(), description: z.string().max(300).optional() }).parse(await readBody(req));
+        await updateListingDetails(dir, body);
+        return send(res, 200, listingJson(await readListing(dir), await listRuns(parts[2])));
+      }
+      if (req.method === "POST" && parts[3] === "photos") {
+        if (isRunning("redesign", parts[2])) return send(res, 409, { error: "Wait for the running redesign to finish before adding photos." });
+        const file = await addListingPhoto(dir, await readRaw(req, 40_000_000));
+        return send(res, 201, { file });
+      }
       if (req.method === "PUT" && parts[3] === "selection") {
         const body = SelectionBody.parse(await readBody(req));
         return send(res, 200, listingJson(await saveSelection(dir, body.photos), await listRuns(parts[2])));
@@ -284,7 +301,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         }
         if (req.method === "POST") {
           const body = CreateProfileBody.parse(await readBody(req));
-          const id = await createTasteProfile(body.name, body.from ?? null);
+          const id = await createTasteProfile(body.name, body.from ?? null, body.description ?? "");
           return send(res, 201, await tasteProfileJson(id));
         }
       }
@@ -294,7 +311,8 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
 
       if (req.method === "GET" && parts.length === 3) return send(res, 200, await tasteProfileJson(id));
       if (req.method === "PATCH" && parts.length === 3) {
-        await renameTasteProfile(id, z.object({ name: z.string().max(60) }).parse(await readBody(req)).name);
+        const body = z.object({ name: z.string().max(60), description: z.string().max(300).optional() }).parse(await readBody(req));
+        await renameTasteProfile(id, body.name, body.description);
         return send(res, 200, await tasteProfileJson(id));
       }
       if (req.method === "PUT" && parts[3] === "brief") {

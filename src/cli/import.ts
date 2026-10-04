@@ -8,22 +8,12 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import sharp from "sharp";
 
-import { log } from "../files.js";
+import { imageFingerprint as fingerprint, isNearDuplicate, log } from "../files.js";
 import { listingDir, readListing } from "../listing/listing.js";
 
 const SOURCE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff"]);
 const MAX_EDGE = 2560;
 
-async function fingerprint(input: string | Buffer): Promise<Buffer> {
-  return sharp(input).rotate().greyscale().resize(32, 24, { fit: "fill" }).raw().toBuffer();
-}
-
-/** Mean absolute pixel difference on a 32×24 greyscale thumbnail; under ~4 is the same shot. */
-export function isNearDuplicate(a: Buffer, b: Buffer): boolean {
-  let diff = 0;
-  for (let i = 0; i < a.length; i += 1) diff += Math.abs(a[i]! - b[i]!);
-  return diff / a.length < 4;
-}
 
 async function main() {
   const { values, positionals } = parseArgs({

@@ -41,6 +41,9 @@ describe("taste profile store", () => {
     expect(await addReference(id, await swatch(200))).toBe("ref-02.jpg");
     await expect(addReference(id, await swatch(10))).rejects.toThrow(/Already in this profile as ref-01/);
     await expect(addReference(id, Buffer.from("not an image"))).rejects.toThrow(/isn't an image/);
+    // Same picture re-encoded with an alpha channel (e.g. a WebP or PNG export) is still a duplicate.
+    const withAlpha = await sharp(await swatch(200)).ensureAlpha().webp().toBuffer();
+    await expect(addReference(id, withAlpha)).rejects.toThrow(/Already in this profile as ref-02/);
 
     await removeReference(id, "ref-01.jpg");
     expect((await readTasteProfile(id))!.references).toEqual(["ref-02.jpg"]);
@@ -89,5 +92,22 @@ describe("progress", () => {
       progressDone(20, "done");
     });
     expect(p).toEqual({ total: 13, done: 13, label: "done" });
+  });
+});
+
+describe("listing photos", () => {
+  it("refuses a re-encoded duplicate but accepts a different image", async () => {
+    const { addListingPhoto, createListing } = await import("../src/listing/listing.js");
+    const listing = await createListing({ name: `zz test ${Date.now()}` });
+    try {
+      const photo = await swatch(10);
+      expect(await addListingPhoto(listing.dir, photo)).toMatch(/-01\.jpg$/);
+      const reencoded = await sharp(photo).webp({ quality: 70 }).toBuffer();
+      await expect(addListingPhoto(listing.dir, reencoded)).rejects.toThrow(/Already in this listing/);
+      const otherImage = await swatch(200);
+      expect(await addListingPhoto(listing.dir, otherImage)).toMatch(/-02\.jpg$/);
+    } finally {
+      await rm(listing.dir, { recursive: true, force: true });
+    }
   });
 });

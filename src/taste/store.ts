@@ -7,7 +7,7 @@ import sharp from "sharp";
 import { z } from "zod";
 
 import { ROOT } from "../config.js";
-import { IMAGE_EXTENSIONS } from "../files.js";
+import { IMAGE_EXTENSIONS, imageFingerprint, isNearDuplicate } from "../files.js";
 import { renderProfileMarkdown } from "./pipeline.js";
 import { TasteProfile } from "./schema.js";
 
@@ -18,6 +18,7 @@ export const MAX_REFERENCES = 40;
 
 const Meta = z.object({
   name: z.string(),
+  description: z.string().default(""),
   createdAt: z.string(),
   updatedAt: z.string(),
   lastBuild: z
@@ -119,7 +120,7 @@ export async function listTasteProfiles(): Promise<ProfileSummary[]> {
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function createTasteProfile(name: string, fromId?: string | null): Promise<string> {
+export async function createTasteProfile(name: string, fromId?: string | null, description = ""): Promise<string> {
   const clean = name.trim().slice(0, 60);
   if (!clean) throw Object.assign(new Error("Give the profile a name."), { status: 400 });
   let id = slugify(clean);
@@ -140,14 +141,14 @@ export async function createTasteProfile(name: string, fromId?: string | null): 
     const srcMeta = await readMeta(fromId);
     if (srcMeta?.lastBuild) lastBuild = { ...srcMeta.lastBuild, at: now };
   }
-  await writeMeta(id, { name: clean, createdAt: now, updatedAt: now, lastBuild });
+  await writeMeta(id, { name: clean, description: description.trim().slice(0, 300), createdAt: now, updatedAt: now, lastBuild });
   return id;
 }
 
-export async function renameTasteProfile(id: string, name: string): Promise<void> {
+export async function renameTasteProfile(id: string, name: string, description?: string): Promise<void> {
   const clean = name.trim().slice(0, 60);
-  if (!clean) throw Object.assign(new Error("Name can't be empty."), { status: 400 });
-  await touch(id, { name: clean });
+  if (!clean) throw Object.assign(new Error("Give the profile a name."), { status: 400 });
+  await touch(id, { name: clean, ...(description !== undefined ? { description: description.trim().slice(0, 300) } : {}) });
 }
 
 export async function saveBrief(id: string, text: string): Promise<void> {
@@ -186,15 +187,6 @@ export async function restorePreviousProfile(id: string): Promise<boolean> {
   return true;
 }
 
-async function fingerprint(input: string | Buffer): Promise<Buffer> {
-  return sharp(input).rotate().greyscale().resize(32, 24, { fit: "fill" }).raw().toBuffer();
-}
-
-function nearDuplicate(a: Buffer, b: Buffer): boolean {
-  let diff = 0;
-  for (let i = 0; i < a.length; i += 1) diff += Math.abs(a[i]! - b[i]!);
-  return diff / a.length < 4;
-}
 
 /** Normalize an uploaded image into references/, refusing duplicates. Returns the stored file name. */
 export async function addReference(id: string, bytes: Buffer): Promise<string> {
@@ -212,9 +204,9 @@ export async function addReference(id: string, bytes: Buffer): Promise<string> {
   }
   if (format === "heif") throw Object.assign(new Error("HEIC photos aren't supported. Export as JPG first."), { status: 415 });
 
-  const print = await fingerprint(bytes);
+  const print = await imageFingerprint(bytes);
   for (const file of existing) {
-    if (nearDuplicate(await fingerprint(path.join(refsDir, file)), print)) {
+    if (isNearDuplicate(await imageFingerprint(path.join(refsDir, file)), print)) {
       throw Object.assign(new Error(`Already in this profile as ${file}.`), { status: 409 });
     }
   }

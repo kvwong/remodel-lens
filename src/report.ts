@@ -227,7 +227,7 @@ export function renderReport(input: {
 
   const overview = feature
     ? `
-  <section class="overview" aria-labelledby="overview-h">
+  <section class="overview card" aria-labelledby="overview-h">
     <h2 id="overview-h">What each scope gets you</h2>
     <p class="lede">The ${esc(roomName(feature).toLowerCase())} at every scope, with the estimate for the whole listing beneath each.</p>
     <div class="plates" style="--cols:${1 + tiers.length}">
@@ -268,8 +268,9 @@ export function renderReport(input: {
     : "";
 
   const table = `
-  <section class="by-room" aria-labelledby="byroom-h">
-    <h2 id="byroom-h">By room</h2>
+  <section class="by-room card" aria-labelledby="byroom-h">
+    <details class="fold section-fold">
+    <summary><h2 id="byroom-h">By room</h2><span class="fold-meta num">${photos.length} photos${tiers.map((t) => { const x = totals.get(t); return x ? ` · ${tierName(t)} ${formatRange(x.range)}` : ""; }).join("")}</span></summary>
     <div class="table-scroll" tabindex="0" role="region" aria-labelledby="byroom-h">
       <table>
         <thead><tr><th scope="col">Room</th>${tiers.map((t) => `<th scope="col">${tierName(t)}</th>`).join("")}</tr></thead>
@@ -288,12 +289,13 @@ export function renderReport(input: {
           : ""}
       </table>
     </div>
+    </details>
   </section>`;
 
   const rooms = photos.map((p) => {
     const room = roomName(p);
     return `
-  <section class="room" id="${p.id}" aria-labelledby="${p.id}-h">
+  <section class="room card" id="${p.id}" aria-labelledby="${p.id}-h">
     <div class="room-head">
       <div class="room-title"><h2 id="${p.id}-h">${esc(room)}</h2><span class="file">${esc(p.basename)}</span></div>
       <div class="tabs" role="tablist" aria-label="Scope for ${esc(room)}">
@@ -331,7 +333,7 @@ export function renderReport(input: {
 
   // Ending: where the money goes, and which images not to lean on.
   const decide = `
-  <section class="decide" aria-labelledby="decide-h">
+  <section class="decide card" aria-labelledby="decide-h">
     <h2 id="decide-h">Before you decide</h2>
     <div class="decide-grid" style="--cols:${tiers.length}">
       ${tiers.map((tier) => {
@@ -368,20 +370,22 @@ export function renderReport(input: {
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:#fafaf9; --surface:#ffffff; --surface-2:#f1f0ee; --text:#1b1a19; --muted:#66625d;
-    --line:rgba(27,26,25,.09); --line-strong:rgba(27,26,25,.2);
-    --accent:#4c6249; --ok:#3d6a4c; --warn:#8a6216; --bad:#9a3b2f;
+    --bg:#f5f4f1; --surface:#ffffff; --surface-2:#f3f1ed; --text:#1b1a19; --muted:#625e58;
+    --line:rgba(27,26,25,.1); --line-strong:rgba(27,26,25,.22);
+    --primary:#2f5a44; --primary-soft:#e4eee7; --accent:var(--primary);
+    --ok:#3d6a4c; --warn:#8a6216; --bad:#9a3b2f;
     --font:"Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     color-scheme:light dark;
   }
   @media (prefers-color-scheme: dark) { :root {
-    --bg:#121211; --surface:#1a1a19; --surface-2:#242322; --text:#ecebe8; --muted:#a39f99;
-    --line:rgba(236,235,232,.09); --line-strong:rgba(236,235,232,.22);
-    --accent:#9db59a; --ok:#8fc49f; --warn:#e0bd78; --bad:#ee9d90;
+    --bg:#0e0e0d; --surface:#1b1a19; --surface-2:#242321; --text:#ecebe8; --muted:#a39f99;
+    --line:rgba(236,235,232,.1); --line-strong:rgba(236,235,232,.22);
+    --primary:#8cc3a1; --primary-soft:#1b2a21; --accent:var(--primary);
+    --ok:#8fc49f; --warn:#e0bd78; --bad:#ee9d90;
   } }
   * { box-sizing:border-box; }
   [hidden] { display:none !important; }
-  html { -webkit-tap-highlight-color:transparent; scrollbar-color:var(--line-strong) transparent; }
+  html { -webkit-tap-highlight-color:transparent; scrollbar-color:var(--line-strong) transparent; scrollbar-gutter:stable; }
   body { margin:0; background:var(--bg); color:var(--text); font:15px/1.55 var(--font); caret-color:var(--text); }
   ::selection { background:color-mix(in srgb, var(--accent) 28%, transparent); }
   a { color:inherit; text-underline-offset:3px; text-decoration-thickness:1px; }
@@ -399,7 +403,9 @@ export function renderReport(input: {
 
   .crumb { display:inline-flex; align-items:center; gap:6px; min-height:32px; font-size:14px; color:var(--muted); text-decoration:none; }
   .crumb:hover { color:var(--text); }
-  .page-head { margin:8px 0 40px; }
+  .page-head { margin:8px 0 28px; }
+  .card { background:var(--surface); border:0; border-radius:12px; box-shadow:var(--shadow); padding:28px; }
+  @media (max-width: 680px) { .card { padding:18px 16px; border-radius:10px; } }
   .meta { margin:8px 0 0; color:var(--muted); font-size:14px; }
   .meta span + span::before { content:"·"; margin:0 8px; opacity:.6; }
   .notice { margin:16px 0 0; font-size:14px; color:var(--warn); }
@@ -412,28 +418,34 @@ export function renderReport(input: {
 
   /* Overview: image-led plates with gallery-label captions */
   .lede { margin:6px 0 20px; color:var(--muted); max-width:65ch; }
-  .plates { display:grid; gap:20px; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); }
-  .plate { margin:0; min-width:0; }
-  .plate figcaption { display:flex; flex-direction:column; gap:2px; padding-top:12px; }
+  .plates { display:grid; gap:0 20px; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); }
+  /* Each plate spans the same rows, so titles, totals, and tallies line up across all four. */
+  .plate { margin:0; min-width:0; display:grid; grid-row:span 7; grid-template-rows:subgrid; align-content:start; }
+  .plate figcaption { display:grid; grid-row:span 6; grid-template-rows:subgrid; padding-top:12px; }
+  .plate figcaption > * { align-self:start; }
   .plate-title { font-weight:600; }
   .plate-sub { color:var(--muted); font-size:13px; }
-  .plate-total { font-size:22px; font-weight:500; letter-spacing:-.01em; margin-top:10px; }
+  .plate-total { font-size:22px; font-weight:500; letter-spacing:-.01em; margin-top:10px; line-height:1.25; }
   .plate-tally { font-size:13px; margin-top:8px; color:var(--muted); }
   .legend { display:flex; flex-wrap:wrap; gap:8px 28px; margin:28px 0 0; padding:14px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
-  .legend div { display:flex; gap:8px; align-items:baseline; } .legend dt, .legend dd { margin:0; } .legend dd { color:var(--muted); font-size:13px; }
+  .legend div { display:flex; gap:8px; align-items:center; } .legend dt, .legend dd { margin:0; line-height:20px; } .legend dt .status { line-height:20px; } .legend dd { color:var(--muted); font-size:13px; }
   .method { max-width:72ch; }
   .method p { color:var(--muted); font-size:14px; margin:0 0 10px; }
+  .section-fold { border-bottom:0 !important; }
+  .section-fold > summary { min-height:56px !important; flex-wrap:wrap; gap:4px 14px !important; }
+  .section-fold > summary h2 { scroll-margin-top:72px; }
+  .fold-meta { color:var(--muted); font-size:13px; font-weight:400; }
 
   /* Images */
   .zoom { position:relative; display:block; width:100%; padding:0; border:0; background:var(--surface-2); border-radius:3px; overflow:hidden; cursor:zoom-in; aspect-ratio:3 / 2; }
-  .zoom img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .5s cubic-bezier(.16,1,.3,1); }
+  .zoom img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .5s var(--ease); }
   .zoom:hover img { transform:scale(1.015); }
   .zoom-hint { position:absolute; right:10px; bottom:10px; width:32px; height:32px; display:grid; place-items:center; border-radius:50%; background:rgba(18,18,17,.55); color:#fff; opacity:0; transition:opacity .2s; }
   .zoom:hover .zoom-hint, .zoom:focus-visible .zoom-hint { opacity:1; }
   .no-image { aspect-ratio:3 / 2; display:grid; place-items:center; border-radius:3px; border:1px dashed var(--line-strong); color:var(--muted); font-size:13px; text-align:center; padding:16px; }
 
   /* By room */
-  .by-room { margin-top:64px; }
+  .by-room { margin-top:20px; padding-top:4px; padding-bottom:4px; }
   .table-scroll { margin-top:14px; overflow-x:auto; background:
       linear-gradient(to right, var(--bg) 30%, transparent) left / 32px 100% no-repeat local,
       linear-gradient(to left, var(--bg) 30%, transparent) right / 32px 100% no-repeat local,
@@ -447,7 +459,7 @@ export function renderReport(input: {
   tfoot th, tfoot td { border-bottom:0; padding-top:14px; font-weight:600; font-size:15px; }
 
   /* Sticky controls */
-  .toolbar { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; margin:56px -20px 0; padding:10px 20px; background:var(--bg); border-bottom:1px solid var(--line); }
+  .toolbar { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; margin:20px -20px 0; padding:10px 20px; background:color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter:saturate(1.2) blur(10px); border-bottom:1px solid var(--line); }
   .toolbar .crumb { margin-right:auto; }
   select { font:inherit; font-size:14px; min-height:36px; padding:6px 30px 6px 10px; border-radius:8px; border:1px solid var(--line-strong); color:inherit; background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2366625d' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E") no-repeat right 8px center; appearance:none; }
   .seg { display:inline-flex; padding:2px; border-radius:9px; background:var(--surface-2); }
@@ -457,22 +469,24 @@ export function renderReport(input: {
   .seg-label { font-size:13px; color:var(--muted); }
 
   /* Rooms */
-  .room { padding-top:48px; margin-top:48px; border-top:1px solid var(--line); scroll-margin-top:64px; }
+  .room { margin-top:20px; scroll-margin-top:72px; }
   .room-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:end; gap:12px 24px; margin-bottom:16px; }
   .room-title { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
   .file { font-size:13px; color:var(--muted); }
   .tabs { display:inline-flex; padding:2px; border-radius:9px; background:var(--surface-2); }
   .tabs [role="tab"] { display:inline-flex; align-items:center; gap:6px; font:inherit; font-size:13px; font-weight:500; min-height:34px; padding:4px 12px; border:0; border-radius:7px; background:transparent; color:var(--muted); cursor:pointer; touch-action:manipulation; }
   .tabs [role="tab"]:hover { color:var(--text); }
-  .tabs [role="tab"][aria-selected="true"] { background:var(--surface); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .tabs [role="tab"][aria-selected="true"] { background:var(--surface); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.1); }
+  .room .tabs, .room .seg { background:var(--surface-2); }
   .tab-mark { display:inline-flex; } .tab-mark .icon { width:13px; height:13px; }
   .pair { display:grid; gap:12px; grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .frame { margin:0; min-width:0; }
-  .frame figcaption, .figcap { margin:8px 0 0; font-size:13px; color:var(--muted); }
+  .frame figcaption, .figcap { margin:8px 0 0; font-size:13px; line-height:20px; color:var(--muted); min-height:20px; }
   .info { display:grid; gap:12px 32px; grid-template-columns:repeat(2, minmax(0, 1fr)); margin-top:20px; align-items:start; }
   .info-tier { grid-column:2; grid-row:1; }
   .info-listing { grid-column:1; grid-row:1; }
-  .verdict { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 16px; padding-bottom:12px; border-bottom:1px solid var(--line); }
+  .verdict { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:4px 16px; min-height:44px; padding:6px 0; border-bottom:1px solid var(--line); }
+  .verdict .status { white-space:normal; flex-wrap:wrap; }
   .verdict-cost { font-size:18px; font-weight:500; }
 
   details.fold { border-bottom:1px solid var(--line); }
@@ -496,14 +510,14 @@ export function renderReport(input: {
   .fine { color:var(--muted); font-size:13px; margin:12px 0 0; }
 
   /* Ending */
-  .decide { margin-top:96px; padding-top:40px; border-top:1px solid var(--line-strong); }
+  .decide { margin-top:40px; }
   .decide-grid { display:grid; gap:32px; margin-top:24px; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); }
   .decide-col h3 { display:flex; justify-content:space-between; gap:12px; align-items:baseline; font-size:16px; padding-bottom:10px; border-bottom:1px solid var(--line); }
   .decide-col h3 .num { font-weight:500; }
   .drivers { list-style:none; margin:8px 0 0; padding:0; font-size:14px; }
   .drivers li { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--line); }
   .shaky { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; font-size:14px; margin:14px 0 0; }
-  .end-links { display:flex; gap:24px; margin-top:48px; font-size:14px; }
+  .end-links { display:flex; gap:24px; margin-top:32px; font-size:14px; }
   .end-links a { display:inline-flex; gap:6px; align-items:center; color:var(--muted); text-decoration:none; } .end-links a:hover { color:var(--text); }
 
   @media (max-width: 900px) {
@@ -521,13 +535,18 @@ export function renderReport(input: {
     .tabs { width:100%; } .tabs [role="tab"] { flex:1; justify-content:center; }
   }
 
-  .to-top { position:fixed; right:max(16px, env(safe-area-inset-right)); bottom:max(16px, env(safe-area-inset-bottom)); z-index:6; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; border:1px solid var(--line-strong); background:var(--surface); color:inherit; cursor:pointer; opacity:0; transform:translateY(8px); transition:opacity .25s, transform .25s cubic-bezier(.16,1,.3,1); pointer-events:none; }
+  .to-top { position:fixed; right:max(16px, env(safe-area-inset-right)); bottom:max(16px, env(safe-area-inset-bottom)); z-index:6; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; border:1px solid var(--line-strong); background:var(--surface); color:inherit; cursor:pointer; opacity:0; transform:translateY(8px); transition:opacity .25s, transform .25s var(--ease); pointer-events:none; }
   .to-top.show { opacity:1; transform:none; pointer-events:auto; }
 
   dialog.viewer { width:100vw; height:100dvh; max-width:none; max-height:none; margin:0; padding:0; border:0; background:#0f0f0e; color:#efede9; }
   dialog.viewer::backdrop { background:rgba(0,0,0,.85); }
-  .viewer-bar { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; justify-content:space-between; padding:10px max(14px, env(safe-area-inset-left)); border-bottom:1px solid rgba(255,255,255,.1); min-height:62px; }
-  .viewer-title { display:flex; flex-direction:column; gap:2px; min-width:0; }
+  /* Fixed columns and a reserved status line, so switching versions never moves the tabs or the image. */
+  .viewer-bar { display:grid; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr); gap:8px 16px; align-items:center; padding:0 max(14px, env(safe-area-inset-left)); border-bottom:1px solid rgba(255,255,255,.1); height:66px; }
+  .viewer-title { display:grid; grid-template-rows:20px 20px; gap:2px; min-width:0; }
+  .viewer-title strong, #viewer-status { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:20px; }
+  #viewer-status .status { white-space:nowrap; }
+  .viewer-plain { color:rgba(239,237,233,.6); font-size:13px; }
+  .viewer-actions { justify-self:end; }
   .viewer-title strong { font-weight:500; }
   .viewer-title .status > span:not(.status-meaning) { color:#efede9; }
   .viewer-title .status-meaning { color:rgba(239,237,233,.6); }
@@ -537,12 +556,33 @@ export function renderReport(input: {
   .viewer-hint { font-size:12px; color:rgba(239,237,233,.55); margin-right:6px; }
   .vbtn { font:inherit; font-size:13px; min-height:36px; padding:4px 12px; border-radius:8px; border:1px solid rgba(255,255,255,.22); background:transparent; color:inherit; cursor:pointer; }
   .vbtn[aria-pressed="true"] { background:#efede9; color:#0f0f0e; }
-  .viewer-stage { height:calc(100dvh - 62px); overflow:auto; overscroll-behavior:contain; display:grid; place-items:center; cursor:zoom-in; }
-  .viewer-stage img { max-width:100vw; max-height:calc(100dvh - 62px); object-fit:contain; display:block; user-select:none; -webkit-user-drag:none; }
+  .viewer-stage { height:calc(100dvh - 66px); overflow:auto; overscroll-behavior:contain; display:grid; place-items:center; cursor:zoom-in; }
+  .viewer-stage img { max-width:100vw; max-height:calc(100dvh - 66px); object-fit:contain; display:block; user-select:none; -webkit-user-drag:none; }
   .viewer-stage.actual { place-items:start; cursor:grab; } .viewer-stage.actual.dragging { cursor:grabbing; }
   .viewer-stage.actual img { max-width:none; max-height:none; }
-  @media (max-width: 680px) { .viewer-hint { display:none; } }
+  @media (max-width: 680px) {
+    .viewer-hint { display:none; }
+    .viewer-bar { grid-template-columns:minmax(0, 1fr) auto; grid-template-rows:auto auto; height:auto; padding-block:10px; }
+    .viewer-tabs { grid-column:1 / -1; grid-row:2; justify-self:start; }
+    .viewer-stage { height:calc(100dvh - 112px); } .viewer-stage img { max-height:calc(100dvh - 112px); }
+  }
   @media (prefers-reduced-motion: reduce) { * { transition:none !important; scroll-behavior:auto !important; } }
+
+  /* Motion + depth system */
+  :root { --ease:cubic-bezier(0.22, 1, 0.36, 1); --ease-pop:cubic-bezier(0.35, 1.55, 0.65, 1); --fast:120ms; --base:240ms; --slow:360ms;
+    --shadow:0 1px 2px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.02), 0 0 0 0.5px rgba(0,0,0,0.08);
+    --shadow-hover:0 2px 4px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.08); }
+  @media (prefers-color-scheme: dark) { :root {
+    --shadow:0 1px 2px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(255,255,255,0.08);
+    --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.12); } }
+  /* Every clickable element presses to 98% on the fast duration. */
+  button, .btn, a.nav-link, .tier, .pick, .zoom, summary, [role="tab"] { transition:transform var(--fast) var(--ease), box-shadow var(--base) var(--ease), background-color var(--base) var(--ease), border-color var(--base) var(--ease), color var(--base) var(--ease), opacity var(--base) var(--ease); }
+  button:active:not(:disabled), .btn:active, a.nav-link:active, .tier:active, .pick:active, .zoom:active, summary:active, [role="tab"]:active { transform:scale(0.98); }
+  /* Tooltips: fade, lift 4px, clear a 2px blur. First one waits; never instant. */
+  [data-tip] { position:relative; }
+  [data-tip]::after { content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 6px); translate:-50% 4px; filter:blur(2px); opacity:0; pointer-events:none; white-space:nowrap; font-size:12px; font-weight:500; padding:4px 8px; border-radius:6px; background:var(--ink, #1b1a19); color:var(--ink-text, #fafaf9); box-shadow:var(--shadow); transition:opacity var(--base) var(--ease), translate var(--base) var(--ease), filter var(--base) var(--ease); transition-delay:0s; z-index:40; }
+  [data-tip]:hover::after, [data-tip]:focus-visible::after { opacity:1; translate:-50% 0; filter:blur(0); transition-delay:400ms; }
+  @keyframes pop-in { from { opacity:0; transform:translateY(6px) scale(0.96); } to { opacity:1; transform:none; } }
 </style>
 </head>
 <body>
@@ -577,7 +617,7 @@ export function renderReport(input: {
     <div class="viewer-title"><strong id="viewer-title"></strong><span id="viewer-status"></span></div>
     <div class="seg viewer-tabs" role="group" aria-label="Compare versions"></div>
     <div class="viewer-actions">
-      <span class="viewer-hint">← → compare · Z zoom</span>
+      <span class="viewer-hint">← → versions · ↑ ↓ rooms · Z zoom</span>
       <button class="vbtn" type="button" data-viewer="zoom" aria-pressed="false">100%</button>
       <button class="vbtn" type="button" data-viewer="close">Close</button>
     </div>
@@ -638,7 +678,7 @@ export function renderReport(input: {
   /* Viewer */
   const dialog = document.querySelector("dialog.viewer");
   const stage = dialog.querySelector(".viewer-stage");
-  // Created on first open so the closed dialog carries no source-less <img>.
+  // The viewer image element is created on first open, so the closed dialog holds no empty image.
   const img = document.createElement("img");
   img.alt = "";
   const tabsEl = dialog.querySelector(".viewer-tabs");
@@ -655,7 +695,9 @@ export function renderReport(input: {
     img.alt = item.dataset.label;
     title.textContent = item.dataset.label;
     const s = STATUS[item.dataset.status];
-    statusEl.innerHTML = s ? '<span class="status s-' + item.dataset.status + '">' + s.icon + "<span>" + s.label + '</span><span class="status-meaning">' + s.meaning + "</span></span>" : "";
+    statusEl.innerHTML = s
+      ? '<span class="status s-' + item.dataset.status + '">' + s.icon + "<span>" + s.label + '</span><span class="status-meaning">' + s.meaning + "</span></span>"
+      : '<span class="viewer-plain">As photographed for the listing</span>';
     tabsEl.querySelectorAll("button").forEach((b, n) => b.setAttribute("aria-pressed", String(n === index)));
     if (!keepZoom) setZoom(false);
   }
@@ -680,8 +722,8 @@ export function renderReport(input: {
       trigger = z;
       items = [...document.querySelectorAll('.zoom[data-group="' + CSS.escape(z.dataset.group) + '"]')];
       tabsEl.innerHTML = items.map((it, n) => '<button type="button" data-index="' + n + '" aria-pressed="false">' + it.dataset.label.split(" · ").pop().replace("Listing photo", "Listing") + "</button>").join("");
-      dialog.showModal();
-      show(items.indexOf(z));
+      if (!dialog.open) dialog.showModal();
+      show(items.indexOf(z), dialog.open && stage.classList.contains("actual"));
       tabsEl.querySelector('[aria-pressed="true"]')?.focus();
       return;
     }
@@ -714,6 +756,18 @@ export function renderReport(input: {
     if (e.key === "ArrowRight") { e.preventDefault(); show(index + 1, true); }
     if (e.key === "ArrowLeft") { e.preventDefault(); show(index - 1, true); }
     if (e.key === "z" || e.key === "Z") setZoom(!stage.classList.contains("actual"));
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      // Next/previous room, same version (Listing/Cosmetic/…), so a scope can be scanned room by room.
+      e.preventDefault();
+      const groups = [...new Set([...document.querySelectorAll(".room .zoom")].map((z) => z.dataset.group))];
+      const g = groups.indexOf(items[index]?.dataset.group);
+      if (g < 0) return;
+      const version = items[index].dataset.label.split(" · ").pop();
+      const nextGroup = groups[(g + (e.key === "ArrowDown" ? 1 : -1) + groups.length) % groups.length];
+      const next = [...document.querySelectorAll('.zoom[data-group="' + CSS.escape(nextGroup) + '"]')];
+      const target = next.find((z) => z.dataset.label.endsWith(" · " + version)) ?? next[0];
+      if (target) { trigger = target; target.click(); }
+    }
   });
   dialog.addEventListener("close", () => { img.remove(); trigger?.focus(); });
 
