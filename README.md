@@ -71,6 +71,58 @@ the command line with:
 npm run taste -- --profile example
 ```
 
+### How the taste pipeline works
+
+A rebuild turns reference photos and your written brief into a saved, editable
+profile. Redesigns apply that profile to each room within the chosen renovation
+tier. The diagram shows the default two-model analysis; `ANALYSIS_MODELS` can
+configure a different set, including a single model that skips the merge step.
+
+```mermaid
+flowchart TD
+    Photos["Reference photos"] --> GPT["GPT analyzes each photo"]
+    Photos --> Claude["Claude analyzes each photo"]
+    GPT --> Merge["Merge analyses<br/>Recheck disagreements against the photo"]
+    Claude --> Merge
+
+    Merge --> Patterns["Extract recurring patterns<br/>in batches of 10 photos"]
+    Brief["Your written brief<br/>Wins when photos conflict"] --> Patterns
+    Patterns --> Profile["Saved, editable taste profile<br/>Palette · material rules · avoids<br/>room notes · alternative directions"]
+    Brief --> Profile
+
+    Profile --> Plan["Plan changes for this room<br/>Prefer strong rules<br/>Choose one direction"]
+    Room["Listing photo<br/>Existing architecture + room inventory"] --> Plan
+    Tier["Renovation tier<br/>Cosmetic · Finishes · Structural"] --> Plan
+
+    Plan --> Image["Generate remodel image<br/>Planned changes + saved image direction"]
+    Profile --> Image
+    Image --> Verify["Check architecture preservation<br/>and whether changes followed the plan"]
+```
+
+Each rule records how many distinct reference photos support it and whether
+your brief states it. A rule is **strong** when it comes from the brief, or when
+at least 25% of the photos support it, rounded up, with a minimum of two photos.
+For 20 references, a rule seen in 5 photos is strong; a rule seen in 1 photo is
+weak; a rule stated in the brief is strong even with no photo evidence. These
+counts are model-derived evidence, not measured confidence. Planning prefers
+strong rules and uses weak rules only where no strong rule applies.
+
+The profile also captures room-specific notes and, when supported, alternative
+directions such as earthy or playful. Planning chooses one direction per room
+and adapts it to the existing architecture and allowed work. Image generation
+receives the listing photo, planned changes, and saved image direction and
+room notes; it does not receive the taste reference photos directly.
+
+Changing references or the brief marks the profile as out of date; **Rebuild
+rules** updates it. You can also edit and save the rules directly. A rebuild
+replaces those edits but keeps the previous profile available to restore.
+Keep category rules, image direction, and room notes consistent because they
+guide different stages of the redesign.
+
+Implementation: [taste pipeline](src/taste/pipeline.ts),
+[taste prompts](src/taste/prompts.ts), [redesign planning](src/redesign/plan.ts),
+and [image generation](src/redesign/generate.ts).
+
 ## Add a listing
 
 Import photos from a local folder. Replace the example path, ID, and name with
