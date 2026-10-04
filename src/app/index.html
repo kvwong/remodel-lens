@@ -127,7 +127,8 @@
   .detail-head { align-items:start; }
   .detail-head .title-row { gap:4px; }
   .detail-head h1 { overflow-wrap:anywhere; min-width:0; }
-  .detail-delete { color:var(--bad); margin-top:2px; }
+  .detail-delete { color:var(--bad); }
+  .detail-admin { display:grid; gap:12px; }
   .subhead { margin:6px 0 0; color:var(--muted); font-size:14px; }
   .section-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; margin-bottom:14px; }
   .tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
@@ -295,20 +296,43 @@
   .dropzone-empty .icon { width:22px; height:22px; }
   .upload-list { list-style:none; margin:10px 0 0; padding:0; font-size:13px; display:grid; gap:2px; }
   .upload-list .bad { color:var(--bad); }
-  .brief { min-height:300px; }
+  .text-field { min-width:0; }
+  .read-text { display:block; width:100%; padding:8px 10px; border:1px solid transparent; border-radius:6px; background:transparent; color:var(--text); font:inherit; font-size:14px; line-height:1.6; text-align:left; white-space:pre-wrap; overflow-wrap:anywhere; cursor:text; transition:background .15s, border-color .15s; }
+  .read-text:hover { background:var(--surface); border-color:var(--line); }
+  .read-text:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+  .read-text .empty-text { color:var(--muted); }
+  .read-text .read-line { display:block; padding-left:16px; position:relative; white-space:normal; }
+  .read-text .read-line + .read-line { margin-top:6px; }
+  .read-text .read-line::before { content:"•"; position:absolute; left:0; color:var(--muted); }
+  .brief-text .read-text { font-size:15px; max-width:80ch; }
+  .text-editor textarea { min-height:100px; resize:vertical; }
+  .brief-text .text-editor textarea { min-height:240px; }
+  .text-edit-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .text-editor .error { margin:8px 0 0; }
+  .rule-row:has(.text-editor) .text-field { grid-column:1 / -1; grid-row:2; }
+  .rule-row:has(.text-editor) .rule-meta { grid-column:2; grid-row:1; padding-top:0; }
+  .rule-row:has(.text-editor) > .icon-btn { grid-column:3; grid-row:1; margin-top:0; }
   .legend-line { font-size:13px; color:var(--muted); margin:0 0 8px; max-width:72ch; }
-  details.category { border-top:1px solid var(--line); }
-  details.category:last-of-type { border-bottom:1px solid var(--line); }
-  details.category > summary { cursor:pointer; min-height:48px; display:flex; align-items:center; gap:10px; list-style:none; flex-wrap:wrap; }
+  details.category { margin-top:8px; border:1px solid var(--line); border-radius:10px; background:color-mix(in srgb, var(--surface-2) 65%, var(--surface)); }
+  details.category > summary { cursor:pointer; min-height:52px; padding:12px 16px; display:flex; align-items:center; gap:10px; list-style:none; flex-wrap:wrap; }
   details.category > summary::-webkit-details-marker { display:none; }
   details.category > summary .cat-name { font-weight:500; }
   details.category > summary .cat-meta { font-size:13px; color:var(--muted); }
   details.category > summary::after { content:""; margin-left:auto; width:7px; height:7px; border-right:1.5px solid var(--muted); border-bottom:1.5px solid var(--muted); transform:translateY(-2px) rotate(45deg); transition:transform .2s; }
   details.category[open] > summary::after { transform:translateY(2px) rotate(-135deg); }
-  details.category[open] { padding-bottom:16px; }
-  .rule-row { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:10px; align-items:start; margin-top:8px; }
+  .category-body { padding:0 16px 16px; }
+  .category-body > .sub-label:first-child { margin-top:0; }
+  .rule-row { display:grid; grid-template-columns:minmax(0, 1fr) 64px 32px; gap:10px; align-items:start; margin-top:8px; padding:12px; border:1px solid var(--line); border-radius:8px; background:var(--surface-2); }
   .rule-row textarea { padding:8px 10px; font-size:14px; }
-  .rule-meta { display:flex; flex-direction:column; align-items:flex-end; gap:4px; padding-top:2px; min-width:64px; }
+  .rule-meta { display:flex; flex-direction:column; align-items:flex-end; gap:4px; padding-top:8px; min-width:0; }
+  .rule-row > .icon-btn { margin-top:4px; }
+  .add-rule { margin-top:12px; }
+  @media (max-width:600px) {
+    details.category > summary { padding:12px; gap:8px; }
+    .category-body { padding:0 12px 12px; }
+    .rule-row { grid-template-columns:minmax(0, 1fr) 48px 28px; gap:8px; padding:10px; }
+    .rule-row > .icon-btn { width:28px; height:28px; }
+  }
   .tag { font-size:12px; color:var(--muted); white-space:nowrap; }
   .tag-weak { color:var(--warn); }
   .icon-btn { width:32px; height:32px; border-radius:8px; border:0; background:transparent; color:var(--muted); cursor:pointer; display:grid; place-items:center; }
@@ -462,6 +486,7 @@ const CONFIRM_ABOVE = 5; // dollars
 
 /* ---------- Icons: one stroke family, drawn inline ---------- */
 const ICONS = {
+  copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
   trash: '<path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7M14 10v7"/>',
   monitor: '<rect x="3" y="3" width="18" height="13" rx="2"/><path d="M12 16v5M8 21h8"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
@@ -494,8 +519,8 @@ const statusTag = (s, count) => `<span class="status s-${s}">${icon(STATUS[s].ic
 let state = {
   view: "listing", listings: [], listing: null, profiles: [], tasteProfiles: [], taste: null,
   keysError: null, job: null, logOpen: false, runError: null, confirming: null, renaming: false,
-  rulesDraft: null, rulesDirty: false, briefDirty: false, uploads: [],
-  savingOrder: false,
+  rulesDraft: null, rulesDirty: false, briefDirty: false, briefDraft: "", textEdit: null, uploads: [],
+  savingOrder: false, duplicating: false,
 };
 
 function params() { return new URL(location.href).searchParams; }
@@ -545,11 +570,9 @@ function runEstimate(photos, scopes) {
 }
 const fmtMinutes = (m) => (m < 60 ? `about ${Math.max(1, Math.round(m))} min` : `about ${(m / 60).toFixed(1)} hr`);
 
-/** Re-render the taste view without losing an in-progress brief edit. */
+/** Inline edit buffers live in state so rendering preserves their text. */
 function rerenderTaste() {
-  const brief = state.briefDirty ? $("#brief")?.value : null;
   renderTaste();
-  if (brief != null) $("#brief").value = brief;
 }
 
 /* ---------- Sidebar ---------- */
@@ -558,7 +581,7 @@ function renderListings() {
   const current = state.view === "listing" ? state.listing?.id : null;
   $("#listings").innerHTML = state.listings.length
     ? state.listings.map((l) => `
-      <li class="sidebar-row" data-sidebar-kind="listings" data-sidebar-id="${esc(l.id)}" draggable="${!state.savingOrder}"><a class="nav-link" draggable="false" title="Drag to reorder. Keyboard: Alt + ↑/↓." href="?listing=${encodeURIComponent(l.id)}${params().get("photos") === "hidden" ? "&photos=hidden" : ""}" ${l.id === current ? 'aria-current="page"' : ""}>
+      <li class="sidebar-row" data-sidebar-kind="listings" data-sidebar-id="${esc(l.id)}" draggable="${!state.savingOrder}"><a class="nav-link" draggable="false" title="Drag to reorder. Keyboard: Alt + ↑/↓." href="?listing=${encodeURIComponent(l.id)}" ${l.id === current ? 'aria-current="page"' : ""}>
         ${l.cover ? `<img src="${esc(l.cover)}" draggable="false" alt="" width="44" height="33">` : ""}
         <span><span class="nav-name">${esc(l.name)}</span><small class="num">${l.id === current ? state.listing.photos.filter((p) => p.selected).length : l.selectedCount} of ${l.photoCount} selected</small></span>
       </a></li>`).join("")
@@ -777,8 +800,7 @@ async function pollJob() {
 
 function renderJob() {
   const running = state.job?.status === "running";
-  const deleteButton = $('[data-action="delete-detail"]');
-  if (deleteButton) deleteButton.disabled = running;
+  document.querySelectorAll('.detail-admin button').forEach(button => { button.disabled = running || state.duplicating || !!state.textEdit; });
   if (state.view === "listing") {
     const button = $('#run-form button[type="submit"]:not([data-confirmed])');
     if (button) {
@@ -788,7 +810,7 @@ function renderJob() {
     renderJobInto($("#job"), state.job, state.job?.reportUrl ? `<p style="margin:4px 0 0"><a class="btn" href="${esc(state.job.reportUrl)}">Open report</a></p>` : "");
   } else {
     const button = $('[data-action="confirm-build"]');
-    if (button) button.disabled = running || state.taste.references.length < 3;
+    if (button) button.disabled = running || !!state.textEdit || state.taste.references.length < 3;
     renderJobInto($("#taste-job"), state.job, "");
   }
 }
@@ -846,15 +868,48 @@ const DETAIL_TYPES = {
   taste: { label: "taste profile", collection: "taste-profiles", edit: "rename", editLabel: "Edit name and description", query: "taste" },
 };
 
-function renderDetailHeader({ kind, name, metadata, running, titleMarkup = "" }) {
+function renderDetailHeader({ kind, name, metadata, titleMarkup = "" }) {
   const detail = DETAIL_TYPES[kind];
   return `<div class="head detail-head">
     <div style="min-width:0;flex:1">
       ${titleMarkup || `<div class="title-row"><h1>${esc(name)}</h1><button class="icon-btn icon-plain" type="button" data-action="${detail.edit}" aria-label="${detail.editLabel}" data-tip="Edit">${icon("pencil")}</button></div>`}
       ${metadata}
     </div>
-    <button class="btn btn-quiet btn-small detail-delete" type="button" data-action="delete-detail" data-detail-kind="${kind}" ${running ? "disabled" : ""}>${icon("trash")}Delete ${detail.label}</button>
   </div>`;
+}
+
+function renderDetailAdmin(kind, running) {
+  const detail = DETAIL_TYPES[kind];
+  return `<section class="detail-admin panel" aria-labelledby="admin-h">
+    <h2 id="admin-h">Admin</h2>
+    <div class="tools">
+      <button class="btn btn-small" type="button" data-action="duplicate-detail" data-detail-kind="${kind}" aria-label="Duplicate ${detail.label}" ${running || state.duplicating ? "disabled" : ""}>${icon("copy")}Duplicate</button>
+      <button class="btn btn-quiet btn-small detail-delete" type="button" data-action="delete-detail" data-detail-kind="${kind}" aria-label="Delete ${detail.label}" ${running || state.duplicating ? "disabled" : ""}>${icon("trash")}Delete</button>
+    </div>
+    <p id="admin-error" class="error" role="alert" hidden></p>
+  </section>`;
+}
+
+async function duplicateDetail(kind) {
+  if (state.duplicating || state.job?.status === "running") return;
+  const detail = DETAIL_TYPES[kind];
+  const id = kind === "listing" ? state.listing.id : state.taste.id;
+  state.duplicating = true;
+  $("#admin-error").hidden = true;
+  renderJob();
+  try {
+    if (kind === "listing") await flushSave();
+    else if (state.briefDirty || state.rulesDirty) {
+      await saveAll();
+      if (state.briefDirty || state.rulesDirty) throw new Error("Couldn't save your changes before duplicating. Try saving again.");
+    }
+    const created = await api(`/api/${detail.collection}/${encodeURIComponent(id)}/duplicate`, { method: "POST" });
+    await navigate(`?${detail.query}=${encodeURIComponent(created.id)}`);
+    announce(`${sentence(detail.label)} duplicated`);
+  } catch (error) {
+    const message = $("#admin-error");
+    if (message) { message.textContent = error.message; message.hidden = false; }
+  } finally { state.duplicating = false; renderJob(); }
 }
 
 function openDetailDelete(kind) {
@@ -882,7 +937,7 @@ function renderListing() {
   const photosHidden = params().get("photos") === "hidden";
 
   $("#content").innerHTML = `
-    ${renderDetailHeader({ kind: "listing", name: l.name, running, metadata:
+    ${renderDetailHeader({ kind: "listing", name: l.name, metadata:
       l.location || l.source || l.description ? `<p class="stats">${[l.location?.replace(/\s*\(.*\)$/, ""), l.source, l.description].filter(Boolean).map((text) => `<span>${esc(text)}</span>`).join("")}</p>` : ""
     })}
 
@@ -987,7 +1042,8 @@ function renderListing() {
       ${l.runs.length
         ? `<ul class="runs">${l.runs.map(runRow).join("")}</ul>`
         : `<p class="muted" style="margin:0">No runs yet. Reports appear here after the first redesign.</p>`}
-    </section>`;
+    </section>
+    ${renderDetailAdmin("listing", running)}`;
 
   renderJob();
   profileCardSizer.disconnect();
@@ -1044,6 +1100,8 @@ async function loadTaste(id) {
   state.rulesDraft = state.taste.profile ? structuredClone(state.taste.profile) : null;
   state.rulesDirty = false;
   state.briefDirty = false;
+  state.briefDraft = state.taste.brief;
+  state.textEdit = null;
 }
 
 function renderTaste() {
@@ -1057,7 +1115,7 @@ function renderTaste() {
   const open = new Set([...document.querySelectorAll("#rules details[open]")].map((d) => d.dataset.key));
 
   $("#content").innerHTML = `
-    ${renderDetailHeader({ kind: "taste", name: t.meta.name, running,
+    ${renderDetailHeader({ kind: "taste", name: t.meta.name,
       titleMarkup: state.renaming ? `<div class="title-row"><label for="profile-name" class="sr-only">Profile name</label><input type="text" class="title-input" id="profile-name" value="${esc(t.meta.name)}" maxlength="60" autocomplete="off" spellcheck="false"></div><p class="hint">Enter to save, Esc to cancel.</p>` : "",
       metadata: `<p class="stats num">
         <span>Taste profile</span>
@@ -1069,7 +1127,7 @@ function renderTaste() {
     })}
     ${t.stale && !running ? `<p class="notice" role="status">Photos or the brief changed since these rules were built. Rebuild to bring the rules up to date.</p>` : ""}
 
-    <section aria-labelledby="refs-h">
+    <section class="panel" aria-labelledby="refs-h">
       <div class="section-head">
         <h2 id="refs-h">Reference photos <span class="muted num" style="font-weight:400">· ${t.references.length}</span></h2>
         <div class="tools">
@@ -1091,11 +1149,10 @@ function renderTaste() {
       </div>
     </section>
 
-    <section aria-labelledby="brief-h">
+    <section class="panel" aria-labelledby="brief-h">
       <div class="section-head" style="margin-bottom:6px"><h2 id="brief-h">Brief</h2></div>
-      <p class="hint" style="margin:0 0 12px">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal and use the photos to confirm and sharpen it. ⌘/Ctrl&nbsp;+&nbsp;Enter saves.</p>
-      <label for="brief" class="sr-only">Brief</label>
-      <textarea id="brief" class="brief" spellcheck="true" placeholder="e.g. Warm, architectural rooms with natural oak and plaster walls…">${esc(t.brief)}</textarea>
+      <p class="hint" style="margin:0 0 12px">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal and use the photos to confirm and sharpen it. Click the text to edit.</p>
+      ${renderTextField("brief", "brief", "Brief", state.briefDraft, { brief: true, rows: 10, placeholder: "Add a brief describing your taste…" })}
     </section>
 
     <section aria-labelledby="build-h" class="panel">
@@ -1116,7 +1173,7 @@ function renderTaste() {
       <div id="taste-job"></div>
     </section>
 
-    <section aria-labelledby="rules-h">
+    <section class="panel" aria-labelledby="rules-h">
       <div class="section-head" style="margin-bottom:6px"><h2 id="rules-h">Rules</h2></div>
       <div id="rules">${renderRulesBody()}</div>
     </section>
@@ -1125,7 +1182,8 @@ function renderTaste() {
       <p id="savebar-text">Unsaved changes</p>
       <button class="btn" type="button" data-action="discard-all">Discard</button>
       <button class="btn btn-primary" type="button" data-action="save-all">Save</button>
-    </div>`;
+    </div>
+    ${renderDetailAdmin("taste", running)}`;
 
   document.querySelectorAll("#rules details").forEach((d) => { if (open.has(d.dataset.key)) d.open = true; });
   updateSaveBar();
@@ -1142,6 +1200,89 @@ function updateSaveBar() {
   $("#savebar-text").textContent = `Unsaved changes to the ${parts.join(" and ")}`;
 }
 
+/** Shared read/edit treatment for the brief, rules, and direction notes. */
+function renderTextField(key, id, label, value, options = {}) {
+  const edit = state.textEdit?.key === key ? state.textEdit : null;
+  const text = Array.isArray(value) ? value.join("\n") : value ?? "";
+  const content = text.trim()
+    ? options.lines ? text.split("\n").map(line => `<span class="read-line">${esc(line)}</span>`).join("") : esc(text)
+    : `<span class="empty-text">${esc(options.placeholder ?? `Add ${label.toLowerCase()}…`)}</span>`;
+  return `<div class="text-field${options.brief ? " brief-text" : ""}" data-text-key="${esc(key)}" data-text-id="${esc(id)}" data-text-label="${esc(label)}" data-text-lines="${!!options.lines}" data-text-rows="${options.rows ?? 4}">
+    ${edit ? `<div class="text-editor">
+      <textarea id="${esc(id)}" aria-label="${esc(label)}" data-edit-input rows="${edit.rows}" spellcheck="true" ${edit.saving ? "disabled" : ""}>${esc(edit.value)}</textarea>
+      <div class="text-edit-actions">
+        <button class="btn btn-small" type="button" data-action="cancel-text" ${edit.saving ? "disabled" : ""}>Cancel</button>
+        <button class="btn btn-small btn-primary" type="button" data-action="done-text" ${edit.saving ? "disabled" : ""}>${edit.saving ? "Saving…" : "Done"}</button>
+      </div>
+      ${edit.error ? `<p class="error" role="alert">${esc(edit.error)}</p>` : ""}
+    </div>` : `<button type="button" id="${esc(id)}" class="read-text" data-edit-text="${esc(key)}" aria-label="Edit ${esc(label)}" ${state.job?.status === "running" ? "disabled" : ""}>${content}</button>`}
+  </div>`;
+}
+
+function beginTextEdit(field, newRule = null) {
+  if (state.textEdit) { announce("Finish the current edit with Done or Cancel."); return $("[data-edit-input]")?.focus(); }
+  const key = field.dataset.textKey;
+  const value = key === "brief" ? state.briefDraft : key.split(".").reduce((obj, k) => obj[k], state.rulesDraft);
+  state.textEdit = { key, id: field.dataset.textId, label: field.dataset.textLabel, lines: field.dataset.textLines === "true", rows: Number(field.dataset.textRows), value: Array.isArray(value) ? value.join("\n") : value, original: Array.isArray(value) ? value.join("\n") : value, newRule };
+  renderTaste();
+  $("[data-edit-input]")?.focus();
+}
+
+function cancelTextEdit() {
+  const edit = state.textEdit;
+  if (!edit || edit.saving) return;
+  if (edit.newRule != null) state.rulesDraft.categories[edit.newRule].rules.pop();
+  state.textEdit = null;
+  renderTaste();
+  (edit.newRule != null ? $(`[data-add-rule="${edit.newRule}"]`) : document.getElementById(edit.id))?.focus();
+}
+
+async function doneTextEdit() {
+  const edit = state.textEdit;
+  if (!edit || edit.saving) return;
+  if (edit.value === edit.original && edit.newRule == null && (edit.key === "brief" || !state.rulesDirty)) return cancelTextEdit();
+  if (/^categories\.\d+\.rules\.\d+\.rule$/.test(edit.key) && !edit.value.trim()) {
+    edit.error = "Enter a rule, or use Cancel to leave without changes.";
+    renderTaste();
+    return $("[data-edit-input]")?.focus();
+  }
+  edit.saving = true;
+  edit.error = null;
+  renderTaste();
+  try {
+    const endpoint = `/api/taste-profiles/${encodeURIComponent(state.taste.id)}`;
+    let result;
+    if (edit.key === "brief") {
+      result = await api(`${endpoint}/brief`, { method: "PUT", body: JSON.stringify({ text: edit.value }) });
+      if (state.textEdit !== edit) return;
+      state.briefDraft = result.brief;
+      state.briefDirty = false;
+    } else {
+      const draft = structuredClone(state.rulesDraft);
+      setPath(draft, edit.key, edit.lines ? edit.value.split("\n").map(line => line.trim()).filter(Boolean) : edit.value);
+      for (const category of draft.categories) category.rules = category.rules.filter(rule => rule.rule.trim());
+      const { imageCount, ...profile } = draft;
+      result = await api(`${endpoint}/rules`, { method: "PUT", body: JSON.stringify(profile) });
+      if (state.textEdit !== edit) return;
+      state.rulesDraft = structuredClone(result.profile);
+      state.rulesDirty = false;
+    }
+    state.taste = result;
+    state.textEdit = null;
+    renderTaste();
+    document.getElementById(edit.id)?.focus();
+    announce(`${edit.label} saved`);
+    state.tasteProfiles = await api("/api/taste-profiles");
+    renderProfilesNav();
+  } catch (error) {
+    if (state.textEdit !== edit) return;
+    edit.saving = false;
+    edit.error = `Couldn't save: ${error.message}`;
+    renderTaste();
+    $("[data-edit-input]")?.focus();
+  }
+}
+
 function renderRulesBody() {
   const d = state.rulesDraft;
   if (!d) return `<p class="muted" style="margin:0">No rules yet. Add reference photos and a brief, then rebuild.</p>`;
@@ -1149,18 +1290,20 @@ function renderRulesBody() {
   const strong = (r) => r.fromBrief || r.support >= Math.max(2, Math.ceil(total * 0.25));
   const lines = (path, list, label, hint) => `
     <label class="sub-label" for="f-${path}">${label}</label>
-    <textarea id="f-${path}" data-lines="${path}" rows="${Math.min(10, Math.max(3, list.length + 1))}">${esc(list.join("\n"))}</textarea>
+    ${renderTextField(path, `f-${path}`, label, list, { lines: true, rows: Math.min(10, Math.max(3, list.length + 1)) })}
     ${hint ? `<p class="hint">${hint}</p>` : ""}`;
   return `
     <p class="legend-line">Each rule shows how many of the ${total} reference photos show it. <em>Brief</em> means your brief states it. <span class="tag-weak">Weak</span> rules come from only one or two photos.</p>
     <details class="category" data-key="summary">
       <summary><span class="cat-name">Summary and image direction</span><span class="cat-meta">Sent to the image model with every redesign</span></summary>
+      <div class="category-body">
       <label class="sub-label" for="f-summary">Summary</label>
-      <textarea id="f-summary" data-path="summary" rows="3">${esc(d.summary)}</textarea>
+      ${renderTextField("summary", "f-summary", "Summary", d.summary, { rows: 4 })}
       <label class="sub-label" for="f-ips">Image direction</label>
-      <textarea id="f-ips" data-path="imagePromptSummary" rows="4">${esc(d.imagePromptSummary)}</textarea>
+      ${renderTextField("imagePromptSummary", "f-ips", "Image direction", d.imagePromptSummary, { rows: 5 })}
       <p class="hint">Keep it concrete: materials, colors, finishes, shapes.</p>
       ${lines("globalAvoid", d.globalAvoid, "Avoid everywhere", "One item per line.")}
+      </div>
     </details>
     ${d.categories.map((c, ci) => {
       const weak = c.rules.filter((r) => !strong(r)).length;
@@ -1168,24 +1311,27 @@ function renderRulesBody() {
       return `
       <details class="category" data-key="cat-${ci}">
         <summary><span class="cat-name">${esc(name)}</span><span class="cat-meta num">${c.rules.length} ${c.rules.length === 1 ? "rule" : "rules"}${weak ? ` · ${weak} weak` : ""}</span></summary>
+        <div class="category-body">
         ${c.rules.map((r, ri) => `
           <div class="rule-row">
-            <label class="sr-only" for="rule-${ci}-${ri}">${esc(name)} rule ${ri + 1}</label>
-            <textarea id="rule-${ci}-${ri}" data-path="categories.${ci}.rules.${ri}.rule" rows="2">${esc(r.rule)}</textarea>
+            ${renderTextField(`categories.${ci}.rules.${ri}.rule`, `rule-${ci}-${ri}`, `${name} rule ${ri + 1}`, r.rule, { rows: 4 })}
             <div class="rule-meta">
-              <button class="icon-btn" type="button" data-delete-rule="${ci}.${ri}" aria-label="Delete ${esc(name)} rule ${ri + 1}">${icon("x")}</button>
-              <span class="tag num">${r.support}/${total}${r.fromBrief ? " · brief" : ""}</span>
-              ${strong(r) ? "" : `<span class="tag tag-weak">Weak</span>`}
+              <span class="tag num">${r.support}/${total}</span>
+              ${r.fromBrief ? `<span class="tag">Brief</span>` : strong(r) ? "" : `<span class="tag tag-weak">Weak</span>`}
             </div>
+            <button class="icon-btn" type="button" data-delete-rule="${ci}.${ri}" ${state.textEdit || state.job?.status === "running" ? "disabled" : ""} aria-label="Delete ${esc(name)} rule ${ri + 1}">${icon("x")}</button>
           </div>`).join("")}
-        <button class="btn btn-quiet btn-small" type="button" data-add-rule="${ci}" style="margin-top:10px">${icon("plus")}Add rule</button>
+        <button class="btn btn-small add-rule" type="button" data-add-rule="${ci}" ${state.textEdit || state.job?.status === "running" ? "disabled" : ""}>${icon("plus")}Add rule</button>
         ${lines(`categories.${ci}.avoid`, c.avoid, "Avoid", "One item per line.")}
+        </div>
       </details>`;
     }).join("")}
     <details class="category" data-key="rooms">
       <summary><span class="cat-name">Room direction</span><span class="cat-meta">${d.roomNotes.length} rooms</span></summary>
+      <div class="category-body">
       ${d.roomNotes.map((r, i) => lines(`roomNotes.${i}.notes`, r.notes, esc(sentence(r.room)), "")).join("")}
       <p class="hint">One note per line. Used for photos labeled with that room.</p>
+      </div>
     </details>`;
 }
 
@@ -1241,13 +1387,11 @@ async function uploadFiles(files) {
 
 /** Reload the profile without discarding unsaved rule or brief edits. */
 async function refreshTaste() {
-  const brief = state.briefDirty ? $("#brief")?.value : null;
-  const keepRules = state.rulesDirty ? state.rulesDraft : null;
+  const keepRules = state.rulesDirty || state.textEdit ? state.rulesDraft : null;
   state.taste = await api(`/api/taste-profiles/${encodeURIComponent(state.taste.id)}`);
   state.rulesDraft = keepRules ?? (state.taste.profile ? structuredClone(state.taste.profile) : null);
-  state.rulesDirty = !!keepRules;
+  if (!state.briefDirty) state.briefDraft = state.taste.brief;
   renderTaste();
-  if (brief != null) { $("#brief").value = brief; state.briefDirty = true; updateSaveBar(); }
   state.tasteProfiles = await api("/api/taste-profiles");
   renderProfilesNav();
 }
@@ -1266,7 +1410,7 @@ function showUndo(text, undo) {
 }
 
 async function saveBrief() {
-  state.taste = await api(`/api/taste-profiles/${encodeURIComponent(state.taste.id)}/brief`, { method: "PUT", body: JSON.stringify({ text: $("#brief").value }) });
+  state.taste = await api(`/api/taste-profiles/${encodeURIComponent(state.taste.id)}/brief`, { method: "PUT", body: JSON.stringify({ text: state.briefDraft }) });
   state.briefDirty = false;
 }
 
@@ -1280,6 +1424,7 @@ async function saveRules() {
 }
 
 async function saveAll() {
+  if (state.textEdit) return doneTextEdit();
   try {
     const hadRules = state.rulesDirty;
     const wasStale = state.taste.stale;
@@ -1394,16 +1539,15 @@ document.addEventListener("input", (event) => {
     if (photo) photo.room = t.value;
     queueSave(t.dataset.room, { room: t.value.trim() });
   }
-  if (t.matches("#brief")) { state.briefDirty = true; updateSaveBar(); }
-  if (t.matches("[data-path]") && state.rulesDraft) { setPath(state.rulesDraft, t.dataset.path, t.value); markRulesDirty(); }
-  if (t.matches("[data-lines]") && state.rulesDraft) {
-    setPath(state.rulesDraft, t.dataset.lines, t.value.split("\n").map((l) => l.trim()).filter(Boolean));
-    markRulesDirty();
-  }
+  if (t.matches("[data-edit-input]") && state.textEdit) state.textEdit.value = t.value;
 });
 
 document.addEventListener("keydown", (event) => {
   const t = event.target;
+  if (t.matches("[data-edit-input]")) {
+    if (event.key === "Escape") { event.preventDefault(); cancelTextEdit(); return; }
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); doneTextEdit(); return; }
+  }
   if (event.key === "Enter" && t.matches("input[data-room]")) { event.preventDefault(); flushSave(); t.blur(); }
   if (t.matches("#profile-name")) {
     if (event.key === "Enter") { event.preventDefault(); finishRename(true); }
@@ -1419,6 +1563,15 @@ document.addEventListener("focusout", (event) => {
 });
 
 document.addEventListener("click", async (event) => {
+  const editText = event.target.closest("[data-edit-text]");
+  if (editText) return beginTextEdit(editText.closest(".text-field"));
+  const editingAction = event.target.closest("[data-action]")?.dataset.action;
+  if (editingAction === "cancel-text") return cancelTextEdit();
+  if (editingAction === "done-text") return doneTextEdit();
+  if (state.textEdit && ["save-all", "discard-all", "confirm-build", "build", "restore-previous", "delete-detail", "duplicate-detail"].includes(editingAction)) {
+    announce("Finish the current edit with Done or Cancel.");
+    return $("[data-edit-input]")?.focus();
+  }
   const toggle = event.target.closest('[data-toggle="photos"]');
   if (toggle) return setPhotosHidden(toggle.getAttribute("aria-expanded") === "true");
 
@@ -1442,6 +1595,7 @@ document.addEventListener("click", async (event) => {
 
   const del = event.target.closest("[data-delete-rule]");
   if (del) {
+    if (state.textEdit) return;
     const [ci, ri] = del.dataset.deleteRule.split(".").map(Number);
     state.rulesDraft.categories[ci].rules.splice(ri, 1);
     const next = state.rulesDraft.categories[ci].rules.length ? `#rule-${ci}-${Math.max(0, ri - 1)}` : `[data-add-rule="${ci}"]`;
@@ -1449,9 +1603,15 @@ document.addEventListener("click", async (event) => {
   }
   const add = event.target.closest("[data-add-rule]");
   if (add) {
+    if (state.textEdit) return;
     const ci = Number(add.dataset.addRule);
     state.rulesDraft.categories[ci].rules.push({ rule: "", support: 0, fromBrief: true });
-    return rerenderRules(`#rule-${ci}-${state.rulesDraft.categories[ci].rules.length - 1}`, `cat-${ci}`);
+    const id = `rule-${ci}-${state.rulesDraft.categories[ci].rules.length - 1}`;
+    const wasDirty = state.rulesDirty;
+    rerenderRules(null, `cat-${ci}`);
+    state.rulesDirty = wasDirty;
+    beginTextEdit(document.getElementById(id).closest(".text-field"), ci);
+    return;
   }
 
   const action = event.target.closest("[data-action]")?.dataset.action;
@@ -1476,12 +1636,14 @@ document.addEventListener("click", async (event) => {
   if (action === "close-dialog") return event.target.closest("dialog")?.close();
   if (action === "pick-files") return $("#ref-input").click();
   if (action === "delete-detail") return openDetailDelete(event.target.closest("[data-detail-kind]").dataset.detailKind);
+  if (action === "duplicate-detail") return duplicateDetail(event.target.closest("[data-detail-kind]").dataset.detailKind);
   if (action === "rename") return openProfileDialog("edit");
   if (action === "save-all") return saveAll();
   if (action === "discard-all") {
     state.rulesDraft = state.taste.profile ? structuredClone(state.taste.profile) : null;
     state.rulesDirty = false;
     state.briefDirty = false;
+    state.briefDraft = state.taste.brief;
     renderTaste();
     announce("Changes discarded");
     return;
@@ -1700,13 +1862,13 @@ document.addEventListener("drop", (e) => {
 
 window.addEventListener("beforeunload", (event) => {
   if (pending.size) { flushSave(); event.preventDefault(); }
-  if (state.briefDirty || state.rulesDirty) event.preventDefault();
+  if (state.briefDirty || state.rulesDirty || state.textEdit) event.preventDefault();
 });
 window.addEventListener("popstate", () => load());
 
 function navigate(href) {
   history.pushState(null, "", href);
-  Object.assign(state, { confirming: null, uploads: [], renaming: false, briefDirty: false, rulesDirty: false, runError: null });
+  Object.assign(state, { confirming: null, uploads: [], renaming: false, briefDirty: false, rulesDirty: false, textEdit: null, runError: null });
   return load().then(() => {
     scrollTo({ top: 0 });
     $("#content").focus({ preventScroll: true });
@@ -1719,12 +1881,14 @@ document.addEventListener("click", (e) => {
   const url = new URL(a.href, location.href);
   if (url.origin !== location.origin || url.pathname !== "/") return;
   e.preventDefault();
-  if ((state.briefDirty || state.rulesDirty) && !confirm("Leave without saving your changes?")) return;
+  if (state.textEdit?.saving) { announce("Wait for the edit to finish saving."); return; }
+  if ((state.briefDirty || state.rulesDirty || state.textEdit) && !confirm("Leave without saving your changes?")) return;
   flushSave();
   navigate(url.search || "/");
 }, true);
 
 async function load() {
+  state.textEdit = null;
   try {
     const [listings, profiles, tasteProfiles, status] = await Promise.all([api("/api/listings"), loadProfiles(), api("/api/taste-profiles"), api("/api/status")]);
     Object.assign(state, { listings, profiles, tasteProfiles, keysError: status.keysError });
@@ -1747,7 +1911,8 @@ async function load() {
     const id = params().get("listing") ?? listings[0]?.id;
     renderProfilesNav();
     if (!id) { state.listing = null; renderListings(); return renderEmpty(); }
-    if (!params().get("listing")) setParams({ listing: id });
+    // Start each listing visit collapsed; expanding applies only to the current visit.
+    setParams({ listing: id, photos: "hidden" });
     state.listing = await api(`/api/listings/${encodeURIComponent(id)}`);
     state.job = state.listing.activeJob;
     renderListings();

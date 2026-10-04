@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { loadEnv, requireKeys, resolveModels } from "../config.js";
 import { logContext, progressContext, type Progress } from "../files.js";
-import { addListingPhoto, createListing, deleteListing, restoreListing, updateListingDetails, listingDir, listListings, LISTINGS_DIR, readListing, saveListingOrder, saveSelection, type Listing } from "../listing/listing.js";
+import { addListingPhoto, createListing, duplicateListing, deleteListing, restoreListing, updateListingDetails, listingDir, listListings, LISTINGS_DIR, readListing, saveListingOrder, saveSelection, type Listing } from "../listing/listing.js";
 import { listProfiles, listRuns, loadProfile, runListingRedesign, RUNS_DIR, type RunSummary } from "../redesign/job.js";
 import { renderReport } from "../report.js";
 import { TIERS } from "../redesign/tiers.js";
@@ -259,6 +259,11 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         return send(res, 200, listingJson(await readListing(dir), await listRuns(parts[2])));
       }
       if ((await readListing(dir)).deletedAt) return send(res, 404, { error: "Listing not found" });
+      if (req.method === "POST" && parts[3] === "duplicate" && parts.length === 4) {
+        if (isRunning("redesign", parts[2])) return send(res, 409, { error: "Wait for the running redesign to finish before duplicating this listing." });
+        const copy = await duplicateListing(parts[2]);
+        return send(res, 201, { id: copy.id });
+      }
       if (req.method === "DELETE" && parts.length === 3) {
         if (isRunning("redesign", parts[2])) return send(res, 409, { error: "Wait for the running redesign to finish before deleting this listing." });
         await deleteListing(parts[2]);
@@ -350,7 +355,13 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         await restoreTasteProfile(id);
         return send(res, 200, await tasteProfileJson(id));
       }
-      if (!(await readTasteProfile(id))) return send(res, 404, { error: "Profile not found" });
+      const currentTaste = await readTasteProfile(id);
+      if (!currentTaste) return send(res, 404, { error: "Profile not found" });
+      if (req.method === "POST" && parts[3] === "duplicate" && parts.length === 4) {
+        if (busy()) return;
+        const copyId = await createTasteProfile(`Copy of ${currentTaste.meta.name}`, id, currentTaste.meta.description);
+        return send(res, 201, { id: copyId });
+      }
       if (req.method === "DELETE" && parts.length === 3) {
         if (busy()) return;
         await deleteTasteProfile(id);

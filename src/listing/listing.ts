@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { z } from "zod";
@@ -110,6 +110,25 @@ export async function createListing(input: { name: string; location?: string | n
   const description = input.description?.trim().slice(0, 300) || undefined;
   await writeFile(path.join(dir, "listing.json"), `${JSON.stringify({ name, ...(location ? { location } : {}), ...(description ? { description } : {}), photos: {} }, null, 2)}\n`);
   return readListing(dir);
+}
+
+/** Copy source photos and their labels into an independent listing with fresh run history. */
+export async function duplicateListing(id: string): Promise<Listing> {
+  const dir = listingDir(id);
+  if (!existsSync(dir)) throw Object.assign(new Error("Listing not found"), { status: 404 });
+  const source = await readListing(dir);
+  if (source.deletedAt) throw Object.assign(new Error("Listing not found"), { status: 404 });
+  const metaPath = path.join(dir, "listing.json");
+  const meta = existsSync(metaPath) ? JSON.parse(await readFile(metaPath, "utf8")) : {};
+  const copy = await createListing({ name: `Copy of ${source.name}` });
+  try {
+    for (const photo of source.photos) await copyFile(path.join(dir, photo.file), path.join(copy.dir, photo.file));
+    await writeFile(path.join(copy.dir, "listing.json"), `${JSON.stringify({ ...meta, name: copy.name, deletedAt: null }, null, 2)}\n`);
+    return await readListing(copy.dir);
+  } catch (error) {
+    await rm(copy.dir, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 

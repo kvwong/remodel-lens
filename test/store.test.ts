@@ -73,12 +73,16 @@ describe("taste profile store", () => {
     await addReference(src, await swatch(90));
     await saveBrief(src, "Plaster and timber.");
     await saveProfileJson(src, profile("rule"), "pipeline");
-    const copy = await createTasteProfile("Copy", src);
+    const copy = await createTasteProfile("Copy", src, "A copy of the direction");
     created.push(copy);
     const c = (await readTasteProfile(copy))!;
     expect(c.references).toEqual(["ref-01.jpg"]);
     expect(c.brief).toBe("Plaster and timber.");
     expect(c.stale).toBe(false);
+    expect(c.meta.description).toBe("A copy of the direction");
+    expect(c.profile!.categories[0]!.rules[0]!.rule).toBe("rule");
+    await saveBrief(copy, "Copy changed.");
+    expect((await readTasteProfile(src))!.brief).toBe("Plaster and timber.");
   });
 });
 
