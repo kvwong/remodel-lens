@@ -944,8 +944,8 @@ function renderListing() {
     <section class="panel zone" aria-labelledby="photos-h" id="photos-zone">
       <div class="section-head">
         <h2 id="photos-h"><button class="disclosure" type="button" aria-expanded="${!photosHidden}" aria-controls="photos-body" data-toggle="photos" ${l.photos.length ? "" : "disabled"}>
-          <span class="chevron">${icon("chevron")}</span>
           <span>Photos to redesign <span class="muted num" style="font-weight:400">· ${selected} of ${l.photos.length}</span></span>
+          <span class="chevron">${icon("chevron")}</span>
         </button></h2>
         <div class="tools">
           <span class="tools fade" data-photos-only data-collapsed="${photosHidden}">
