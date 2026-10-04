@@ -6,9 +6,9 @@ import { isStrongRule } from "../taste/pipeline.js";
 import type { TasteProfile } from "../taste/schema.js";
 import { allowedAt, TIER_DEFINITIONS, TIERS, type Tier } from "./tiers.js";
 
-/** Universal realism constraints; these apply regardless of taste. */
+/** Universal realism constraints; these apply regardless of taste. Material and style preferences belong in the taste profile. */
 export const PRACTICAL_CONSTRAINTS = [
-  "Use only genuine materials at their real thickness: solid wood or real veneer, natural stone, ceramic tile, real plaster, glass, metal. No laminates, printed grain, stone-effect panels, films, faux beams, or decorative wraps.",
+  "Show every material as what it is: a painted, laminate, or veneer finish must not be rendered as solid wood or stone.",
   "Never invent vaulted ceilings, double-height space, larger windows, or floor area.",
   "Keep furniture and cabinetry realistically scaled to the room; nothing oversized.",
   "Maintain usable circulation, door swings, appliance access, and chair clearance.",
@@ -43,7 +43,7 @@ export const ChangePlan = z.object({
     .describe("The one taste expression this room uses, by name from the profile's expressions, chosen to suit the existing room. Empty string if the profile has none."),
   architecturalLanguage: z
     .string()
-    .describe("The single design language for this room given the existing house, e.g. 'traditional: cream painted shallow coffers, framed oak fronts' or 'vaulted modern: wood ceiling boards, dark beams, slab oak'."),
+    .describe("The single design language for this room given the existing house, e.g. 'traditional: painted shaker cabinets, cased openings' or 'modern: flat-slab cabinetry, minimal trim'."),
   changes: z.array(
     z.object({
       element: z.string().describe("Must match a changeable element (or wall, for major) from the inventory."),
@@ -62,7 +62,7 @@ export const ChangePlan = z.object({
   feasibilityFlags: z.array(z.string()).describe("Risks a buyer should check: load-bearing, plumbing moves, permits, condition."),
   beyondScope: z
     .array(z.string())
-    .describe("Work beyond this tier that the full taste would need, stated as real construction (e.g. 'replace raised-panel boxes with solid oak slab cabinetry on plywood carcasses — moderate tier'). Empty if this tier already gets there."),
+    .describe("Work beyond this tier that the full taste would need, stated as real construction (e.g. 'replace cabinet boxes and doors in the same layout — moderate tier'). Empty if this tier already gets there."),
   rationale: z.string(),
 });
 
@@ -102,9 +102,9 @@ Hard constraints:
 - Do not change things just to change them. If the existing item already fits the taste, preserve it.
 ${PRACTICAL_CONSTRAINTS.map((c) => `- ${c}`).join("\n")}
 - Use the full allowance of this tier where the taste calls for it. When a change is allowed but carries uncertainty (e.g. whether coffers or soffits are structural), make the change and add a feasibility flag to verify it, rather than preserving the item. Reserve beyondScope for work above this tier.
-- If this tier cannot reach the taste authentically, do the honest smaller version (or leave an item as-is) and put the real construction needed in beyondScope. Never fake a finish to bridge the gap: do not paint or skin cabinets to imitate wood, and do not add applied beams or trim to imitate structure.
+- If this tier cannot reach the taste authentically, do the honest smaller version (or leave an item as-is) and put the real construction needed in beyondScope. Never render a cheaper change as if it were the full one (e.g. painted cabinets shown as new solid-wood cabinets).
 - Choose one expression from the profile for this room (if it has any), based on the room's architecture and existing finishes, and keep every change consistent with it.
-- Cost each change as an installed range (materials + labor, permits where typical) in ${new Date().getFullYear()} USD for ${location ? location : "a typical US metro"}. Estimate visible quantities from the photo (linear feet of cabinets, square feet of floor or tile, number of windows) and state them in costBasis. Price the specific materials proposed (e.g. solid oak vs. veneer, natural stone vs. quartz) at mid-market custom quality, not luxury designer pricing and not big-box. Keep ranges honest: high is typically 1.3–2× low. Cosmetic decor and furniture count at retail.
+- Cost each change as an installed range (materials + labor, permits where typical) in ${new Date().getFullYear()} USD for ${location ? location : "a typical US metro"}. Estimate visible quantities from the photo (linear feet of cabinets, square feet of floor or tile, number of windows) and state them in costBasis. Price the specific materials proposed (e.g. solid wood vs. veneer vs. laminate, natural stone vs. quartz) at mid-market custom quality, not luxury designer pricing and not big-box. Keep ranges honest: high is typically 1.3–2× low. Cosmetic decor and furniture count at retail.
 - First decide architecturalLanguage from what the existing room is (traditional, modern, vaulted, etc.), then choose finishes consistent with it. Where the taste offers conditional options ("in a traditional room… / in a modern room…"), pick the branch that fits this house.
 
 Room inventory (JSON):

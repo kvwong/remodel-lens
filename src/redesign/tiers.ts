@@ -18,12 +18,12 @@ export const TIER_DEFINITIONS: Record<Tier, { allowed: string; confidence: strin
   },
   moderate: {
     allowed:
-      "everything in cosmetic, plus new flooring, new cabinet boxes and doors in the same layout, countertops, backsplash and wall tile, plumbing fixtures in the same locations, appliances in the same locations, interior doors, removing or replacing trim (window and door casings, crown, baseboards) including trimless plaster window returns, and rebuilding built-ins flush with the wall plane without changing walls",
+      "everything in cosmetic, plus new flooring, new cabinet boxes and doors in the same layout, countertops, backsplash and wall tile, plumbing fixtures in the same locations, appliances in the same locations, interior doors, adding, removing, or replacing trim (window and door casings, crown, baseboards), and rebuilding built-ins without changing walls",
     confidence: "Good evidence with a real budget: layout and openings are unchanged.",
   },
   major: {
     allowed:
-      "everything in moderate, plus replacing window and exterior door frames and sashes within the existing openings (same position and size), removing decorative non-structural coffers, boxed beams, and soffits, removing or adding interior non-exterior walls, relocating plumbing and the kitchen layout, islands requiring new plumbing or electrical, enlarging interior openings",
+      "everything in moderate, plus replacing window and exterior door frames and sashes within the existing openings (same position and size), adding or removing decorative non-structural coffers, beams, and soffits, removing or adding interior non-exterior walls, relocating plumbing and the kitchen layout, islands requiring new plumbing or electrical, enlarging interior openings",
     confidence:
       "Speculative: wall removal and plumbing moves need a contractor and possibly a structural engineer before you rely on this.",
   },

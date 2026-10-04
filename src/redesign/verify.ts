@@ -123,10 +123,10 @@ export async function judge(input: {
 Check every fixed element below and report whether it is preserved in the same position, size, and count.
 
 How to judge:
-- For windows and doors, judge the OPENING by its wall edges: head height, jamb positions, sill line, and how many separate units there are. Slimmer replacement frames naturally show more glass inside the same opening, and removed casing becomes plaster; neither is a change to the opening. New frames, sashes, casings, or trim are allowed when they appear in the planned changes.
+- For windows and doors, judge the OPENING by its wall edges: head height, jamb positions, sill line, and how many separate units there are. Slimmer replacement frames naturally show more glass inside the same opening, and removed casing becomes wall surface; neither is a change to the opening. New frames, sashes, casings, or trim are allowed when they appear in the planned changes.
 - A failure is a difference that would require construction to build: an opening moved, resized, added, removed, or merged with another; a ceiling raised, lowered, or reshaped (beyond planned removal of decorative coffers or soffits, which exposes the ceiling at its existing height); a firebox resized; the room visibly larger or smaller.
 - Ignore small rendering differences that a builder would not notice or could not build differently (a few percent of a dimension, slight perspective softness). Mention them in issues, but mark the element preserved.
-- Removing planned decorative coffers, boxed beams, or trim is not a change to the ceiling or openings.
+- Adding or removing planned decorative coffers, beams, or trim is not a change to the ceiling or openings.
 Fixed elements:
 ${input.inventory.fixed.map((item) => `- ${item.kind}: ${item.description}`).join("\n")}
 

@@ -29,7 +29,7 @@ export function editPrompt(input: {
     "- Camera position, height, lens, and perspective. Do not reframe, crop, or zoom.",
     "- Room dimensions, ceiling height, and floor plane.",
     "- Every wall-to-ceiling junction and ceiling line stays at the same position in the image. Removing coffers or soffits exposes a ceiling at the existing height; never raise or reshape it.",
-    "- Each window and door opening keeps its wall edges (head, jambs, sill) at the same position in the image. Where casing or trim is removed, the area it covered becomes plaster wall or a plaster return, not glass. Separate window units stay separate, with the wall or post between them intact; transoms stay transoms.",
+    "- Each window and door opening keeps its wall edges (head, jambs, sill) at the same position in the image. Where casing or trim is removed, the area it covered becomes wall surface, not glass. Separate window units stay separate, with the wall or post between them intact; transoms stay transoms.",
     "- Fireplace firebox opening keeps its exact size and position; only the surround and mantel may change if listed.",
     ...fixed,
     ...plan.preserve.map((item) => `- ${item}`),
@@ -49,7 +49,7 @@ export function editPrompt(input: {
     ...roomNotesFor(profile, inventory.roomType).flatMap((room) => [`${room.room.toUpperCase()} DIRECTION:`, ...room.notes.map((n) => `- ${n}`)]),
     `AVOID: ${profile.globalAvoid.join(", ")}.`,
     "",
-    "Render accurate wood grain, stone variation, fabric texture, shadows, and material junctions. Natural exposure with daylight consistent with the existing windows. No people, text, or watermarks.",
+    "Render accurate material textures, shadows, and material junctions. Natural exposure with daylight consistent with the existing windows. No people, text, or watermarks.",
     ...(input.feedback ? ["", `A previous attempt failed verification. Fix this: ${input.feedback}`] : []),
   ].join("\n");
 }
