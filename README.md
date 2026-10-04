@@ -1,92 +1,146 @@
 # Remodel Lens
 
-Redesign listing photos to match your interior taste, with each redesign limited
-to what a realistic remodel at a given budget tier could do. See
-[PLAN.md](PLAN.md) for the architecture and roadmap.
+Remodel Lens creates realistic listing-photo redesigns from your interior-taste
+references. Each redesign is scoped to a budget tier and includes a report with
+cost bands and checks for changes to fixed architecture. See [PLAN.md](PLAN.md)
+for architecture and roadmap details.
 
-## Setup
+## Get started
 
-```bash
-npm install
-cp .env.example .env.local   # add OPENAI_API_KEY and ANTHROPIC_API_KEY
-```
+### Requirements
 
-You need your own API keys: an OpenAI key (image edits and analysis) and an
-Anthropic key (the second analysis model). To use only one provider, set
-`ANALYSIS_MODELS` and `REASONING_MODEL` (see Config).
+- Node.js 22 or newer and npm.
+- API keys for OpenAI and Anthropic to use the default models. Image generation
+  always uses OpenAI. You can start the local app without keys, but you need
+  the required keys to rebuild taste rules or generate redesigns.
 
-The repo ships with no taste. It includes an empty `profiles/example/` profile
-to start from. Your profiles, reference photos, listings, and runs stay local
-and are gitignored.
+### Install and configure
 
-## 1. Taste profiles
-
-Profiles live in `profiles/<id>/`, each with its own reference photos, written
-brief, and rules. To make your own, open **Example** (or click **New…**), add
-10–20 interior photos you like, write a brief, and click **Rebuild rules**. Manage them in the app (`npm run app` → **Taste profiles**):
-
-- **References:** add photos (drag and drop, JPG/PNG/WebP/TIFF; duplicates are
-  refused) or remove them, with Undo.
-- **Brief:** describe the taste in your own words. Rebuilds treat it as the
-  strongest signal.
-- **Rules:** edit, add, or delete individual rules, the image direction, and
-  room notes.
-- **Rebuild rules:** GPT and Claude analyze every reference and merge the
-  results with the brief. The previous rules are kept and can be restored. The
-  app shows when photos or the brief have changed since the last build.
-- **New…:** start empty or from a copy of an existing profile.
-
-The same rebuild is available from the CLI:
+From the repository root:
 
 ```bash
-npm run taste -- --profile example
+npm ci
+cp .env.example .env.local
 ```
 
-## 2. Pick photos
+Open `.env.local` and add your keys:
 
-Save each listing's photos into a folder, e.g. `listings/123-main-st/`. Then run:
+```dotenv
+OPENAI_API_KEY=your-openai-key
+ANTHROPIC_API_KEY=your-anthropic-key
+```
+
+The defaults use OpenAI and Anthropic for reference analysis, OpenAI for
+planning and checks, and OpenAI for image edits. To use OpenAI for all analysis
+and planning, set these optional overrides in `.env.local`:
+
+```dotenv
+ANALYSIS_MODELS=openai/gpt-6.1-sol
+REASONING_MODEL=openai/gpt-6.1-sol
+```
+
+You can change model IDs and image concurrency with the optional settings in
+[`.env.example`](.env.example). Keep real keys in `.env.local`; never commit
+them.
+
+### Start the app
 
 ```bash
 npm run app
 ```
 
-Open http://localhost:4310. For each listing you can choose which photos to
-redesign, label each room ("great room", "den") so the right taste direction
-applies, pick tiers and a profile, and run. Selections save to
-`listings/<id>/listing.json`, and past runs link to their reports. An optional
-`name` in listing.json sets the display name.
+Open <http://localhost:4310>. To use another local port, set `PORT` before
+starting the app, for example `PORT=4320 npm run app`.
 
-## 3. Redesign a listing
+## Create a taste profile
 
-From the app, or from the CLI using the same saved selection:
+1. In **Taste profiles**, open **Example** or choose **New** to create a profile.
+2. Add at least 3 interior reference photos you like; 10–20 gives the models
+   more to work with. JPG, PNG, WebP, and TIFF are supported. Near-duplicates
+   are skipped.
+3. Write a brief describing your preferred styles, materials, colors, rooms,
+   and things to avoid. Be specific about the materials and details you want.
+4. Choose **Rebuild rules**. The app combines the brief with analysis of your
+   references. You can then edit the rules, image direction, and room notes in
+   the app.
+
+The app saves the profile in `profiles/<id>/`. You can rebuild its rules from
+the command line with:
+
+```bash
+npm run taste -- --profile example
+```
+
+## Add a listing
+
+Import photos from a local folder. Replace the example path, ID, and name with
+your own:
+
+```bash
+npm run import -- ~/Pictures/123-main-st --id 123-main-st --name "123 Main St"
+```
+
+The importer accepts JPG, PNG, WebP, and TIFF files, corrects photo rotation,
+resizes large images, skips near-duplicates, and adds new photos as selected.
+Reload the app to see the listing. You can also import individual files by
+passing their paths instead of a folder. In the app, label rooms (for example,
+`kitchen` or `den`), choose which photos to redesign, select a taste profile,
+and choose the budget tiers.
+
+Listings and their selections are stored in `listings/<id>/`. To add more
+photos to an existing listing, run the import command again with the same ID.
+
+## Generate a redesign
+
+In the app, open the listing and choose **Run redesign**. The report opens when
+the run finishes. Each room includes before-and-after images by tier, a change
+list with cost bands, and a verification status.
+
+You can also run the saved listing selection from the CLI:
 
 ```bash
 npm run redesign -- listings/123-main-st --profile profiles/example/profile.json --tiers cosmetic,moderate
 ```
 
-Add `major` to `--tiers` for speculative layout changes. Open the printed
-`report.html` to see before/after images per tier, the change list with cost
-bands, and each image's verification status:
+Add `major` to `--tiers` for speculative layout changes. Reports and run data
+are saved under `.runs/`. API calls can incur charges; each run processes the
+selected photos across the chosen tiers, and rebuilding a profile analyzes its
+reference photos.
 
 | Status | Meaning |
 |---|---|
-| Verified | Fixed elements (windows, doors, stairs, ceiling) passed both the edge check and the vision judge |
-| Needs review | The judge passed it, but edge structure shifted near a fixed element, or the plan was only partly followed |
-| Unverified | Failed twice. Architecture changed, so don't trust it for decisions |
+| Verified | Fixed elements (windows, doors, stairs, ceiling) passed both the edge check and the vision judge. |
+| Needs review | The judge passed, but an edge shifted near a fixed element or the plan was only partly followed. |
+| Unverified | Verification failed twice. Architecture changed; don't rely on the image for decisions. |
 
-## Config
+## Your data and privacy
 
-| Env var | Default |
-|---|---|
-| `ANALYSIS_MODELS` | `openai/gpt-6.1-sol,anthropic/claude-sonnet-5-5` |
-| `REASONING_MODEL` | `openai/gpt-6.1-sol` |
-| `IMAGE_MODEL` | `gpt-image-2.5-sunburst` (prompt-only edits; older models get the mask) |
-| `IMAGE_CONCURRENCY` | `4` (shared across listings running in parallel) |
+Listings, profiles, reference photos, and run artifacts are stored in this
+checkout. Personal listings, profiles, and runs are gitignored; only the empty
+`profiles/example/` starter profile is shared in the repository. When you
+rebuild rules or generate a redesign, the relevant reference or listing photos
+and prompts are sent to the configured model providers for processing. Do not
+use photos or details you are not comfortable sending to those providers.
+Remodel Lens does not scrape listing sites; source listing photos yourself.
 
-## Checks
+## Configuration
+
+Settings are read from `.env.local` (preferred) or `.env` in the repository
+root. `.env.example` lists the defaults:
+
+| Setting | Default | Purpose |
+|---|---|---|
+| `OPENAI_API_KEY` | — | Required for image edits and default OpenAI models. |
+| `ANTHROPIC_API_KEY` | — | Required by the default analysis models. |
+| `ANALYSIS_MODELS` | `openai/gpt-6.1-sol,anthropic/claude-sonnet-5-5` | Models that analyze each taste reference. |
+| `REASONING_MODEL` | `openai/gpt-6.1-sol` | Planning, rule extraction, and verification. |
+| `IMAGE_MODEL` | `gpt-image-2.5-sunburst` | Image-edit model. |
+| `IMAGE_CONCURRENCY` | `4` | Maximum image edits in flight across listings. |
+| `PORT` | `4310` | Local app port. |
+
+## Development checks
 
 ```bash
-npm run check && npm test
+npm run check
+npm test
 ```
-
-Download listing photos yourself, for personal use. This tool doesn't scrape listing sites.
