@@ -258,3 +258,13 @@ describe("cost estimates", () => {
     expect(totals.get("moderate")).toEqual({ range: { low: 75_000, high: 120_000 }, rooms: 2 });
   });
 });
+
+describe("plain-language verification notes", () => {
+  it("rewrites detector and judge phrasing", async () => {
+    const { plainReason } = await import("../src/report.js");
+    expect(plainReason("Edge structure shifted around window (Tall window over sink), r=0.38")).toBe("Window outline may have shifted (match 0.38): Tall window over sink");
+    expect(plainReason("ceiling_line not preserved: The junction rises.")).toBe("Ceiling line changed: The junction rises.");
+    expect(plainReason("plumbing_location: shower not preserved: Head moved.")).toBe("Plumbing location: shower changed: Head moved.");
+    expect(plainReason("Openings were added, removed, or moved.")).toBe("A window or door opening was added, removed, or moved.");
+  });
+});
