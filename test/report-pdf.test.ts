@@ -72,6 +72,6 @@ describe("report PDF", () => {
     const html = renderReport({ title: "12 Maple St", photos, profileSummary: "", pdf: { summary: "/pdf/runs/maple/r1?detail=summary", full: "/pdf/runs/maple/r1?detail=full" } });
     expect(html).toContain('href="/pdf/runs/maple/r1?detail=summary"');
     expect(html).toContain('href="/pdf/runs/maple/r1?detail=full"');
-    expect(renderReport({ title: "12 Maple St", photos, profileSummary: "" })).not.toContain("data-pdf download");
+    expect(renderReport({ title: "12 Maple St", photos, profileSummary: "" })).not.toContain("data-pdf=");
   });
 });

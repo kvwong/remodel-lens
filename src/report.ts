@@ -444,21 +444,17 @@ export function renderReport(input: {
   /* PDF downloads sit in the header's upper right corner, beside the title. */
   .page-head > .share { grid-column:2; grid-row:1 / span 4; align-self:start; }
   .share { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px 10px; max-width:560px; }
-  .share-label { flex-basis:100%; text-align:right; font-size:13px; color:var(--muted); }
-  .share-btn { display:inline-flex; align-items:center; gap:10px; min-height:44px; padding:6px 14px 6px 12px; border-radius:9px; border:1px solid var(--line-strong); background:var(--surface); text-decoration:none; color:var(--text); }
+  .share-btn { display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:6px 14px 6px 12px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); text-decoration:none; color:var(--text); font-size:14px; font-weight:500; white-space:nowrap; }
   .share-btn:hover { border-color:var(--primary); background:var(--primary-soft); }
   .share-btn .icon { color:var(--primary); }
   .share-btn[aria-busy="true"] { opacity:.6; cursor:progress; }
-  .share-text { display:grid; line-height:1.25; }
-  .share-text strong { font-size:14px; font-weight:600; }
-  .share-text span { font-size:12px; color:var(--muted); }
   .share-status { flex-basis:100%; text-align:right; font-size:13px; color:var(--muted); }
   .share-status:empty { display:none; }
   @media (max-width: 900px) {
     .page-head > .share { grid-column:1; grid-row:auto; margin-top:18px; justify-content:flex-start; max-width:none; }
-    .share-label, .share-status { text-align:left; }
+    .share-status { text-align:left; }
   }
-  @media (max-width: 680px) { .share-btn { flex:1 1 100%; } }
+  @media (max-width: 680px) { .share-btn { flex:1 1 0; justify-content:center; } }
   .notice { margin:16px 0 0; font-size:14px; color:var(--warn); }
 
   .status { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; white-space:nowrap; }
@@ -643,10 +639,9 @@ export function renderReport(input: {
     <h1 id="top" tabindex="-1">${esc(input.title)}</h1>
     <p class="meta">${meta.map((m) => `<span>${esc(m)}</span>`).join("")}</p>
     ${input.pdf
-      ? `<div class="share" role="group" aria-labelledby="share-label">
-      <span class="share-label" id="share-label">Download PDF</span>
-      <a class="share-btn" href="${esc(input.pdf.summary)}" data-pdf download>${icon("download")}<span class="share-text"><strong>Summary</strong><span>Costs and before and after, 3 pages</span></span></a>
-      <a class="share-btn" href="${esc(input.pdf.full)}" data-pdf download>${icon("download")}<span class="share-text"><strong>Full scope</strong><span>Every room and change</span></span></a>
+      ? `<div class="share" role="group" aria-label="Download PDF">
+      <a class="share-btn" href="${esc(input.pdf.summary)}" data-pdf="Summary" title="Costs and a before and after for every room" download>${icon("download")}Summary PDF</a>
+      <a class="share-btn" href="${esc(input.pdf.full)}" data-pdf="Full scope" title="Every room, scope, and planned change" download>${icon("download")}Full scope PDF</a>
       <span class="share-status" role="status" aria-live="polite"></span>
     </div>`
       : ""}
@@ -850,7 +845,7 @@ export function renderReport(input: {
   document.querySelectorAll("a[data-pdf]").forEach((link) => link.addEventListener("click", async (e) => {
     e.preventDefault();
     if (link.getAttribute("aria-busy") === "true") return;
-    const kind = link.querySelector("strong").textContent;
+    const kind = link.dataset.pdf;
     link.setAttribute("aria-busy", "true");
     shareStatus.textContent = "Preparing the " + kind.toLowerCase() + " PDF…";
     try {
