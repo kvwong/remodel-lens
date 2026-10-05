@@ -37,6 +37,7 @@
   :root {
     --bg:#f5f4f1; --surface:#ffffff; --surface-2:#f5f3ef; --text:#1b1a19; --muted:#625e58;
     --line:rgba(27,26,25,.1); --line-strong:rgba(27,26,25,.22);
+    --control-hover:var(--surface);
     --ink:#1b1a19; --ink-text:#fafaf9;
     /* Primary: deep forest green from the taste palette, for primary actions, selection, and progress only. */
     --primary:#2f5a44; --primary-hover:#244a37; --primary-text:#ffffff; --primary-soft:#e4eee7;
@@ -46,10 +47,11 @@
     --mono:ui-monospace, "SF Mono", Menlo, monospace;
   }
   :root[data-theme="dark"] {
-      --bg:#0e0e0d; --surface:#1b1a19; --surface-2:#242321; --text:#ecebe8; --muted:#a39f99;
-      --line:rgba(236,235,232,.1); --line-strong:rgba(236,235,232,.22);
+      --bg:#0e0e0d; --surface:#242321; --surface-2:#302e2b; --text:#ecebe8; --muted:#b5b0a9;
+      --line:rgba(236,235,232,.2); --line-strong:rgba(236,235,232,.42);
+      --control-hover:var(--surface-2);
       --ink:#ecebe8; --ink-text:#121211;
-      --primary:#8cc3a1; --primary-hover:#a3d1b5; --primary-text:#0d1a12; --primary-soft:#1b2a21;
+      --primary:#8cc3a1; --primary-hover:#a3d1b5; --primary-text:#0d1a12; --primary-soft:#223a2b;
       --ok:#8fc49f; --warn:#e0bd78; --warn-bg:#2c2414; --bad:#ee9d90; --bad-bg:#321b17;
   }
   :root { color-scheme:light; }
@@ -96,7 +98,8 @@
   nav ul { list-style:none; margin:0; padding:0; display:grid; gap:2px; }
   nav ul { position:relative; }
   .nav-link { position:relative; z-index:1; display:flex; gap:12px; align-items:center; padding:8px 10px; border-radius:10px; text-decoration:none; min-height:52px; }
-  .nav-link:hover:not([aria-current="page"]) { background:color-mix(in srgb, var(--surface) 60%, transparent); }
+  .nav-link { cursor:pointer; }
+  .nav-link:hover:not([aria-current="page"]) { background:var(--surface); }
   .nav-link[aria-current="page"] { background:var(--surface); box-shadow:var(--shadow); }
   .nav-link[aria-current="page"] .nav-name { font-weight:600; }
   .nav-link img { width:48px; height:36px; object-fit:cover; border-radius:6px; background:var(--surface-2); flex:none; }
@@ -104,8 +107,8 @@
   .nav-link small { display:block; color:var(--muted); font-size:13px; }
   .nav-link .stale { color:var(--warn); }
   .sidebar-row { position:relative; min-width:0; }
-  .sidebar-row[draggable="true"] .nav-link { cursor:grab; }
   .sidebar-row.dragging { opacity:.45; }
+  body.sidebar-dragging, body.sidebar-dragging * { cursor:grabbing !important; }
   .sidebar-row[data-drop-position]::after { content:""; position:absolute; left:10px; right:10px; height:2px; background:var(--primary); pointer-events:none; z-index:3; }
   .sidebar-row[data-drop-position="before"]::after { top:-2px; }
   .sidebar-row[data-drop-position="after"]::after { bottom:-2px; }
@@ -134,9 +137,50 @@
   .tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .hint { margin:6px 0 0; font-size:13px; color:var(--muted); max-width:68ch; }
 
+  /* Collection pages and the mobile navigation shell. */
+  .collection-head h1 { font-size:26px; line-height:1.2; }
+  .collection-grid { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap:12px; }
+  .collection-link { display:flex; gap:16px; align-items:center; min-height:104px; padding:16px; border-radius:12px; background:var(--surface); box-shadow:var(--shadow); text-decoration:none; }
+  .collection-link:hover { box-shadow:var(--shadow-hover); }
+  .collection-preview { width:88px; height:70px; border-radius:8px; overflow:hidden; flex:none; display:grid; place-items:center; background:var(--surface-2); color:var(--muted); }
+  .collection-preview > img { width:100%; height:100%; object-fit:cover; }
+  .collection-preview .profile-preview { height:100%; }
+  .collection-copy { display:grid; gap:4px; min-width:0; overflow-wrap:anywhere; }
+  .collection-copy strong { font-size:16px; font-weight:600; line-height:1.3; }
+  .collection-copy small { color:var(--muted); font-size:13px; }
+  .collection-copy .stale { color:var(--warn); }
+  .report-listing { font-size:15px; font-weight:600; text-decoration:none; justify-self:start; }
+  .report-listing:hover { text-decoration:underline; }
+  .mobile-tabs { display:none; }
+  @media (max-width:860px) {
+    html { scroll-padding-bottom:112px; }
+    .layout { padding:16px max(16px, env(safe-area-inset-left)) calc(112px + env(safe-area-inset-bottom)); gap:20px; align-content:start; }
+    .side { flex-direction:row; align-items:center; gap:8px; padding:0; }
+    .side-content { display:contents; }
+    .side-content nav { display:none; }
+    .side .brand { padding-left:0; }
+    .display-setting { margin:0 0 0 auto; padding:0; }
+    .display-options button { width:30px; height:32px; }
+    main > .head + * { margin-top:0; }
+    .collection-head { align-items:center; }
+    .collection-head .btn { min-height:44px; }
+    .collection-grid { grid-template-columns:minmax(0, 1fr); }
+    .collection-link { min-height:108px; }
+    .mobile-tabs { position:fixed; z-index:25; bottom:calc(12px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:4px; padding:6px; border:1px solid var(--line-strong); border-radius:24px; background:var(--surface); box-shadow:0 8px 32px rgba(0,0,0,.2), 0 2px 8px rgba(0,0,0,.08); }
+    .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-height:56px; border-radius:18px; color:var(--muted); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; transition:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
+    .mobile-tabs .icon { width:22px; height:22px; }
+    .mobile-tabs a[aria-current="page"] { background:var(--primary-soft); color:var(--primary); font-weight:600; }
+    .mobile-tabs a:active { transform:scale(.96); }
+    #save-status { top:54px !important; max-width:calc(100% - 32px); background:var(--surface); border-radius:6px; padding:2px 6px; }
+    #save-status:empty { padding:0; }
+  }
+  @supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+    .mobile-tabs { background:color-mix(in srgb, var(--surface) 78%, transparent); backdrop-filter:blur(24px) saturate(1.5); -webkit-backdrop-filter:blur(24px) saturate(1.5); }
+  }
+
   /* Controls */
   .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:38px; padding:6px 14px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); cursor:pointer; font-size:14px; font-weight:500; text-decoration:none; white-space:nowrap; }
-  .btn:hover { border-color:var(--text); box-shadow:var(--shadow-hover); }
+  .btn:hover { background:var(--control-hover); border-color:var(--text); box-shadow:var(--shadow-hover); }
   .btn-primary { background:var(--primary); color:var(--primary-text); border-color:var(--primary); padding:6px 16px; font-weight:600; box-shadow:0 1px 2px rgba(20,40,28,.18); }
   .btn-primary:hover { background:var(--primary-hover); border-color:var(--primary-hover); }
   .btn-primary:active { transform:translateY(1px); }
@@ -356,8 +400,8 @@
     --shadow:0 1px 2px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.02), 0 0 0 0.5px rgba(0,0,0,0.08);
     --shadow-hover:0 2px 4px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.08); }
   :root[data-theme="dark"] {
-    --shadow:0 1px 2px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(255,255,255,0.08);
-    --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.12); }
+    --shadow:0 1px 2px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(255,255,255,0.18);
+    --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.24); }
   /* Every clickable element presses to 98% on the fast duration. */
   button, .btn, a.nav-link, .tier, .pick, .zoom, summary, [role="tab"] { transition:transform var(--fast) var(--ease), box-shadow var(--base) var(--ease), background-color var(--base) var(--ease), border-color var(--base) var(--ease), color var(--base) var(--ease), opacity var(--base) var(--ease); }
   button:active:not(:disabled), .btn:active, a.nav-link:active, .tier:active, .pick:active, .zoom:active, summary:active, [role="tab"]:active { transform:scale(0.98); }
@@ -369,6 +413,86 @@
   .side-head [data-tip]::after { left:auto; right:0; translate:0 4px; }
   .side-head [data-tip]:hover::after, .side-head [data-tip]:focus-visible::after { translate:0 0; }
   @keyframes pop-in { from { opacity:0; transform:translateY(6px) scale(0.96); } to { opacity:1; transform:none; } }
+  /* Mobile layout (kept last so it wins over the base component rules above). */
+  @media (max-width:860px) {
+    .savebar { bottom:calc(96px + env(safe-area-inset-bottom)); }
+    .toast { bottom:calc(96px + env(safe-area-inset-bottom)); max-width:calc(100% - 32px); }
+    /* The floating tab bar would ride above the on-screen keyboard and cover the field being typed in. */
+    body:has(:is(input:not([type="checkbox"]), textarea, select):focus) .mobile-tabs { display:none; }
+
+    /* Detail pages: a back link replaces the hidden sidebar. */
+    .back-link { display:inline-flex; align-items:center; gap:2px; min-height:44px; margin:-10px 0 -4px -6px; padding:0 8px 0 2px; border-radius:8px; color:var(--muted); font-size:14px; font-weight:500; text-decoration:none; }
+    .back-link .icon { width:18px; height:18px; transform:rotate(90deg); }
+    .back-link:active { color:var(--text); }
+    .head h1, .title-input { font-size:24px !important; line-height:1.25; }
+    .detail-head .title-row .icon-plain { width:36px; height:36px; }
+
+    /* Listing photos: two up, so a 12-photo listing is a few screens instead of a dozen. */
+    #photos-zone .section-head > .tools { width:100%; }
+    #photos-zone .section-head > .tools > .btn:last-of-type { margin-left:auto; }
+    .grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px 10px; }
+    .pick { border-radius:6px; }
+    .check { top:6px; left:6px; width:28px; height:28px; }
+    .meta { padding-top:6px; gap:4px; }
+    .meta label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+    .room { min-height:40px; padding:6px 8px; }
+    .file { font-size:11px; }
+    .file a { min-width:32px; min-height:32px; justify-content:flex-end; }
+    .file a .view-text { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+    .file a .icon { width:16px; height:16px; }
+
+    /* Redesign settings: keep the primary action close and full width. */
+    .profile-trigger .profile-preview { flex:none; height:128px; }
+    .profile-actions { margin-top:4px; }
+    .profile-actions > a { display:inline-flex; align-items:center; min-height:44px; }
+    .profile-actions .btn { min-height:44px; }
+    .tier { min-height:56px; padding:12px; }
+    .tier input { width:20px; height:20px; }
+    .run-row { flex-direction:column; align-items:stretch; gap:10px; }
+    .run-row .btn-primary, .confirm .btn { min-height:48px; font-size:15px; }
+    .run-row .estimate { order:-1; font-size:13px; }
+    .confirm { display:grid; grid-template-columns:1fr 1fr; }
+    .confirm p { grid-column:1 / -1; }
+
+    /* Runs: the whole row opens the report; the separate button is redundant. */
+    .runs { border-top:0; }
+    .run { position:relative; flex-wrap:nowrap; gap:12px; padding:14px 0; }
+    .runs .run:first-child { padding-top:0; }
+    .run:has(a.run-title) a.run-title::after { content:""; position:absolute; inset:0; }
+    .run .report-listing { position:relative; z-index:1; display:inline-flex; align-items:center; min-height:32px; margin:-6px 0 -2px; }
+    .run > .btn { display:none; }
+    .run .run-chevron { display:block; flex:none; color:var(--muted); transform:rotate(-90deg); }
+    .run:has(a.run-title):active { background:var(--surface-2); }
+
+    /* Taste references: a dense three-up board; drag-and-drop chrome is a desktop affordance. */
+    .ref-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px; }
+    .ref { aspect-ratio:1; border-radius:6px; }
+    .ref .remove { top:4px; right:4px; width:28px; height:28px; }
+    .ref .remove::before { content:""; position:absolute; inset:-8px; }
+    .ref .name { left:4px; bottom:4px; }
+    #dropzone { border:0; padding:0; }
+    #dropzone .dropzone-empty { border:1px dashed var(--line-strong); border-radius:10px; }
+    .ref-hint-drop { display:none; }
+
+    /* Dialogs become bottom sheets with thumb-reachable actions. */
+    dialog.modal { margin:auto 0 0; width:100%; max-width:100%; max-height:calc(100dvh - 24px); border-radius:16px 16px 0 0; border-width:1px 0 0; padding:20px 16px calc(16px + env(safe-area-inset-bottom)); overscroll-behavior:contain; }
+    dialog.modal[open] { animation:sheet-up var(--slow) var(--ease); }
+    dialog.modal .field-row:last-child { display:grid; grid-template-columns:1fr 1fr; }
+    dialog.modal .field-row:last-child .btn { min-height:48px; }
+  }
+  @keyframes sheet-up { from { transform:translateY(100%); } to { transform:none; } }
+  .back-link, .run-chevron { display:none; }
+  @media (max-width:860px) { .back-link { display:inline-flex; } .run-chevron { display:block; } }
+  /* Touch: hover backgrounds stick after a tap, so only show them for real pointers. */
+  @media (hover:none) {
+    .disclosure:hover:not(:disabled), .btn-quiet:hover, .icon-plain:hover, .display-options button:hover { background:transparent; }
+    .btn:hover:not(.btn-primary):not(.btn-quiet) { background:var(--surface); border-color:var(--line-strong); box-shadow:none; }
+    .savebar .btn:hover:not(.btn-primary) { background:transparent; border-color:color-mix(in srgb, var(--ink-text) 35%, transparent); }
+    .tier:hover:not(:has(input:checked)) { border-color:var(--line-strong); box-shadow:none; }
+    .collection-link:hover { box-shadow:var(--shadow); }
+    .read-text:hover { background:transparent; border-color:transparent; }
+    .collection-link:active { background:var(--surface-2); }
+  }
 </style>
 </head>
 <body>
@@ -401,6 +525,11 @@
     <p class="muted">Loading…</p>
   </main>
 </div>
+<nav class="mobile-tabs" aria-label="Main navigation">
+  <a href="?view=listings" class="mobile-tab" data-mobile-tab="listings"><span data-icon="home"></span><span>Listings</span></a>
+  <a href="?view=tastes" class="mobile-tab" data-mobile-tab="tastes"><span data-icon="sparkles"></span><span>Tastes</span></a>
+  <a href="?view=reports" class="mobile-tab" data-mobile-tab="reports"><span data-icon="report"></span><span>Reports</span></a>
+</nav>
 <div id="progress-live" class="sr-only" aria-live="polite"></div>
 
 <dialog class="modal" id="new-listing-dialog" aria-labelledby="new-listing-h">
@@ -486,6 +615,9 @@ const CONFIRM_ABOVE = 5; // dollars
 
 /* ---------- Icons: one stroke family, drawn inline ---------- */
 const ICONS = {
+  home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+  sparkles: '<path d="m12 3 2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6z"/><path d="M20 2v4M18 4h4"/>',
+  report: '<path d="M14 2H5a1 1 0 0 0-1 1v18a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8z"/><path d="M14 2v6h6M8 12h8M8 16h8"/>',
   copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
   trash: '<path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7M14 10v7"/>',
   monitor: '<rect x="3" y="3" width="18" height="13" rx="2"/><path d="M12 16v5M8 21h8"/>',
@@ -520,7 +652,7 @@ let state = {
   view: "listing", listings: [], listing: null, profiles: [], tasteProfiles: [], taste: null,
   keysError: null, job: null, logOpen: false, runError: null, confirming: null, renaming: false,
   rulesDraft: null, rulesDirty: false, briefDirty: false, briefDraft: "", textEdit: null, uploads: [],
-  savingOrder: false, duplicating: false,
+  savingOrder: false, duplicating: false, reports: [], reportErrors: [],
 };
 
 function params() { return new URL(location.href).searchParams; }
@@ -581,11 +713,63 @@ function renderListings() {
   const current = state.view === "listing" ? state.listing?.id : null;
   $("#listings").innerHTML = state.listings.length
     ? state.listings.map((l) => `
-      <li class="sidebar-row" data-sidebar-kind="listings" data-sidebar-id="${esc(l.id)}" draggable="${!state.savingOrder}"><a class="nav-link" draggable="false" title="Drag to reorder. Keyboard: Alt + ↑/↓." href="?listing=${encodeURIComponent(l.id)}" ${l.id === current ? 'aria-current="page"' : ""}>
+      <li class="sidebar-row" data-sidebar-kind="listings" data-sidebar-id="${esc(l.id)}" draggable="${!state.savingOrder}"><a class="nav-link" draggable="false" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" href="?listing=${encodeURIComponent(l.id)}" ${l.id === current ? 'aria-current="page"' : ""}>
         ${l.cover ? `<img src="${esc(l.cover)}" draggable="false" alt="" width="44" height="33">` : ""}
         <span><span class="nav-name">${esc(l.name)}</span><small class="num">${l.id === current ? state.listing.photos.filter((p) => p.selected).length : l.selectedCount} of ${l.photoCount} selected</small></span>
       </a></li>`).join("")
     : `<li class="muted" style="font-size:14px">No listings yet.</li>`;
+}
+
+/* Collection routes work at every size; the tab bar is mobile-only. */
+function renderMobileTabs() {
+  const active = state.view === "taste" || state.view === "tastes" ? "tastes" : state.view === "reports" ? "reports" : "listings";
+  document.querySelectorAll("[data-mobile-tab]").forEach(link => {
+    if (link.dataset.mobileTab === active) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
+  $(".side .brand").href = matchMedia("(max-width:860px)").matches ? "?view=listings" : "/";
+}
+addEventListener("resize", renderMobileTabs);
+
+function renderCollection(view) {
+  const tastes = view === "tastes";
+  const items = tastes ? state.tasteProfiles : state.listings;
+  const label = tastes ? "Tastes" : "Listings";
+  document.title = `${label} · Remodel Lens`;
+  $("#content").innerHTML = `<header class="head collection-head">
+    <div><h1>${label}</h1><p class="subhead">${items.length} ${tastes ? "taste profiles" : "listings"}</p></div>
+    <button class="btn btn-small" type="button" data-action="${tastes ? "new-profile" : "new-listing"}" aria-label="${tastes ? "New taste profile" : "New listing"}">${icon("plus")}New ${tastes ? "taste" : "listing"}</button>
+  </header>
+  ${items.length ? `<ul class="collection-grid">${items.map(item => {
+    const profile = tastes ? state.profiles.find(p => p.id === item.id) : null;
+    const preview = tastes ? profile?.previews?.length ? profilePreview(profile) : icon("image") : item.cover ? `<img src="${esc(item.cover)}" alt="" loading="lazy">` : icon("home");
+    return `<li><a class="collection-link nav-inline" href="?${tastes ? "taste" : "listing"}=${encodeURIComponent(item.id)}">
+      <span class="collection-preview">${preview}</span>
+      <span class="collection-copy"><strong>${esc(item.name)}</strong><small class="num">${tastes ? `${item.referenceCount} photos · ${item.built ? `${item.ruleCount} rules` : "no rules yet"}` : `${item.selectedCount} of ${item.photoCount} selected`}</small>
+      ${tastes && (item.running || item.stale) ? `<small class="${item.stale ? "stale" : ""}">${item.running ? "Rebuilding…" : "Out of date"}</small>` : ""}</span>
+    </a></li>`;
+  }).join("")}</ul>` : `<section class="panel"><p class="muted" style="margin:0">${tastes ? "No tastes yet. Create a taste profile to collect your reference photos and brief." : "No listings yet. Create a listing to add photos of a home."}</p></section>`}`;
+  alignSidebar();
+}
+
+async function loadReports() {
+  // Reuse listing detail data so report links and statuses match the listing pages.
+  const listings = state.listings;
+  const results = await Promise.allSettled(listings.map(listing => api(`/api/listings/${encodeURIComponent(listing.id)}`)));
+  state.reportErrors = [];
+  state.reports = results.flatMap((result, index) => {
+    const listing = listings[index];
+    if (result.status === "rejected") { state.reportErrors.push(listing.name); return []; }
+    return result.value.runs.filter(run => run.reportUrl).map(run => ({ ...run, listingId: listing.id, listingName: listing.name }));
+  }).sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt) || a.listingName.localeCompare(b.listingName) || a.id.localeCompare(b.id));
+}
+
+function renderReports() {
+  document.title = "Reports · Remodel Lens";
+  $("#content").innerHTML = `<header class="head collection-head"><div><h1>Reports</h1><p class="subhead">${state.reports.length} reports across ${state.listings.length} listings · newest first</p></div></header>
+    ${state.reportErrors.length ? `<div class="notice" role="alert">Couldn't load reports for ${esc(state.reportErrors.join(", "))}. <button class="btn btn-small" type="button" data-action="retry-reports">Retry</button></div>` : ""}
+    <section class="panel">${state.reports.length ? `<ul class="runs">${state.reports.map(run => runRow(run, true)).join("")}</ul>` : `<p class="muted" style="margin:0">${state.reportErrors.length ? "Reports couldn't be loaded. Try again." : "No reports yet. Run a redesign from a listing to create one."}</p>`}</section>`;
+  alignSidebar();
 }
 
 const sidebarItems = (kind) => kind === "listings" ? state.listings : state.tasteProfiles;
@@ -622,6 +806,7 @@ async function moveSidebarItem(kind, id, targetIndex, focus = false) {
 
 let draggedSidebarItem = null;
 function clearSidebarDrag() {
+  document.body.classList.remove("sidebar-dragging");
   document.querySelectorAll(".sidebar-row").forEach((row) => { row.classList.remove("dragging"); delete row.dataset.dropPosition; });
 }
 document.addEventListener("dragstart", (event) => {
@@ -631,6 +816,7 @@ document.addEventListener("dragstart", (event) => {
   event.dataTransfer.setData("text/plain", draggedSidebarItem.id);
   event.dataTransfer.effectAllowed = "move";
   row.classList.add("dragging");
+  document.body.classList.add("sidebar-dragging");
 });
 document.addEventListener("dragover", (event) => {
   const row = event.target.closest?.(".sidebar-row");
@@ -708,7 +894,7 @@ function renderProfilesNav() {
   const current = state.view === "taste" ? state.taste?.id : null;
   $("#profiles-nav").innerHTML = state.tasteProfiles.length
     ? state.tasteProfiles.map((p) => `
-      <li class="sidebar-row" data-sidebar-kind="taste-profiles" data-sidebar-id="${esc(p.id)}" draggable="${!state.savingOrder}"><a class="nav-link" draggable="false" title="Drag to reorder. Keyboard: Alt + ↑/↓." href="?taste=${encodeURIComponent(p.id)}" ${p.id === current ? 'aria-current="page"' : ""}>
+      <li class="sidebar-row" data-sidebar-kind="taste-profiles" data-sidebar-id="${esc(p.id)}" draggable="${!state.savingOrder}"><a class="nav-link" draggable="false" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" href="?taste=${encodeURIComponent(p.id)}" ${p.id === current ? 'aria-current="page"' : ""}>
         <span><span class="nav-name">${esc(p.name)}</span><small class="num">${p.referenceCount} photos · ${p.built ? `${p.ruleCount} rules` : "no rules yet"}${p.running ? " · rebuilding…" : p.stale ? ' · <span class="stale">out of date</span>' : ""}</small></span>
       </a></li>`).join("")
     : `<li class="muted" style="font-size:14px">No profiles yet.</li>`;
@@ -825,7 +1011,7 @@ function renderEmpty() {
   </div>`;
 }
 
-function runRow(r) {
+function runRow(r, aggregate = false) {
   const counts = STATUS_ORDER.filter((s) => r.counts?.[s]).map((s) => statusTag(s, r.counts[s])).join("");
   const meta = [
     r.profileName ? `${esc(r.profileName)} profile` : null,
@@ -836,6 +1022,7 @@ function runRow(r) {
   return `
     <li class="run">
       <div class="run-main">
+        ${aggregate ? `<a class="report-listing nav-inline" href="?listing=${encodeURIComponent(r.listingId)}">${esc(r.listingName)}</a>` : ""}
         ${r.reportUrl ? `<a class="run-title" href="${esc(r.reportUrl)}">${esc(fmtDate(r.startedAt))}</a>` : `<span class="run-title">${esc(fmtDate(r.startedAt))}</span>`}
         <div class="run-meta">${meta}</div>
         <div class="statuses">
@@ -843,7 +1030,7 @@ function runRow(r) {
           ${r.stopped ? `<span class="status s-review">${icon("stop")}<span>Stopped early</span></span>` : ""}
         </div>
       </div>
-      ${r.reportUrl ? `<a class="btn btn-small" href="${esc(r.reportUrl)}" aria-label="Open report from ${esc(fmtDate(r.startedAt))}">Open report</a>` : ""}
+      ${r.reportUrl ? `<a class="btn btn-small" href="${esc(r.reportUrl)}" aria-label="Open report from ${esc(fmtDate(r.startedAt))}">Open report</a><span class="run-chevron" aria-hidden="true">${icon("chevron")}</span>` : ""}
     </li>`;
 }
 
@@ -870,8 +1057,10 @@ const DETAIL_TYPES = {
 
 function renderDetailHeader({ kind, name, metadata, titleMarkup = "" }) {
   const detail = DETAIL_TYPES[kind];
+  const back = kind === "listing" ? ["listings", "Listings"] : ["tastes", "Tastes"];
   return `<div class="head detail-head">
     <div style="min-width:0;flex:1">
+      <a class="back-link nav-inline" href="?view=${back[0]}">${icon("chevron")}${back[1]}</a>
       ${titleMarkup || `<div class="title-row"><h1>${esc(name)}</h1><button class="icon-btn icon-plain" type="button" data-action="${detail.edit}" aria-label="${detail.editLabel}" data-tip="Edit">${icon("pencil")}</button></div>`}
       ${metadata}
     </div>
@@ -980,7 +1169,7 @@ function renderListing() {
                 <div class="meta">
                   <label for="room-${i}">Room</label>
                   <input class="room" id="room-${i}" name="room-${esc(p.file)}" data-room="${esc(p.file)}" value="${esc(p.room)}" placeholder="e.g. kitchen…" autocomplete="off" spellcheck="false" maxlength="80">
-                  <div class="file"><span class="file-name">${p.selected ? "" : "Skipped · "}${esc(p.file)}</span><a href="${esc(p.full)}" target="_blank" rel="noopener" aria-label="View ${esc(label)} full size (opens in a new tab)">${icon("expand")}View</a></div>
+                  <div class="file"><span class="file-name">${p.selected ? "" : "Skipped · "}${esc(p.file)}</span><a href="${esc(p.full)}" target="_blank" rel="noopener" aria-label="View ${esc(label)} full size (opens in a new tab)">${icon("expand")}<span class="view-text">View</span></a></div>
                 </div>
               </div>`;
             }).join("")}
@@ -1040,7 +1229,7 @@ function renderListing() {
     <section class="panel zone" aria-labelledby="runs-h">
       <div class="section-head"><h2 id="runs-h">Past runs <span class="muted num" style="font-weight:400">· ${l.runs.length}</span></h2></div>
       ${l.runs.length
-        ? `<ul class="runs">${l.runs.map(runRow).join("")}</ul>`
+        ? `<ul class="runs">${l.runs.map(run => runRow(run)).join("")}</ul>`
         : `<p class="muted" style="margin:0">No runs yet. Reports appear here after the first redesign.</p>`}
     </section>
     ${renderDetailAdmin("listing", running)}`;
@@ -1143,7 +1332,7 @@ function renderTaste() {
                 <span class="name" aria-hidden="true">${esc(r.file.replace(/\.\w+$/, "").replace("ref-", ""))}</span>
                 <button class="remove" type="button" data-remove="${esc(r.file)}" aria-label="Remove ${esc(r.file)}" ${running ? "disabled" : ""}>${icon("x")}</button>
               </div>`).join("")}</div>
-             <p class="hint" style="margin-top:12px">Drop images here to add them. Whole rooms and close-ups of materials both help.</p>`
+             <p class="hint" style="margin-top:12px"><span class="ref-hint-drop">Drop images here to add them. </span>Whole rooms and close-ups of materials both help.</p>`
           : `<div class="dropzone-empty">${icon("image")}<p style="margin:0">Drop 10–20 photos of interiors you love here, or use <strong>Add photos</strong>.</p></div>`}
         <ul class="upload-list" aria-live="polite">${state.uploads.map((u) => `<li class="${u.ok ? "" : "bad"}">${esc(u.text)}</li>`).join("")}</ul>
       </div>
@@ -1151,7 +1340,7 @@ function renderTaste() {
 
     <section class="panel" aria-labelledby="brief-h">
       <div class="section-head" style="margin-bottom:6px"><h2 id="brief-h">Brief</h2></div>
-      <p class="hint" style="margin:0 0 12px">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal and use the photos to confirm and sharpen it. Click the text to edit.</p>
+      <p class="hint" style="margin:0 0 12px">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal and use the photos to confirm and sharpen it. Select the text to edit.</p>
       ${renderTextField("brief", "brief", "Brief", state.briefDraft, { brief: true, rows: 10, placeholder: "Add a brief describing your taste…" })}
     </section>
 
@@ -1616,6 +1805,13 @@ document.addEventListener("click", async (event) => {
 
   const action = event.target.closest("[data-action]")?.dataset.action;
   if (!action) return;
+  if (action === "retry-reports") {
+    const button = event.target.closest("button");
+    button.disabled = true;
+    await loadReports();
+    if (state.view === "reports") renderReports();
+    return;
+  }
   if (action === "all" || action === "none") return updateSelection(state.listing.photos.map((p) => p.file), action === "all");
   if (action === "new-profile") return openNewProfile();
   if (action === "new-listing" || action === "edit-listing") {
@@ -1876,7 +2072,7 @@ function navigate(href) {
 }
 
 document.addEventListener("click", (e) => {
-  const a = e.target.closest?.("a.nav-link, a.nav-inline, a.brand");
+  const a = e.target.closest?.("a.nav-link, a.nav-inline, a.brand, a.mobile-tab");
   if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   const url = new URL(a.href, location.href);
   if (url.origin !== location.origin || url.pathname !== "/") return;
@@ -1889,6 +2085,8 @@ document.addEventListener("click", (e) => {
 
 async function load() {
   state.textEdit = null;
+  state.job = null;
+  clearTimeout(pollTimer);
   try {
     const [listings, profiles, tasteProfiles, status] = await Promise.all([api("/api/listings"), loadProfiles(), api("/api/taste-profiles"), api("/api/status")]);
     Object.assign(state, { listings, profiles, tasteProfiles, keysError: status.keysError });
@@ -1896,9 +2094,27 @@ async function load() {
     banner.hidden = !status.keysError;
     banner.innerHTML = status.keysError ? `You can pick photos and edit profiles now. To run redesigns or rebuild rules, add <code>OPENAI_API_KEY</code> and <code>ANTHROPIC_API_KEY</code> to <code>.env.local</code> and restart <code>npm run app</code>.` : "";
 
+    let collection = params().get("view");
+    if (!collection && !params().get("listing") && !params().get("taste") && matchMedia("(max-width:860px)").matches) {
+      collection = "listings";
+      setParams({ view: collection });
+    }
+    if (["listings", "tastes", "reports"].includes(collection)) {
+      state.view = collection;
+      renderListings();
+      renderProfilesNav();
+      renderMobileTabs();
+      if (collection === "reports") {
+        $("#content").innerHTML = `<header class="head collection-head"><h1>Reports</h1></header><section class="panel"><p class="muted" role="status">Loading reports…</p></section>`;
+        await loadReports();
+        if (state.view === "reports") renderReports();
+      } else renderCollection(collection);
+      return;
+    }
     const tasteId = params().get("taste");
     if (tasteId) {
       state.view = "taste";
+      renderMobileTabs();
       await loadTaste(tasteId);
       state.job = state.taste.activeJob;
       renderListings();
@@ -1908,6 +2124,7 @@ async function load() {
     }
 
     state.view = "listing";
+    renderMobileTabs();
     const id = params().get("listing") ?? listings[0]?.id;
     renderProfilesNav();
     if (!id) { state.listing = null; renderListings(); return renderEmpty(); }
