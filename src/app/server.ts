@@ -36,8 +36,20 @@ import {
 } from "../taste/store.js";
 
 const PORT = Number(process.env.PORT ?? 4310);
-const HOST = "127.0.0.1";
+// Listen on the LAN so the app can be opened from another device on the same Wi-Fi.
+const HOST = "0.0.0.0";
 const INDEX = path.join(path.dirname(new URL(import.meta.url).pathname), "index.html");
+
+function isAllowedRequestHost(host: string): boolean {
+  if (/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return true;
+  const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(:\d+)?$/.exec(host);
+  if (!match) return false;
+  const [a, b, c, d] = match.slice(1, 5).map(Number) as [number, number, number, number];
+  if ([a, b, c, d].some((octet) => octet > 255)) return false;
+  const privateIpv4 = a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31);
+  const tailscaleIpv4 = a === 100 && b >= 64 && b <= 127;
+  return privateIpv4 || tailscaleIpv4;
+}
 
 const CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -218,8 +230,9 @@ const RunBody = z.object({ tiers: z.array(z.enum(TIERS)).min(1), profile: z.stri
 const CreateProfileBody = z.object({ name: z.string().max(60), description: z.string().max(300).optional(), from: z.string().max(60).nullable().optional() });
 
 async function handle(req: IncomingMessage, res: ServerResponse) {
-  // Refuse foreign Host headers so a DNS-rebinding page can't reach this server.
-  if (!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.host ?? "")) return send(res, 421, { error: "Unexpected host" });
+  // Refuse public hostnames so a DNS-rebinding page can't reach this server.
+  // Private IPv4 addresses are allowed for access from another device on the LAN.
+  if (!isAllowedRequestHost(req.headers.host ?? "")) return send(res, 421, { error: "Unexpected host" });
   const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
   const parts = url.pathname.split("/").filter(Boolean);
 
