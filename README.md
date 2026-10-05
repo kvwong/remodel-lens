@@ -148,6 +148,12 @@ In the app, open the listing and choose **Run redesign**. The report opens when
 the run finishes. Each room includes before-and-after images by tier, a change
 list with cost bands, and a verification status.
 
+To share a report with someone who won't open the app, use **Download PDF** at
+the top of the report. **Summary** is about three pages: the whole-listing
+estimate per scope, a before-and-after for every room, the largest costs, and
+what to check. **Full scope** adds a section per room with every planned change,
+what it replaces, and how it was priced.
+
 You can also run the saved listing selection from the CLI:
 
 ```bash

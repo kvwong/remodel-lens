@@ -5,7 +5,7 @@ import { TIER_LABELS, TIER_RANK, type Tier } from "./redesign/tiers.js";
 /* ---------- Formatting ---------- */
 
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-const usdCompact = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 });
+const usdCompact = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1, trailingZeroDisplay: "stripIfInteger" });
 
 /** "$850", "$12K", "$1.2M": rounded so ranges don't imply false precision. */
 export function formatUSD(n: number): string {
@@ -25,10 +25,10 @@ function money(r: CostRange): string {
   return `<span aria-hidden="true">${formatRange(r)}</span><span class="sr-only">${usd.format(r.low)} to ${usd.format(r.high)}</span>`;
 }
 
-const sentence = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
+export const sentence = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
 const baseRoom = (room: string) => room.replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase();
-const roomName = (p: PhotoResult) => sentence(p.room ?? p.inventory.roomType);
-const tierName = (t: Tier) => TIER_LABELS[t].name;
+export const roomName = (p: PhotoResult) => sentence(p.room ?? p.inventory.roomType);
+export const tierName = (t: Tier) => TIER_LABELS[t].name;
 
 /**
  * Whole-listing estimate per tier. Photos of the same room ("great room", "great room (toward dining)")
@@ -57,8 +57,8 @@ export function listingTotals(photos: PhotoResult[]): Map<Tier, { range: CostRan
 
 /* ---------- Status vocabulary ---------- */
 
-type Status = TierResult["status"];
-const STATUS: Record<Status, { label: string; meaning: string; icon: IconName }> = {
+export type Status = TierResult["status"];
+export const STATUS: Record<Status, { label: string; meaning: string; icon: IconName }> = {
   verified: { label: "Verified", meaning: "Structure matches the listing", icon: "check" },
   review: { label: "Needs review", meaning: "Small drift. Check the notes", icon: "alert" },
   failed: { label: "Structure changed", meaning: "Inspiration only, not for decisions", icon: "x" },
@@ -75,6 +75,7 @@ const ICON_PATHS = {
   minus: '<path d="M5 12h14"/>',
   arrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   arrowUp: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
+  download: '<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>',
   expand: '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>',
 } as const;
 type IconName = keyof typeof ICON_PATHS;
@@ -135,7 +136,7 @@ function changeCost(c: ChangePlan["changes"][number] & { costBand?: string }): s
   return esc(c.costBand ?? "–"); // results from before dollar ranges existed
 }
 
-function fixedSummary(photo: PhotoResult): string {
+export function fixedSummary(photo: PhotoResult): string {
   const counts = new Map<string, number>();
   for (const f of photo.inventory.fixed) {
     const k = (KIND[f.kind] ?? sentence(f.kind.replace(/_/g, " "))).toLowerCase();
@@ -186,11 +187,21 @@ function tierInfo(t: TierResult): string {
       : ""}`;
 }
 
-function pickFeature(photos: PhotoResult[]): PhotoResult | null {
+export function pickFeature(photos: PhotoResult[]): PhotoResult | null {
   const weight = { verified: 3, review: 2, unchanged: 1, failed: 0, error: 0 } as const;
   const score = (p: PhotoResult) => p.tiers.reduce((s, t) => s + (t.image ? 1 : 0) + weight[t.status], 0);
   const maxCost = (p: PhotoResult) => Math.max(0, ...p.tiers.map((t) => planCost(t.plan)?.high ?? 0));
   return [...photos].sort((a, b) => score(b) - score(a) || maxCost(b) - maxCost(a))[0] ?? null;
+}
+
+/** The biggest single changes in one scope, one entry per room and element (rooms shot twice count once). */
+export function largestCosts(photos: PhotoResult[], tier: Tier, limit = 4): Array<{ room: string; c: ChangePlan["changes"][number] }> {
+  return photos
+    .flatMap((p) => (p.tiers.find((t) => t.tier === tier)?.plan.changes ?? []).map((c) => ({ room: roomName(p), c })))
+    .filter(({ c }) => Number.isFinite(c.costHigh))
+    .sort((a, b) => b.c.costHigh - a.c.costHigh)
+    .filter((d, i, all) => all.findIndex((e) => baseRoom(e.room) === baseRoom(d.room) && e.c.element === d.c.element) === i)
+    .slice(0, limit);
 }
 
 /* ---------- Page ---------- */
@@ -203,6 +214,8 @@ export function renderReport(input: {
   /** Link back to the listing in the picker; omitted for static reports opened from disk. */
   backHref?: string | null;
   run?: { startedAt: string; profileName?: string | null; stopped?: boolean };
+  /** PDF download links; only the app can build PDFs, so static reports omit them. */
+  pdf?: { summary: string; full: string } | null;
 }): string {
   const photos = input.photos;
   const tiers = [...new Set(photos.flatMap((p) => p.tiers.map((t) => t.tier)))].sort((a, b) => TIER_RANK[a] - TIER_RANK[b]);
@@ -338,12 +351,7 @@ export function renderReport(input: {
     <div class="decide-grid" style="--cols:${tiers.length}">
       ${tiers.map((tier) => {
         const x = totals.get(tier);
-        const drivers = photos
-          .flatMap((p) => (p.tiers.find((t) => t.tier === tier)?.plan.changes ?? []).map((c) => ({ room: roomName(p), c })))
-          .filter(({ c }) => Number.isFinite(c.costHigh))
-          .sort((a, b) => b.c.costHigh - a.c.costHigh)
-          .filter((d, i, all) => all.findIndex((e) => baseRoom(e.room) === baseRoom(d.room) && e.c.element === d.c.element) === i)
-          .slice(0, 4);
+        const drivers = largestCosts(photos, tier);
         const shaky = photos.filter((p) => ["failed", "error"].includes(p.tiers.find((t) => t.tier === tier)?.status ?? "")).map(roomName);
         return `
       <div class="decide-col">
@@ -432,6 +440,17 @@ export function renderReport(input: {
   @media (max-width: 680px) { .card { padding:18px 16px; border-radius:10px; } }
   .meta { margin:8px 0 0; color:var(--muted); font-size:14px; }
   .meta span + span::before { content:"·"; margin:0 8px; opacity:.6; }
+  .share { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin:18px 0 0; }
+  .share-label { font-size:13px; color:var(--muted); margin-right:4px; }
+  .share-btn { display:inline-flex; align-items:center; gap:10px; min-height:44px; padding:6px 14px 6px 12px; border-radius:9px; border:1px solid var(--line-strong); background:var(--surface); text-decoration:none; color:var(--text); }
+  .share-btn:hover { border-color:var(--primary); background:var(--primary-soft); }
+  .share-btn .icon { color:var(--primary); }
+  .share-btn[aria-busy="true"] { opacity:.6; cursor:progress; }
+  .share-text { display:grid; line-height:1.25; }
+  .share-text strong { font-size:14px; font-weight:600; }
+  .share-text span { font-size:12px; color:var(--muted); }
+  .share-status { font-size:13px; color:var(--muted); }
+  @media (max-width: 680px) { .share-label { flex-basis:100%; } .share-btn { flex:1 1 100%; } }
   .notice { margin:16px 0 0; font-size:14px; color:var(--warn); }
 
   .status { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; white-space:nowrap; }
@@ -615,6 +634,14 @@ export function renderReport(input: {
     ${back ? `<a class="crumb" href="${back.href}" data-back>${icon("arrowLeft")}${back.label}</a>` : ""}
     <h1 id="top" tabindex="-1">${esc(input.title)}</h1>
     <p class="meta">${meta.map((m) => `<span>${esc(m)}</span>`).join("")}</p>
+    ${input.pdf
+      ? `<div class="share" role="group" aria-labelledby="share-label">
+      <span class="share-label" id="share-label">Download PDF</span>
+      <a class="share-btn" href="${esc(input.pdf.summary)}" data-pdf download>${icon("download")}<span class="share-text"><strong>Summary</strong><span>Costs and before and after, about 3 pages</span></span></a>
+      <a class="share-btn" href="${esc(input.pdf.full)}" data-pdf download>${icon("download")}<span class="share-text"><strong>Full scope</strong><span>Every room, change, and cost basis</span></span></a>
+      <span class="share-status" role="status" aria-live="polite"></span>
+    </div>`
+      : ""}
     ${input.run?.stopped ? `<p class="notice">This run was stopped early, so some rooms or scopes are missing.</p>` : ""}
   </header>
   ${overview}
@@ -809,6 +836,32 @@ export function renderReport(input: {
       });
     }
   } catch {}
+
+  /* PDF downloads: fetch first so the button can say it's working (a long report takes a few seconds). */
+  const shareStatus = document.querySelector(".share-status");
+  document.querySelectorAll("a[data-pdf]").forEach((link) => link.addEventListener("click", async (e) => {
+    e.preventDefault();
+    if (link.getAttribute("aria-busy") === "true") return;
+    const kind = link.querySelector("strong").textContent;
+    link.setAttribute("aria-busy", "true");
+    shareStatus.textContent = "Preparing the " + kind.toLowerCase() + " PDF…";
+    try {
+      const res = await fetch(link.href);
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "HTTP " + res.status);
+      const name = /filename[*]=UTF-8''([^;]+)/.exec(res.headers.get("content-disposition") || "")?.[1];
+      const url = URL.createObjectURL(await res.blob());
+      const a = Object.assign(document.createElement("a"), { href: url, download: name ? decodeURIComponent(name) : "report.pdf" });
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      shareStatus.textContent = kind + " PDF downloaded.";
+    } catch (err) {
+      shareStatus.textContent = "Couldn't make the PDF: " + err.message;
+    } finally {
+      link.removeAttribute("aria-busy");
+    }
+  }));
 
   const toTop = document.querySelector(".to-top");
   const reduce = matchMedia("(prefers-reduced-motion: reduce)");
