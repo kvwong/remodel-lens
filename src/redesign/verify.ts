@@ -8,6 +8,12 @@ import type { ChangePlan } from "./plan.js";
 const EDGE_WIDTH = 384; // small enough to forgive a few pixels of drift
 export const EDGE_THRESHOLD = 0.45;
 
+/** Minimum edge correlation for a fixed element to count as preserved. Override with EDGE_THRESHOLD; tune with `npm run tune`. */
+export function edgeThreshold(): number {
+  const value = Number(process.env.EDGE_THRESHOLD);
+  return value > 0 && value < 1 ? value : EDGE_THRESHOLD;
+}
+
 type Gray = { data: Float32Array; width: number; height: number };
 
 async function edgeMap(bytes: Uint8Array, width: number, height: number): Promise<Gray> {
@@ -80,7 +86,7 @@ export function insetBox(box: BoxTuple, fraction = 0.2): BoxTuple {
 
 const OPENING_KINDS = new Set(["window", "exterior_door", "skylight", "doorway_opening", "interior_door"]);
 
-export async function edgeChecks(original: Uint8Array, redesign: Uint8Array, inventory: RoomInventory): Promise<EdgeCheck[]> {
+export async function edgeChecks(original: Uint8Array, redesign: Uint8Array, inventory: RoomInventory, threshold = edgeThreshold()): Promise<EdgeCheck[]> {
   const meta = await sharp(original).metadata();
   const height = Math.round(EDGE_WIDTH * ((meta.height ?? 1) / (meta.width ?? 1)));
   const [a, b] = await Promise.all([edgeMap(original, EDGE_WIDTH, height), edgeMap(redesign, EDGE_WIDTH, height)]);
@@ -89,7 +95,7 @@ export async function edgeChecks(original: Uint8Array, redesign: Uint8Array, inv
     .map((item) => {
       const box = OPENING_KINDS.has(item.kind) ? insetBox(item.box as BoxTuple) : (item.box as BoxTuple);
       const correlation = boxCorrelation(a, b, box);
-      return { kind: item.kind, description: item.description, correlation, pass: correlation === null || correlation >= EDGE_THRESHOLD };
+      return { kind: item.kind, description: item.description, correlation, pass: correlation === null || correlation >= threshold };
     });
 }
 

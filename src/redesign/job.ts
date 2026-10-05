@@ -29,6 +29,8 @@ export type RunSummary = {
   apiCost?: number;
   /** True when the run was stopped before every photo finished. */
   stopped?: boolean;
+  /** Image edit model used for the run. Missing on runs from before it was recorded. */
+  imageModel?: string;
   /** Filled in by listRuns from the profile's metadata. */
   profileName?: string | null;
 };
@@ -58,8 +60,10 @@ export async function runListingRedesign(input: {
   tiers: Tier[];
   outDir?: string | undefined;
   max?: number | undefined;
+  /** Overrides IMAGE_MODEL for this run, e.g. to compare image models on the same listing. */
+  imageModel?: string | undefined;
 }): Promise<RunSummary & { outDir: string }> {
-  const models = resolveModels();
+  const models = { ...resolveModels(), ...(input.imageModel ? { image: input.imageModel } : {}) };
   requireKeys(models);
   const profile = await loadProfile(input.profilePath);
   const listing = await readListing(input.listingDir);
@@ -79,6 +83,7 @@ export async function runListingRedesign(input: {
     listing: listing.id,
     profile: path.relative(ROOT, path.resolve(ROOT, input.profilePath)),
     tiers: input.tiers,
+    imageModel: models.image,
     photos: photos.map((p) => p.basename),
     startedAt: new Date().toISOString(),
     finishedAt: null,
