@@ -180,7 +180,7 @@ export function renderTuningReport(records: AttemptRecord[], current: number): s
     ...rows.map((r) => `| ${r.threshold.toFixed(2)}${Math.abs(r.threshold - current) < 1e-9 ? " (current)" : ""}${best && r.threshold === best.threshold ? " ★" : ""} | ${pct(r.flagged)} | ${r.tp} | ${r.fp} | ${r.fn} | ${pct(r.precision)} | ${pct(r.recall)} | ${num(r.f1)} |`),
     "",
     best
-      ? `★ Suggested: **${best.threshold.toFixed(2)}** (best F1). Try it with \`EDGE_THRESHOLD=${best.threshold.toFixed(2)}\` in \`.env.local\`.`
+      ? `★ Suggested: **${best.threshold.toFixed(2)}** (best F1). Apply it on the Tuning section of the app's Settings page, or set \`EDGE_THRESHOLD=${best.threshold.toFixed(2)}\` in \`.env.local\`.`
       : "No broken images yet, so there's nothing to tune against. Label a few failures or run more listings.",
     "",
     "## Correlation by element",

@@ -14,6 +14,7 @@ import { addListingPhoto, createListing, duplicateListing, deleteListing, restor
 import { listProfiles, listRuns, loadProfile, runListingRedesign, RUNS_DIR, type RunSummary } from "../redesign/job.js";
 import type { PhotoResult } from "../redesign/run.js";
 import { renderReport } from "../report.js";
+import { labelAttempt, settingsView, testKey, tuningView, updateSettings } from "./settings-api.js";
 import { pdfFilename, renderReportPdf, type PdfDetail } from "../report-pdf.js";
 import { TIERS } from "../redesign/tiers.js";
 import { runTasteBuild } from "../taste/build.js";
@@ -460,6 +461,21 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         return send(res, 202, jobView(job));
       }
     }
+    if (parts[1] === "settings" && parts.length === 2) {
+      if (req.method === "GET") return send(res, 200, settingsView());
+      if (req.method === "PATCH") return send(res, 200, await updateSettings(await readBody(req)));
+    }
+    if (req.method === "POST" && parts[1] === "settings" && parts[2] === "test-key" && parts.length === 3) {
+      const body = z.object({ provider: z.enum(["openai", "anthropic"]), key: z.string().max(500).optional() }).parse(await readBody(req));
+      return send(res, 200, await testKey(body.provider, body.key));
+    }
+    if (req.method === "GET" && parts[1] === "tuning" && parts.length === 2) {
+      return send(res, 200, await tuningView(url.searchParams.get("rescan") === "1"));
+    }
+    if (req.method === "PUT" && parts[1] === "tuning" && parts[2] === "labels" && parts.length === 3) {
+      const body = z.object({ key: z.string().max(500), label: z.enum(["ok", "broken"]).nullable() }).parse(await readBody(req));
+      return send(res, 200, await labelAttempt(body.key, body.label));
+    }
     if (req.method === "GET" && parts[1] === "status") {
       let keysError: string | null = null;
       try {
@@ -489,6 +505,10 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       }
     }
     return sendFile(res, file);
+  }
+  if (req.method === "GET" && parts[0] === "thumb" && parts[1] === "runs") {
+    const width = Math.min(1600, Math.max(80, Number(url.searchParams.get("w")) || 480));
+    return sendThumb(res, safeJoin(RUNS_DIR, parts.slice(2).join("/")), width);
   }
   if (req.method === "GET" && parts[0] === "pdf" && parts[1] === "runs" && parts.length === 4) {
     return sendReportPdf(res, safeJoin(RUNS_DIR, parts.slice(2).join("/")), url.searchParams.get("detail"));
