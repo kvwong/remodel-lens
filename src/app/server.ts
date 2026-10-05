@@ -12,7 +12,9 @@ import { loadEnv, requireKeys, resolveModels } from "../config.js";
 import { logContext, progressContext, type Progress } from "../files.js";
 import { addListingPhoto, createListing, duplicateListing, deleteListing, restoreListing, updateListingDetails, listingDir, listListings, LISTINGS_DIR, readListing, saveListingOrder, saveSelection, type Listing } from "../listing/listing.js";
 import { listProfiles, listRuns, loadProfile, runListingRedesign, RUNS_DIR, type RunSummary } from "../redesign/job.js";
+import type { PhotoResult } from "../redesign/run.js";
 import { renderReport } from "../report.js";
+import { pdfFilename, renderReportPdf, type PdfDetail } from "../report-pdf.js";
 import { TIERS } from "../redesign/tiers.js";
 import { runTasteBuild } from "../taste/build.js";
 import { TasteProfile } from "../taste/schema.js";
@@ -200,27 +202,55 @@ async function tasteProfileJson(id: string) {
   };
 }
 
-/** Re-render a run's report from its saved results so past runs pick up report improvements. */
-async function freshReport(runDir: string): Promise<string | null> {
+/** What a run's report is drawn from: its saved results plus the listing and profile as they are now. */
+async function loadReportInput(runDir: string) {
   const resultsPath = path.join(runDir, "results.json");
   const runPath = path.join(runDir, "run.json");
   if (!existsSync(resultsPath) || !existsSync(runPath)) return null;
+  const run = JSON.parse(await readFile(runPath, "utf8")) as RunSummary;
+  const listing = await readListing(listingDir(run.listing)).catch(() => null);
+  const profile = await loadProfile(run.profile).catch(() => null);
+  const profileName = (await listRuns(run.listing)).find((r) => r.id === path.basename(runDir))?.profileName ?? null;
+  return {
+    listingId: run.listing,
+    title: listing?.name ?? run.listing,
+    photos: JSON.parse(await readFile(resultsPath, "utf8")) as PhotoResult[],
+    profileSummary: profile?.summary ?? "",
+    location: listing?.location ?? null,
+    run: { startedAt: run.startedAt, profileName, stopped: !!run.stopped },
+  };
+}
+
+/** Re-render a run's report from its saved results so past runs pick up report improvements. */
+async function freshReport(runDir: string): Promise<string | null> {
   try {
-    const run = JSON.parse(await readFile(runPath, "utf8")) as RunSummary;
-    const listing = await readListing(listingDir(run.listing)).catch(() => null);
-    const profile = await loadProfile(run.profile).catch(() => null);
-    const profileName = (await listRuns(run.listing)).find((r) => r.id === path.basename(runDir))?.profileName ?? null;
+    const input = await loadReportInput(runDir);
+    if (!input) return null;
+    const pdfBase = `/pdf/runs/${path.relative(RUNS_DIR, runDir).split(path.sep).map(encodeURIComponent).join("/")}`;
     return renderReport({
-      title: listing?.name ?? run.listing,
-      photos: JSON.parse(await readFile(resultsPath, "utf8")),
-      profileSummary: profile?.summary ?? "",
-      location: listing?.location ?? null,
-      backHref: `/?listing=${encodeURIComponent(run.listing)}`,
-      run: { startedAt: run.startedAt, profileName, stopped: !!run.stopped },
+      ...input,
+      backHref: `/?listing=${encodeURIComponent(input.listingId)}`,
+      pdf: { summary: `${pdfBase}?detail=summary`, full: `${pdfBase}?detail=full` },
     });
   } catch {
     return null; // fall back to the static file written at run time
   }
+}
+
+/** A run's report as a PDF to share: /pdf/runs/<listing>/<run>?detail=summary|full */
+async function sendReportPdf(res: ServerResponse, runDir: string | null, detail: string | null) {
+  const input = runDir ? await loadReportInput(runDir) : null;
+  if (!runDir || !input) return send(res, 404, { error: "Report not found" });
+  const level: PdfDetail = detail === "full" ? "full" : "summary";
+  const pdf = await renderReportPdf({ ...input, runDir, detail: level });
+  const name = pdfFilename(input.title, level);
+  res.writeHead(200, {
+    "content-type": "application/pdf",
+    "content-length": pdf.length,
+    "content-disposition": `attachment; filename="${name.replace(/[^\x20-\x7e]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+    "cache-control": "no-store",
+  });
+  res.end(pdf);
 }
 
 const SelectionBody = z.object({
@@ -459,6 +489,9 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       }
     }
     return sendFile(res, file);
+  }
+  if (req.method === "GET" && parts[0] === "pdf" && parts[1] === "runs" && parts.length === 4) {
+    return sendReportPdf(res, safeJoin(RUNS_DIR, parts.slice(2).join("/")), url.searchParams.get("detail"));
   }
   if (req.method === "GET" && parts[0] === "thumb" && parts[1] === "listings") {
     const width = Math.min(1600, Math.max(80, Number(url.searchParams.get("w")) || 640));

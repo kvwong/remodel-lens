@@ -14,13 +14,16 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.71",
     "@ai-sdk/openai": "^4.0.83",
+    "@fontsource/hanken-grotesk": "^5.3.0",
     "ai": "^7.0.127",
     "openai": "^7.27.0",
+    "pdfkit": "^0.20.2",
     "sharp": "^0.35.5",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",
+    "@types/pdfkit": "^0.17.6",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
