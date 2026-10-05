@@ -166,7 +166,7 @@
     .collection-head .btn { min-height:44px; }
     .collection-grid { grid-template-columns:minmax(0, 1fr); }
     .collection-link { min-height:108px; }
-    .mobile-tabs { position:fixed; z-index:25; bottom:calc(12px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:4px; padding:6px; border:1px solid var(--line-strong); border-radius:24px; background:var(--surface); box-shadow:0 8px 32px rgba(0,0,0,.2), 0 2px 8px rgba(0,0,0,.08); }
+    .mobile-tabs { position:fixed; z-index:25; bottom:calc(12px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:4px; padding:6px; border:1px solid var(--line-strong); border-radius:24px; background:var(--surface); box-shadow:0 8px 32px rgba(0,0,0,.2), 0 2px 8px rgba(0,0,0,.08); }
     .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-height:56px; border-radius:18px; color:var(--muted); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; transition:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
     .mobile-tabs .icon { width:22px; height:22px; }
     .mobile-tabs a[aria-current="page"] { background:var(--primary-soft); color:var(--primary); font-weight:600; }
@@ -493,6 +493,59 @@
     .read-text:hover { background:transparent; border-color:transparent; }
     .collection-link:active { background:var(--surface-2); }
   }
+
+  /* Settings */
+  .settings-link { display:flex; align-items:center; gap:10px; min-height:40px; margin:0 0 12px; padding:6px 10px; border-radius:8px; color:var(--muted); font-size:14px; font-weight:500; text-decoration:none; }
+  .settings-link:hover { background:var(--surface); color:var(--text); }
+  .settings-link[aria-current="page"] { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
+  @media (max-width:860px) { .settings-link { display:none; } }
+  .settings-panel { display:grid; gap:16px; }
+  .settings-panel > .hint { margin-top:-8px; }
+  .settings-panel h3 { margin-top:4px; }
+  .settings-panel code, .subhead code { font-family:var(--mono); font-size:13px; }
+  .settings-input { min-height:40px; padding:6px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); font-size:16px; min-width:0; }
+  .settings-input:focus { outline:2px solid var(--text); outline-offset:1px; }
+  .settings-input[type="number"] { width:9ch; font-variant-numeric:tabular-nums; }
+  .key-input { flex:1 1 260px; font-family:var(--mono); font-size:14px; }
+  .key-block { display:grid; gap:8px; padding-top:16px; border-top:1px solid var(--line); }
+  .key-block:first-of-type { border-top:0; padding-top:0; }
+  .key-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:4px 12px; }
+  .key-head .field-label { margin:0; }
+  .key-state { font-size:13px; color:var(--muted); }
+  .key-state.set { color:var(--ok); }
+  .result-ok { color:var(--ok); } .result-bad { color:var(--bad); }
+  .model-field { display:grid; gap:6px; max-width:520px; }
+  .model-field select, .model-field .settings-input { width:100%; }
+  .checks { display:grid; gap:6px; }
+  .checks label { display:flex; align-items:center; gap:8px; min-height:32px; font-size:14px; }
+  .checks input { width:16px; height:16px; margin:0; }
+  .number-fields { display:flex; flex-wrap:wrap; gap:16px 28px; }
+  .number-field { display:grid; gap:6px; align-content:start; max-width:300px; }
+  .number-field label { font-size:14px; font-weight:500; }
+  .number-field .hint { margin:0; }
+  .suffix-input { display:flex; align-items:center; gap:6px; }
+  .data-table-wrap { overflow-x:auto; margin:0 -4px; padding:0 4px; }
+  .data-table { width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums; }
+  .data-table th { text-align:left; font-weight:500; color:var(--muted); font-size:13px; padding:6px 10px 6px 0; border-bottom:1px solid var(--line-strong); white-space:nowrap; }
+  .data-table td { padding:6px 10px 6px 0; border-bottom:1px solid var(--line); vertical-align:middle; }
+  .data-table tr.current td { font-weight:600; }
+  .data-table tr.suggested td { background:var(--primary-soft); }
+  .data-table .settings-input[type="number"] { width:10ch; min-height:34px; font-size:14px; }
+  .data-table a { color:var(--muted); font-size:13px; }
+  .suggestion { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; padding:12px 14px; border-radius:8px; background:var(--surface-2); font-size:14px; }
+  .suggestion p { margin:0; flex:1 1 280px; }
+  .seg { display:inline-flex; gap:4px; flex-wrap:wrap; }
+  .seg button { min-height:32px; padding:4px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); font-size:13px; cursor:pointer; }
+  .seg button[aria-pressed="true"] { background:var(--primary-soft); border-color:var(--primary); color:var(--primary); font-weight:600; }
+  .seg button.bad[aria-pressed="true"] { background:var(--bad-bg); border-color:var(--bad); color:var(--bad); }
+  .tune-grid { list-style:none; margin:0; padding:0; display:grid; gap:14px; grid-template-columns:repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
+  .tune-card { display:grid; gap:8px; padding:10px; border:1px solid var(--line); border-radius:10px; }
+  .tune-pair { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+  .tune-pair a { display:block; position:relative; aspect-ratio:4 / 3; border-radius:6px; overflow:hidden; background:var(--surface-2); }
+  .tune-pair img { width:100%; height:100%; object-fit:cover; display:block; }
+  .tune-pair span { position:absolute; left:4px; bottom:4px; padding:1px 6px; border-radius:4px; background:rgba(18,18,17,.6); color:#fff; font-size:11px; }
+  .tune-meta { display:grid; gap:2px; font-size:13px; min-width:0; overflow-wrap:anywhere; }
+  .tune-meta small { color:var(--muted); font-size:12.5px; }
 </style>
 </head>
 <body>
@@ -513,6 +566,7 @@
     </nav>
     </div>
     <section class="display-setting" aria-labelledby="display-label">
+      <a class="settings-link nav-inline" href="?view=settings" data-settings-link><span data-icon="settings"></span>Settings</a>
       <h2 id="display-label" class="sr-only">Display</h2>
       <div class="display-options" role="group" aria-labelledby="display-label">
         <button type="button" data-display="system" aria-label="System" data-tip="System" aria-pressed="true"><span data-icon="monitor"></span></button>
@@ -529,6 +583,7 @@
   <a href="?view=listings" class="mobile-tab" data-mobile-tab="listings"><span data-icon="home"></span><span>Listings</span></a>
   <a href="?view=tastes" class="mobile-tab" data-mobile-tab="tastes"><span data-icon="sparkles"></span><span>Tastes</span></a>
   <a href="?view=reports" class="mobile-tab" data-mobile-tab="reports"><span data-icon="report"></span><span>Reports</span></a>
+  <a href="?view=settings" class="mobile-tab" data-mobile-tab="settings"><span data-icon="settings"></span><span>Settings</span></a>
 </nav>
 <div id="progress-live" class="sr-only" aria-live="polite"></div>
 
@@ -633,6 +688,7 @@ const ICONS = {
   stop: '<rect x="6" y="6" width="12" height="12" rx="1.5"/>',
   pencil: '<path d="M21.2 6.8a1 1 0 0 0-4-4L3.8 16.2a2 2 0 0 0-.5.8L2 21.4a.5.5 0 0 0 .6.6l4.4-1.3a2 2 0 0 0 .8-.5z"/>',
   image: '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
+  settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
   refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.8 9.8 0 0 1 6.7 2.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.8 9.8 0 0 1-6.7-2.7L3 16"/><path d="M8 16H3v5"/>',
 };
 const icon = (name) => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
@@ -653,6 +709,7 @@ let state = {
   keysError: null, job: null, logOpen: false, runError: null, confirming: null, renaming: false,
   rulesDraft: null, rulesDirty: false, briefDirty: false, briefDraft: "", textEdit: null, uploads: [],
   savingOrder: false, duplicating: false, reports: [], reportErrors: [],
+  settings: null, tuning: null, tuningLoading: false, tuningFilter: "worth", tuningShow: 24, tuningTouched: new Set(),
 };
 
 function params() { return new URL(location.href).searchParams; }
@@ -722,11 +779,14 @@ function renderListings() {
 
 /* Collection routes work at every size; the tab bar is mobile-only. */
 function renderMobileTabs() {
-  const active = state.view === "taste" || state.view === "tastes" ? "tastes" : state.view === "reports" ? "reports" : "listings";
+  const active = state.view === "taste" || state.view === "tastes" ? "tastes" : state.view === "reports" ? "reports" : state.view === "settings" ? "settings" : "listings";
   document.querySelectorAll("[data-mobile-tab]").forEach(link => {
     if (link.dataset.mobileTab === active) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   });
+  const settingsLink = $("[data-settings-link]");
+  if (state.view === "settings") settingsLink.setAttribute("aria-current", "page");
+  else settingsLink.removeAttribute("aria-current");
   $(".side .brand").href = matchMedia("(max-width:860px)").matches ? "?view=listings" : "/";
 }
 addEventListener("resize", renderMobileTabs);
@@ -2083,16 +2143,429 @@ document.addEventListener("click", (e) => {
   navigate(url.search || "/");
 }, true);
 
+/* ---------- Settings ---------- */
+
+const OTHER = "__other";
+const num2 = (n) => (n == null ? "" : String(Math.round(n * 100) / 100));
+
+function updateBanner(keysError) {
+  state.keysError = keysError;
+  const banner = $("#banner");
+  banner.hidden = !keysError || params().get("view") === "settings"; // the settings page shows the same message by the keys
+  banner.innerHTML = keysError ? `You can pick photos and edit profiles now. To run redesigns or rebuild rules, add your API keys in <a class="nav-inline" href="?view=settings">Settings</a>.` : "";
+}
+
+async function loadSettingsPage() {
+  state.settings = await api("/api/settings");
+  renderSettings();
+}
+
+function renderSettings() {
+  document.title = "Settings · Remodel Lens";
+  $("#content").innerHTML = `<header class="head collection-head"><div><h1>Settings</h1>
+      <p class="subhead">Saved on this computer in <code>.settings.json</code>. Anything set here replaces the same value in <code>.env.local</code>.</p></div></header>
+    <section class="panel settings-panel" id="settings-keys" aria-labelledby="keys-h"></section>
+    <section class="panel settings-panel" id="settings-models" aria-labelledby="models-h"></section>
+    <section class="panel settings-panel" id="settings-tuning" aria-labelledby="tuning-h"></section>
+    <section class="panel settings-panel" id="settings-costs" aria-labelledby="costs-h"></section>`;
+  renderKeys(); renderModels(); renderTuning(); renderCosts();
+  alignSidebar();
+}
+
+function settingsSaved(next, message) {
+  state.settings = next;
+  updateBanner(next.keysError);
+  announce(message);
+}
+
+/* API keys */
+
+function renderKeys() {
+  const s = state.settings;
+  const needsAnthropic = [s.models.current.reasoning, ...s.models.current.analysis].some((m) => m.startsWith("anthropic/"));
+  const block = (id) => {
+    const k = s.keys[id];
+    const status = k.source === "settings" ? `Saved here${k.hint && k.hint !== "…" ? ` · ends in ${esc(k.hint.slice(1))}` : ""}`
+      : k.source === "environment" ? `From .env.local${k.hint && k.hint !== "…" ? ` · ends in ${esc(k.hint.slice(1))}` : ""}`
+      : id === "anthropic" && !needsAnthropic ? "Not set · not needed with the current models" : "Not set";
+    return `<form class="key-block" data-key-form="${id}" novalidate>
+      <div class="key-head"><label class="field-label" for="key-${id}">${esc(k.name)} API key</label><span class="key-state ${k.source ? "set" : ""}">${status}</span></div>
+      <div class="field-row">
+        <input class="settings-input key-input" type="password" id="key-${id}" autocomplete="off" spellcheck="false" placeholder="${k.source ? "Paste a new key to replace it" : "Paste your key"}">
+        <button class="btn btn-primary btn-small" type="submit">Save</button>
+        <button class="btn btn-small" type="button" data-test-key="${id}">Check</button>
+        ${k.source === "settings" ? `<button class="btn btn-quiet btn-small detail-delete" type="button" data-remove-key="${id}">Remove</button>` : ""}
+      </div>
+      <p class="hint" data-key-result="${id}" role="status" aria-live="polite">Create one at <a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(new URL(k.url).host)}</a>.</p>
+    </form>`;
+  };
+  $("#settings-keys").innerHTML = `<h2 id="keys-h">API keys</h2>
+    <p class="hint">OpenAI is always needed because it makes the image edits. Anthropic is needed only when a Claude model is picked under Models. Keys stay on this computer and are sent only to their own provider; once saved, only the last four characters are shown.</p>
+    ${s.keysError ? `<p class="notice">${esc(s.keysError)}</p>` : ""}
+    ${block("openai")}${block("anthropic")}`;
+}
+
+async function checkKey(id) {
+  const out = $(`[data-key-result="${id}"]`);
+  const typed = $(`#key-${id}`).value.trim();
+  out.className = "hint";
+  out.textContent = "Checking…";
+  try {
+    const result = await api("/api/settings/test-key", { method: "POST", body: JSON.stringify({ provider: id, ...(typed ? { key: typed } : {}) }) });
+    out.className = `hint ${result.ok ? "result-ok" : "result-bad"}`;
+    out.textContent = result.ok && typed ? `${result.message} Save it to use it.` : result.message;
+  } catch (error) {
+    out.className = "hint result-bad";
+    out.textContent = error.message;
+  }
+}
+
+async function saveKey(id, value) {
+  const out = $(`[data-key-result="${id}"]`);
+  try {
+    const next = await api("/api/settings", { method: "PATCH", body: JSON.stringify({ keys: { [id]: value } }) });
+    settingsSaved(next, value ? "Key saved" : "Key removed");
+    renderKeys(); renderModels();
+  } catch (error) {
+    out.className = "hint result-bad";
+    out.textContent = error.message;
+  }
+}
+
+/* Models */
+
+function modelSelect(id, options, current, defaultId) {
+  const known = options.some((o) => o.id === current);
+  return `<select id="${id}" data-other-select>
+      ${options.map((o) => `<option value="${esc(o.id)}" ${o.id === current ? "selected" : ""}>${esc(o.label)}${o.id === defaultId ? " (default)" : ""}</option>`).join("")}
+      <option value="${OTHER}" ${known ? "" : "selected"}>Other model ID…</option>
+    </select>
+    <input class="settings-input" type="text" id="${id}-other" value="${known ? "" : esc(current)}" ${known ? "hidden" : ""} spellcheck="false" autocomplete="off" aria-label="Model ID" placeholder="${id === "image-model" ? "e.g. gpt-image-2" : "openai/… or anthropic/…"}">`;
+}
+
+function renderModels() {
+  const m = state.settings.models;
+  const notes = (options, current) => options.find((o) => o.id === current)?.note ?? "";
+  const analysisOptions = [...m.options.reasoning];
+  for (const id of m.current.analysis) if (!analysisOptions.some((o) => o.id === id)) analysisOptions.push({ id, label: id });
+  const saved = Object.keys(m.saved).length > 0;
+  $("#settings-models").innerHTML = `<h2 id="models-h">Models</h2>
+    <form id="models-form" class="settings-panel" novalidate>
+      <div class="model-field">
+        <label class="field-label" for="reasoning-model" style="margin:0">Reasoning model</label>
+        <p class="hint" style="margin:0 0 4px">Merges the reference analyses, writes taste rules, inventories each room, plans the changes, and judges every redesign.</p>
+        ${modelSelect("reasoning-model", m.options.reasoning, m.current.reasoning, m.defaults.reasoning)}
+        <p class="hint" style="margin:0" data-model-note="reasoning-model">${esc(notes(m.options.reasoning, m.current.reasoning))}</p>
+      </div>
+      <fieldset class="model-field">
+        <legend>Reference analysis models</legend>
+        <p class="hint" style="margin:0 0 4px">Each one studies every reference photo on its own. With two or more, the reasoning model merges their notes.</p>
+        <div class="checks">${analysisOptions.map((o) => `<label><input type="checkbox" name="analysis" value="${esc(o.id)}" ${m.current.analysis.includes(o.id) ? "checked" : ""}>${esc(o.label)}${m.defaults.analysis.includes(o.id) ? ' <span class="muted">(default)</span>' : ""}</label>`).join("")}</div>
+      </fieldset>
+      <div class="model-field">
+        <label class="field-label" for="image-model" style="margin:0">Image model</label>
+        <p class="hint" style="margin:0 0 4px">Makes the redesigned photos. Always OpenAI.</p>
+        ${modelSelect("image-model", m.options.image, m.current.image, m.defaults.image)}
+        <p class="hint" style="margin:0" data-model-note="image-model">${esc(notes(m.options.image, m.current.image))}</p>
+      </div>
+      <p class="error" id="models-error" role="alert" hidden></p>
+      <div class="field-row">
+        <button class="btn btn-primary" type="submit">Save models</button>
+        ${saved ? `<button class="btn btn-quiet" type="button" data-reset-models>Reset to defaults</button>` : ""}
+      </div>
+    </form>`;
+}
+
+function selectedModel(id) {
+  const value = $(`#${id}`).value;
+  return value === OTHER ? $(`#${id}-other`).value.trim() : value;
+}
+
+async function saveModels(reset) {
+  const err = $("#models-error");
+  err.hidden = true;
+  const analysis = [...document.querySelectorAll('#models-form input[name="analysis"]:checked')].map((i) => i.value);
+  if (!reset && analysis.length === 0) { err.textContent = "Pick at least one reference analysis model."; err.hidden = false; return; }
+  const m = state.settings.models;
+  // Store only what differs from the defaults, so default changes in the code still reach this computer.
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const reasoning = selectedModel("reasoning-model");
+  const image = selectedModel("image-model");
+  const body = reset ? { reasoning: null, analysis: null, image: null } : {
+    reasoning: reasoning === m.defaults.reasoning ? null : reasoning,
+    analysis: same(analysis, m.defaults.analysis) ? null : analysis,
+    image: image === m.defaults.image ? null : image,
+  };
+  try {
+    const next = await api("/api/settings", { method: "PATCH", body: JSON.stringify({ models: body }) });
+    settingsSaved(next, reset ? "Models reset" : "Models saved");
+    renderModels(); renderKeys();
+  } catch (error) {
+    err.textContent = error.message;
+    err.hidden = false;
+  }
+}
+
+/* Tuning */
+
+function renderTuning() {
+  const t = state.settings.tuning;
+  $("#settings-tuning").innerHTML = `<h2 id="tuning-h">Tuning</h2>
+    <p class="hint">After each redesign, an edge check compares the outlines of windows, doors, and other fixed elements in the before and after photos. An image is flagged for review when any of them matches less than the threshold. Higher catches more changed structure but flags more good images.</p>
+    <form id="threshold-form" class="field-row" novalidate>
+      <label class="field-label" for="edge-threshold" style="margin:0">Edge threshold</label>
+      <input class="settings-input" type="number" id="edge-threshold" min="0.05" max="0.95" step="0.01" value="${num2(t.edgeThreshold)}" inputmode="decimal">
+      <button class="btn btn-primary btn-small" type="submit">Save</button>
+      ${t.saved != null ? `<button class="btn btn-quiet btn-small" type="button" data-reset-threshold>Reset to ${num2(t.default)}</button>` : `<span class="hint" style="margin:0">Default ${num2(t.default)}</span>`}
+    </form>
+    <hr class="zone-divider" style="margin:4px 0">
+    <div class="section-head" style="margin:0"><div><h3>Score past runs</h3><p class="hint">Re-scores every redesign saved on this computer against your labels and the vision judge. No API calls, no cost.</p></div>
+      <button class="btn btn-small" type="button" data-tune-scan>${icon("refresh")}${state.tuning ? "Rescan" : "Score past runs"}</button></div>
+    <div id="tuning-results" class="settings-panel">${state.tuningLoading ? `<p class="muted" role="status">Scoring past runs…</p>` : state.tuning ? tuningResults() : ""}</div>`;
+}
+
+const pct = (n) => (n == null ? "–" : pf.format(n));
+
+function tuningResults() {
+  const t = state.tuning;
+  if (!t.total) return `<p class="muted">No scored redesigns yet. Run a few redesigns, then score again.</p>`;
+  const s = t.suggested;
+  const current = t.threshold;
+  const suggestion = !s ? `<div class="suggestion"><p>No broken images yet, so there's nothing to tune against. Label a few images below where the structure changed, or run more listings.</p></div>`
+    : Math.abs(s.threshold - current) < 1e-9 ? `<div class="suggestion"><p>Your threshold, <strong>${num2(current)}</strong>, is already the best fit for these runs.</p></div>`
+    : `<div class="suggestion"><p>Suggested threshold: <strong>${num2(s.threshold)}</strong>. It catches ${s.tp} of ${s.tp + s.fn} broken images with ${s.fp} false ${s.fp === 1 ? "alarm" : "alarms"}.</p><button class="btn btn-primary btn-small" type="button" data-use-threshold="${s.threshold}">Use ${num2(s.threshold)}</button></div>`;
+  // Images labeled since the filter was picked stay put, so a card doesn't vanish under the pointer.
+  const isOpen = (a) => a.label === null || state.tuningTouched.has(a.key);
+  const worth = t.attempts.filter((a) => isOpen(a) && a.flagged !== (a.judge === "broken"));
+  const unlabeled = t.attempts.filter(isOpen);
+  const filters = { worth: ["Worth a look", worth], unlabeled: ["Unlabeled", unlabeled], all: ["All", t.attempts] };
+  const [, shown] = filters[state.tuningFilter] ?? filters.worth;
+  const visible = shown.slice(0, state.tuningShow);
+  return `<p class="hint num" style="margin:0">${nf.format(t.total)} images from ${t.runs} ${t.runs === 1 ? "run" : "runs"} across ${t.listings} ${t.listings === 1 ? "listing" : "listings"}. ${t.labeled} labeled by you; the rest use the vision judge's call. Scanned ${fmtDate(t.scannedAt)}.</p>
+    ${suggestion}
+    <div class="data-table-wrap"><table class="data-table">
+      <caption class="sr-only">Edge threshold sweep</caption>
+      <thead><tr><th scope="col">Threshold</th><th scope="col">Flagged</th><th scope="col">Caught broken</th><th scope="col">False alarms</th><th scope="col">Missed broken</th><th scope="col">F1</th></tr></thead>
+      <tbody>${t.sweep.map((r) => `<tr class="${Math.abs(r.threshold - current) < 1e-9 ? "current" : ""} ${s && r.threshold === s.threshold ? "suggested" : ""}">
+        <td>${num2(r.threshold)}${Math.abs(r.threshold - current) < 1e-9 ? " (yours)" : ""}${s && r.threshold === s.threshold ? " ★" : ""}</td><td>${pct(r.flagged)}</td><td>${r.tp}</td><td>${r.fp}</td><td>${r.fn}</td><td>${r.f1 == null ? "–" : r.f1.toFixed(2)}</td></tr>`).join("")}</tbody>
+    </table></div>
+    <h3>Image models</h3>
+    <p class="hint" style="margin:-8px 0 0">To compare two models on one listing, run <code>npm run tune -- compare listings/&lt;listing&gt; --models a,b</code>. It costs a redesign per model.</p>
+    <div class="data-table-wrap"><table class="data-table">
+      <caption class="sr-only">Image model comparison</caption>
+      <thead><tr><th scope="col">Model</th><th scope="col">Images kept</th><th scope="col">Verified</th><th scope="col">Verified first try</th><th scope="col">Mean attempts</th><th scope="col">Broken</th></tr></thead>
+      <tbody>${t.models.map((m) => `<tr><td>${esc(m.imageModel)}</td><td>${m.tiers}</td><td>${pct(m.tiers ? m.verified / m.tiers : null)}</td><td>${pct(m.tiers ? m.firstTry / m.tiers : null)}</td><td>${m.meanAttempts.toFixed(1)}</td><td>${pct(m.brokenRate)}</td></tr>`).join("")}</tbody>
+    </table></div>
+    <div class="section-head" style="margin:4px 0 0"><div><h3>Label images</h3><p class="hint">Your call beats the judge's. Mark the images you'd judge differently and the suggestion above updates. "Worth a look" shows images where the edge check and the judge disagree.</p></div>
+      <div class="seg" role="group" aria-label="Show">${Object.entries(filters).map(([id, [label, list]]) => `<button type="button" data-tune-filter="${id}" aria-pressed="${(state.tuningFilter ?? "worth") === id}">${label} <span class="num">${list.length}</span></button>`).join("")}</div></div>
+    ${visible.length ? `<ul class="tune-grid">${visible.map(tuneCard).join("")}</ul>` : `<p class="muted" style="margin:0">Nothing here.</p>`}
+    ${shown.length > visible.length ? `<div><button class="btn btn-small" type="button" data-tune-more>Show more (${shown.length - visible.length} left)</button></div>` : ""}`;
+}
+
+function tuneCard(a) {
+  const label = `${a.listing} · ${a.photo}`;
+  return `<li class="tune-card">
+    <div class="tune-pair">
+      <a href="${esc(a.original.full)}" target="_blank" rel="noopener"><img src="${esc(a.original.thumb)}" alt="Original: ${esc(label)}" loading="lazy"><span>Before</span></a>
+      <a href="${esc(a.redesign.full)}" target="_blank" rel="noopener"><img src="${esc(a.redesign.thumb)}" alt="Redesign: ${esc(label)}" loading="lazy"><span>After</span></a>
+    </div>
+    <div class="tune-meta"><strong>${esc(label)}</strong>
+      <small>${esc(tierName(a.tier))} · attempt ${a.attempt} · ${esc(a.imageModel)}</small>
+      <small>Judge: ${a.judge === "broken" ? "structure changed" : "looks right"} · Edge check: ${a.minCorrelation == null ? "nothing to compare" : `${a.minCorrelation.toFixed(2)}${a.flagged ? ", flagged" : ", passed"}`}</small></div>
+    <div class="seg" role="group" aria-label="Your call on ${esc(label)}">
+      <button type="button" data-tune-label="ok" data-key="${esc(a.key)}" aria-pressed="${a.label === "ok"}">Looks right</button>
+      <button type="button" class="bad" data-tune-label="broken" data-key="${esc(a.key)}" aria-pressed="${a.label === "broken"}">Structure changed</button>
+    </div>
+  </li>`;
+}
+
+async function scanTuning(rescan) {
+  state.tuningLoading = true;
+  renderTuning();
+  try {
+    state.tuning = await api(`/api/tuning${rescan ? "?rescan=1" : ""}`);
+    state.tuningTouched = new Set();
+  } catch (error) {
+    announce(`Couldn't score runs: ${error.message}`);
+  }
+  state.tuningLoading = false;
+  if (state.view === "settings") renderTuning();
+}
+
+async function saveThreshold(value) {
+  try {
+    const next = await api("/api/settings", { method: "PATCH", body: JSON.stringify({ tuning: { edgeThreshold: value } }) });
+    settingsSaved(next, value == null ? "Threshold reset" : "Threshold saved");
+    if (state.tuning) state.tuning = await api("/api/tuning");
+    renderTuning();
+  } catch (error) {
+    announce(error.message);
+  }
+}
+
+/* Cost assumptions */
+
+function renderCosts() {
+  const c = state.settings.costs;
+  const saved = c.saved;
+  const field = (id, label, value, placeholder, hint, attrs = 'step="0.01" min="0.01" max="10"') => `<div class="number-field">
+      <label for="${id}">${label}</label>
+      <input class="settings-input" type="number" id="${id}" ${attrs} value="${value == null ? "" : num2(value)}" placeholder="${placeholder}" inputmode="decimal">
+      ${hint ? `<p class="hint">${hint}</p>` : ""}</div>`;
+  const customized = Object.keys(saved).length > 0;
+  $("#settings-costs").innerHTML = `<h2 id="costs-h">Cost assumptions</h2>
+    <p class="hint">Remodel costs come from a unit-cost table: national installed cost × local labor × finish grade × overhead. Leave a field blank to use the default shown in it. Changes apply to new redesigns; past reports keep the prices they were run with.</p>
+    <form id="costs-form" class="settings-panel" novalidate>
+      <h3>Local labor</h3>
+      <div class="number-fields">
+        ${field("labor-seattle", esc(c.regions.seattle.name), saved.laborFactor?.seattle, num2(c.defaults.laborFactor.seattle), `Construction wages vs. the US average (${esc(c.regions.seattle.source)}). Used when a listing's location is in the Seattle area.`)}
+        ${field("labor-national", "Everywhere else", saved.laborFactor?.national, num2(c.defaults.laborFactor.national), "For listings outside the Seattle area. Set your own area's factor here.")}
+      </div>
+      <h3>Finish grade</h3>
+      <div class="number-fields">
+        ${["basic", "mid", "premium"].map((g) => field(`grade-${g}`, sentence(g), saved.grades?.[g], num2(c.defaults.grades[g]), g === "mid" ? "What the planner proposes by default." : "")).join("")}
+      </div>
+      <p class="hint" style="margin-top:-8px">Multiplies the builder-grade price. These are assumptions, not sourced figures.</p>
+      <h3>Overhead</h3>
+      <div class="number-fields">
+        <div class="number-field"><label for="overhead">Contractor overhead and permits</label>
+          <span class="suffix-input"><input class="settings-input" type="number" id="overhead" min="0" max="200" step="1" value="${saved.overhead == null ? "" : Math.round(saved.overhead * 100)}" placeholder="${Math.round(c.defaults.overhead * 100)}" inputmode="decimal">%</span>
+          <p class="hint">Overhead and profit, permits, and cleanup, added on top.</p></div>
+      </div>
+      <h3>Unit costs</h3>
+      <p class="hint" style="margin-top:-8px">National builder-grade installed cost per unit, in dollars, before the adjustments above. Defaults are from Homewyse (September 2026).</p>
+      <div class="data-table-wrap"><table class="data-table">
+        <caption class="sr-only">Unit costs</caption>
+        <thead><tr><th scope="col">Item</th><th scope="col">Unit</th><th scope="col">Low</th><th scope="col">High</th><th scope="col"><span class="sr-only">Source</span></th></tr></thead>
+        <tbody>${c.items.map((item) => `<tr>
+          <th scope="row" style="font-weight:400;color:var(--text);white-space:normal;border-bottom-color:var(--line)">${esc(item.label)}</th><td>${esc(item.unit)}</td>
+          <td><input class="settings-input" type="number" min="0" step="0.01" data-cost="${item.key}" data-bound="low" value="${saved.items?.[item.key] ? num2(saved.items[item.key].low) : ""}" placeholder="${num2(item.low)}" aria-label="${esc(item.label)}, low"></td>
+          <td><input class="settings-input" type="number" min="0" step="0.01" data-cost="${item.key}" data-bound="high" value="${saved.items?.[item.key] ? num2(saved.items[item.key].high) : ""}" placeholder="${num2(item.high)}" aria-label="${esc(item.label)}, high"></td>
+          <td><a href="${esc(item.source)}" target="_blank" rel="noopener">Source</a></td></tr>`).join("")}</tbody>
+      </table></div>
+      <p class="error" id="costs-error" role="alert" hidden></p>
+      <div class="field-row">
+        <button class="btn btn-primary" type="submit">Save cost assumptions</button>
+        ${customized ? `<button class="btn btn-quiet" type="button" data-reset-costs>Reset all to defaults</button>` : ""}
+      </div>
+    </form>`;
+}
+
+function readCosts() {
+  const c = state.settings.costs;
+  const value = (id) => { const v = $(`#${id}`).value.trim(); return v === "" ? undefined : Number(v); };
+  const out = {};
+  const labor = { seattle: value("labor-seattle"), national: value("labor-national") };
+  if (labor.seattle !== undefined || labor.national !== undefined) out.laborFactor = labor;
+  const grades = Object.fromEntries(["basic", "mid", "premium"].map((g) => [g, value(`grade-${g}`)]));
+  if (Object.values(grades).some((v) => v !== undefined)) out.grades = grades;
+  const overhead = value("overhead");
+  if (overhead !== undefined) out.overhead = overhead / 100;
+  const items = {};
+  for (const item of c.items) {
+    const low = $(`[data-cost="${item.key}"][data-bound="low"]`).value.trim();
+    const high = $(`[data-cost="${item.key}"][data-bound="high"]`).value.trim();
+    if (low === "" && high === "") continue;
+    items[item.key] = { low: low === "" ? item.low : Number(low), high: high === "" ? item.high : Number(high) };
+  }
+  if (Object.keys(items).length) out.items = items;
+  return JSON.parse(JSON.stringify(out)); // drops undefined fields
+}
+
+async function saveCosts(reset) {
+  const err = $("#costs-error");
+  err.hidden = true;
+  try {
+    const next = await api("/api/settings", { method: "PATCH", body: JSON.stringify({ costs: reset ? null : readCosts() }) });
+    settingsSaved(next, reset ? "Cost assumptions reset" : "Cost assumptions saved");
+    renderCosts();
+  } catch (error) {
+    err.textContent = error.message;
+    err.hidden = false;
+  }
+}
+
+document.addEventListener("submit", (event) => {
+  if (state.view !== "settings") return;
+  const form = event.target;
+  const keyForm = form.closest("[data-key-form]");
+  if (keyForm) {
+    event.preventDefault();
+    const id = keyForm.dataset.keyForm;
+    const value = $(`#key-${id}`).value.trim();
+    if (!value) { $(`#key-${id}`).focus(); return; }
+    return saveKey(id, value);
+  }
+  if (form.id === "models-form") { event.preventDefault(); return saveModels(false); }
+  if (form.id === "costs-form") { event.preventDefault(); return saveCosts(false); }
+  if (form.id === "threshold-form") {
+    event.preventDefault();
+    const value = Number($("#edge-threshold").value);
+    if (!(value > 0 && value < 1)) return announce("Use a threshold between 0 and 1.");
+    return saveThreshold(value);
+  }
+});
+
+document.addEventListener("change", (event) => {
+  const select = event.target.closest?.("[data-other-select]");
+  if (!select) return;
+  const other = $(`#${select.id}-other`);
+  other.hidden = select.value !== OTHER;
+  if (!other.hidden) other.focus();
+  const options = state.settings.models.options[select.id === "image-model" ? "image" : "reasoning"];
+  $(`[data-model-note="${select.id}"]`).textContent = options.find((o) => o.id === select.value)?.note ?? "";
+});
+
+document.addEventListener("click", async (event) => {
+  if (state.view !== "settings") return;
+  const target = event.target.closest?.("button");
+  if (!target) return;
+  if (target.dataset.testKey) return checkKey(target.dataset.testKey);
+  if (target.dataset.removeKey) {
+    const name = state.settings.keys[target.dataset.removeKey].name;
+    if (!confirm(`Remove the ${name} key saved here?`)) return;
+    return saveKey(target.dataset.removeKey, null);
+  }
+  if (target.hasAttribute("data-reset-models")) return saveModels(true);
+  if (target.hasAttribute("data-reset-costs")) { if (confirm("Reset every cost assumption to the built-in defaults?")) saveCosts(true); return; }
+  if (target.hasAttribute("data-reset-threshold")) return saveThreshold(null);
+  if (target.dataset.useThreshold) return saveThreshold(Number(target.dataset.useThreshold));
+  if (target.hasAttribute("data-tune-scan")) return scanTuning(!!state.tuning);
+  if (target.dataset.tuneFilter) { state.tuningFilter = target.dataset.tuneFilter; state.tuningShow = 24; state.tuningTouched = new Set(); return renderTuning(); }
+  if (target.hasAttribute("data-tune-more")) { state.tuningShow += 24; return renderTuning(); }
+  if (target.dataset.tuneLabel) {
+    const label = target.getAttribute("aria-pressed") === "true" ? null : target.dataset.tuneLabel;
+    target.closest(".seg").querySelectorAll("button").forEach((b) => (b.disabled = true));
+    try {
+      state.tuning = await api("/api/tuning/labels", { method: "PUT", body: JSON.stringify({ key: target.dataset.key, label }) });
+      announce(label ? "Label saved" : "Label cleared");
+    } catch (error) {
+      announce(`Couldn't save the label: ${error.message}`);
+    }
+    state.tuningTouched.add(target.dataset.key);
+    const scrollY = window.scrollY;
+    renderTuning();
+    window.scrollTo({ top: scrollY });
+  }
+});
+
 async function load() {
   state.textEdit = null;
   state.job = null;
   clearTimeout(pollTimer);
   try {
     const [listings, profiles, tasteProfiles, status] = await Promise.all([api("/api/listings"), loadProfiles(), api("/api/taste-profiles"), api("/api/status")]);
-    Object.assign(state, { listings, profiles, tasteProfiles, keysError: status.keysError });
-    const banner = $("#banner");
-    banner.hidden = !status.keysError;
-    banner.innerHTML = status.keysError ? `You can pick photos and edit profiles now. To run redesigns or rebuild rules, add <code>OPENAI_API_KEY</code> and <code>ANTHROPIC_API_KEY</code> to <code>.env.local</code> and restart <code>npm run app</code>.` : "";
+    Object.assign(state, { listings, profiles, tasteProfiles });
+
+    if (params().get("view") === "settings") {
+      state.view = "settings";
+      updateBanner(status.keysError);
+      renderListings();
+      renderProfilesNav();
+      renderMobileTabs();
+      return loadSettingsPage();
+    }
+    updateBanner(status.keysError);
 
     let collection = params().get("view");
     if (!collection && !params().get("listing") && !params().get("taste") && matchMedia("(max-width:860px)").matches) {

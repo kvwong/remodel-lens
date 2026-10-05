@@ -4,11 +4,15 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
+import { ROOT } from "../config.js";
 import type { RoomInventory } from "../listing/inventory.js";
 import type { RunSummary } from "../redesign/job.js";
 import { edgeChecks, type EdgeCheck, type JudgeResult, type Verdict } from "../redesign/verify.js";
 import type { AttemptRecord, Label } from "./analyze.js";
 import { minCorrelation } from "./analyze.js";
+
+export const TUNING_DIR = path.join(ROOT, ".runs", "tuning");
+export const LABELS_FILE = path.join(TUNING_DIR, "labels.json");
 
 type SavedVerify = { verdict: Verdict; edges: EdgeCheck[]; judgement: JudgeResult };
 
@@ -113,4 +117,20 @@ export async function writeLabelTemplate(file: string, records: AttemptRecord[])
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, `${JSON.stringify(existing, null, 2)}\n`);
   return { added, total: Object.keys(existing).length };
+}
+
+/** Records your call on one image (null clears it), in the same file `npm run tune -- labels` writes. */
+export async function setLabel(file: string, record: AttemptRecord, label: Label | null): Promise<void> {
+  const existing = (await readJson<Record<string, LabelEntry>>(file)) ?? {};
+  existing[record.key] = {
+    ...(existing[record.key] ?? {
+      judge: record.judgeBroken ? "broken" : "ok",
+      minCorrelation: round(minCorrelation(record)),
+      original: record.original,
+      redesign: record.redesign,
+    }),
+    label,
+  };
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, `${JSON.stringify(existing, null, 2)}\n`);
 }

@@ -11,3 +11,4 @@ profiles/*
 !profiles/example/
 profiles/*/references/
 profiles/*/profile.prev.json
+.settings.json

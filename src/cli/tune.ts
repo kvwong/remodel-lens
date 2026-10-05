@@ -15,10 +15,7 @@ import { RUNS_DIR, runListingRedesign } from "../redesign/job.js";
 import { parseTiers } from "../redesign/tiers.js";
 import { edgeThreshold } from "../redesign/verify.js";
 import { renderTuningReport } from "../tune/analyze.js";
-import { collectAttempts, readLabels, writeLabelTemplate } from "../tune/collect.js";
-
-const TUNING_DIR = path.join(ROOT, ".runs", "tuning");
-const LABELS = path.join(TUNING_DIR, "labels.json");
+import { collectAttempts, LABELS_FILE as LABELS, readLabels, TUNING_DIR, writeLabelTemplate } from "../tune/collect.js";
 
 async function report(only?: Set<string>) {
   const records = await collectAttempts(RUNS_DIR, { labels: await readLabels(LABELS), ...(only ? { only } : {}) });

@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { applySettings, readSettings } from "./settings.js";
+
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export function loadEnv(): void {
@@ -14,6 +16,12 @@ export function loadEnv(): void {
       process.env[match[1]!] = match[2]!.replace(/^(['"])(.*)\1$/, "$2");
     }
   }
+  // Values saved on the app's settings page win over the files above.
+  try {
+    applySettings(readSettings());
+  } catch (error) {
+    process.stderr.write(`[remodel-lens] Ignoring saved settings: ${(error as Error).message}\n`);
+  }
 }
 
 export type Models = {
@@ -25,14 +33,20 @@ export type Models = {
   image: string;
 };
 
+export const DEFAULT_MODELS: Models = {
+  analysis: ["openai/gpt-6.1-sol", "anthropic/claude-sonnet-5-5"],
+  reasoning: "openai/gpt-6.1-sol",
+  image: "gpt-image-2.5-sunburst",
+};
+
 export function resolveModels(): Models {
   return {
-    analysis: (process.env.ANALYSIS_MODELS ?? "openai/gpt-6.1-sol,anthropic/claude-sonnet-5-5")
+    analysis: (process.env.ANALYSIS_MODELS ?? DEFAULT_MODELS.analysis.join(","))
       .split(",")
       .map((m) => m.trim())
       .filter(Boolean),
-    reasoning: process.env.REASONING_MODEL ?? "openai/gpt-6.1-sol",
-    image: process.env.IMAGE_MODEL ?? "gpt-image-2.5-sunburst",
+    reasoning: process.env.REASONING_MODEL ?? DEFAULT_MODELS.reasoning,
+    image: process.env.IMAGE_MODEL ?? DEFAULT_MODELS.image,
   };
 }
 
@@ -44,6 +58,6 @@ export function requireKeys(models: Models): void {
   }
   const missing = [...needed].filter((key) => !process.env[key]);
   if (missing.length > 0) {
-    throw new Error(`Missing ${missing.join(", ")}. Copy .env.example to .env.local and fill it in.`);
+    throw new Error(`Missing ${missing.join(", ")}. Add ${missing.length > 1 ? "them" : "it"} on the app's Settings page, or in .env.local.`);
   }
 }

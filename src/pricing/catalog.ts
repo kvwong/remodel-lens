@@ -3,7 +3,7 @@
 // Baselines are Homewyse's "basic cost to install" national figures (materials + labor + supplies,
 // favorable site conditions, no contractor overhead or permits), read 2026-10-05 for the September 2026
 // update. https://www.homewyse.com/services/ — one page per item, linked below.
-// Edit these numbers freely; the tests only check the arithmetic, not the values.
+// Edit these numbers freely, or override them on the app's settings page; the tests only check the arithmetic.
 
 export const GRADES = ["basic", "mid", "premium"] as const;
 export type Grade = (typeof GRADES)[number];
@@ -76,6 +76,10 @@ export const REGIONS = {
 const SEATTLE_AREA =
   /\b(seattle|bellevue|mercer island|issaquah|kirkland|redmond|sammamish|newcastle|renton|bothell|woodinville|medina|clyde hill|yarrow point|hunts point|eastside|king county)\b|\b98[01]\d\d\b/i;
 
+export function regionKeyFor(location: string | null | undefined): keyof typeof REGIONS {
+  return location && SEATTLE_AREA.test(location) ? "seattle" : "national";
+}
+
 export function regionFor(location: string | null | undefined): Region {
-  return location && SEATTLE_AREA.test(location) ? REGIONS.seattle : REGIONS.national;
+  return REGIONS[regionKeyFor(location)];
 }

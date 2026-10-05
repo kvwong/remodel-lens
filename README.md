@@ -20,10 +20,27 @@ From the repository root:
 
 ```bash
 npm ci
-cp .env.example .env.local
+npm run app
 ```
 
-Open `.env.local` and add your keys:
+Open <http://localhost:4310> and choose **Settings** (bottom of the sidebar, or
+the last tab on a phone). There you can:
+
+- **API keys:** paste your OpenAI and Anthropic keys and check that each one
+  works. Once saved, only the last four characters are shown.
+- **Models:** pick the reasoning model, the reference analysis models, and the
+  image model.
+- **Tuning:** set the edge-check threshold, score your past runs (no API
+  calls), label images where the structure changed, and apply the suggested
+  threshold.
+- **Cost assumptions:** change the local labor factors, finish-grade
+  multipliers, overhead, and any unit cost in the pricing table.
+
+Settings are saved in `.settings.json` at the repository root, which git
+ignores and only your user can read. They apply to the command-line tools too,
+and they win over `.env.local`. Clearing a setting falls back to `.env.local`.
+
+If you prefer files, copy `.env.example` to `.env.local` and add your keys:
 
 ```dotenv
 OPENAI_API_KEY=your-openai-key
