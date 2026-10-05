@@ -165,6 +165,45 @@ reference photos.
 | Needs review | The judge passed, but an edge shifted near a fixed element or the plan was only partly followed. |
 | Unverified | Verification failed twice. Architecture changed; don't rely on the image for decisions. |
 
+## Tune verification
+
+After a few real runs, check how well the edge check separates good images from
+broken ones and how the image models compare:
+
+```bash
+npm run tune
+```
+
+This re-scores every saved image under `.runs/redesign/` without any API calls
+and writes `.runs/tuning/report.md`. The report sweeps edge thresholds from
+0.20 to 0.70, suggests the one with the best balance of caught failures and
+false alarms, shows the correlation range per element type, and compares image
+models by verdict and retry rate. Apply a suggested threshold with
+`EDGE_THRESHOLD` in `.env.local`.
+
+By default the vision judge's structural call is treated as the right answer.
+Your own judgment is better. To label images yourself:
+
+```bash
+npm run tune -- labels
+```
+
+Open `.runs/tuning/labels.json`, set `label` to `"ok"` or `"broken"` for the
+images you've looked at (each entry lists the original and redesign paths), and
+run `npm run tune` again. Re-running `labels` adds new images and keeps your
+labels.
+
+To compare image models on the same photos, redesign one listing once per
+model. This makes API calls for every model, and the CLI prints an estimate
+first:
+
+```bash
+npm run tune -- compare listings/123-main-st --models gpt-image-2,gpt-image-2.5-sunburst --profile profiles/example/profile.json
+```
+
+Runs from before this change don't record their image model and show as
+`unknown` in the model comparison.
+
 ## Your data and privacy
 
 Listings, profiles, reference photos, and run artifacts are stored in this
@@ -188,6 +227,7 @@ root. `.env.example` lists the defaults:
 | `REASONING_MODEL` | `openai/gpt-6.1-sol` | Planning, rule extraction, and verification. |
 | `IMAGE_MODEL` | `gpt-image-2.5-sunburst` | Image-edit model. |
 | `IMAGE_CONCURRENCY` | `4` | Maximum image edits in flight across listings. |
+| `EDGE_THRESHOLD` | `0.45` | Minimum edge correlation for a fixed element to pass. See [Tune verification](#tune-verification). |
 | `PORT` | `4310` | Local app port. |
 
 ## Development checks

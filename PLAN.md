@@ -104,7 +104,8 @@ bands, verification results, and feasibility flags.
    `npm run redesign`. Local files only, with outputs in `.runs/`.
 2. **Tune with real photos:** test on 3–5 real listings. Adjust inventory
    prompts and the edge-match threshold. Compare `gpt-image-2` with the
-   `gpt-image-2.5-*` models.
+   `gpt-image-2.5-*` models. `npm run tune` scores past runs, sweeps the
+   threshold, and compares image models (`npm run tune -- compare`).
 3. **Stricter structure preservation if needed:** if masked gpt-image edits keep
    drifting, add a Flux/SDXL + ControlNet (depth and straight-line) backend
    through Replicate or fal behind the same `generate` interface.

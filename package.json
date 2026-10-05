@@ -7,7 +7,8 @@
     "check": "tsc --noEmit",
     "test": "vitest run",
     "app": "tsx src/app/server.ts",
-    "import": "tsx src/cli/import.ts"
+    "import": "tsx src/cli/import.ts",
+    "tune": "tsx src/cli/tune.ts"
   },
   "type": "module",
   "dependencies": {
