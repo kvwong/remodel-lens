@@ -441,18 +441,19 @@ export function renderReport(input: {
   @media (max-width: 680px) { .card { padding:18px 16px; border-radius:10px; } }
   .meta { margin:8px 0 0; color:var(--muted); font-size:14px; }
   .meta span + span::before { content:"·"; margin:0 8px; opacity:.6; }
-  /* PDF downloads sit in the header's upper right corner, beside the title. */
-  .page-head > .share { grid-column:2; grid-row:1 / span 4; align-self:start; }
-  .share { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px 10px; max-width:560px; }
+  /* PDF downloads sit at the right, their bottom edge on the title's baseline row (the row is set inline: 2 under a back link, else 1). */
+  .page-head > .share { grid-column:2; align-self:end; margin-bottom:4px; }
+  .share { position:relative; display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px 10px; max-width:560px; }
   .share-btn { display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:6px 14px 6px 12px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); text-decoration:none; color:var(--text); font-size:14px; font-weight:500; white-space:nowrap; }
   .share-btn:hover { border-color:var(--primary); background:var(--primary-soft); }
   .share-btn .icon { color:var(--primary); }
   .share-btn[aria-busy="true"] { opacity:.6; cursor:progress; }
-  .share-status { flex-basis:100%; text-align:right; font-size:13px; color:var(--muted); }
+  /* Below the buttons without taking space, so the buttons stay on the baseline while a PDF is prepared. */
+  .share-status { position:absolute; top:100%; right:0; margin-top:6px; white-space:nowrap; font-size:13px; color:var(--muted); }
   .share-status:empty { display:none; }
   @media (max-width: 900px) {
-    .page-head > .share { grid-column:1; grid-row:auto; margin-top:18px; justify-content:flex-start; max-width:none; }
-    .share-status { text-align:left; }
+    .page-head > .share { grid-column:1; grid-row:auto !important; margin:18px 0 0; justify-content:flex-start; max-width:none; }
+    .share-status { position:static; flex-basis:100%; margin:0; white-space:normal; }
   }
   @media (max-width: 680px) { .share-btn { flex:1 1 0; justify-content:center; } }
   .notice { margin:16px 0 0; font-size:14px; color:var(--warn); }
@@ -639,7 +640,7 @@ export function renderReport(input: {
     <h1 id="top" tabindex="-1">${esc(input.title)}</h1>
     <p class="meta">${meta.map((m) => `<span>${esc(m)}</span>`).join("")}</p>
     ${input.pdf
-      ? `<div class="share" role="group" aria-label="Download PDF">
+      ? `<div class="share" role="group" aria-label="Download PDF" style="grid-row:${back ? 2 : 1}">
       <a class="share-btn" href="${esc(input.pdf.summary)}" data-pdf="Summary" title="Costs and a before and after for every room" download>${icon("download")}Summary PDF</a>
       <a class="share-btn" href="${esc(input.pdf.full)}" data-pdf="Full scope" title="Every room, scope, and planned change" download>${icon("download")}Full scope PDF</a>
       <span class="share-status" role="status" aria-live="polite"></span>
