@@ -499,39 +499,88 @@
   .settings-link:hover { background:var(--surface); color:var(--text); }
   .settings-link[aria-current="page"] { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
   @media (max-width:860px) { .settings-link { display:none; } }
-  .settings-panel { display:grid; gap:16px; }
-  .settings-panel > .hint { margin-top:-8px; }
-  .settings-panel h3 { margin-top:4px; }
+  .settings-panel { display:grid; gap:0; }
   .settings-panel code, .subhead code { font-family:var(--mono); font-size:13px; }
-  .settings-input { min-height:40px; padding:6px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); font-size:16px; min-width:0; }
+  .panel-head { display:grid; gap:6px; padding-bottom:20px; }
+  .panel-head .hint { margin:0; }
+  .settings-panel > .notice { margin-bottom:20px; }
+  /* One row per setting: what it is on the left, the control on the right. */
+  fieldset.setting-row { border:0; border-top:1px solid var(--line); margin:0; min-width:0; }
+  .setting-row { display:grid; grid-template-columns:minmax(0, 240px) minmax(0, 1fr); gap:8px 40px; align-items:start; padding:20px 0; border-top:1px solid var(--line); }
+  .setting-row-wide { grid-template-columns:minmax(0, 1fr); gap:14px; }
+  .setting-row-wide .setting-label { max-width:62ch; }
+  .setting-label { display:grid; gap:4px; min-width:0; }
+  .setting-label label, .setting-label .label-text { font-weight:500; font-size:14px; }
+  .setting-label p { margin:0; font-size:13px; line-height:1.5; color:var(--muted); }
+  .setting-label a { color:var(--muted); }
+  .setting-control { display:grid; gap:8px; justify-items:start; min-width:0; }
+  .control-line { display:flex; flex-wrap:wrap; align-items:center; gap:8px; width:100%; }
+  .control-note { margin:0; font-size:13px; color:var(--muted); min-height:0; }
+  .control-note:empty { display:none; }
+  @media (max-width:700px) { .setting-row { grid-template-columns:minmax(0, 1fr); gap:12px; } }
+  .panel-foot { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px 12px; padding-top:20px; border-top:1px solid var(--line); }
+  .panel-foot .error { margin-right:auto; }
+  .pill { display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:999px; background:var(--surface-2); color:var(--muted); font-size:12.5px; font-weight:500; }
+  .pill .icon { width:13px; height:13px; }
+  .pill-ok { background:var(--primary-soft); color:var(--primary); }
+  .settings-input { height:38px; padding:0 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); color:var(--text); font-size:15px; min-width:0; }
+  .settings-input::placeholder { color:var(--muted); opacity:.8; }
   .settings-input:focus { outline:2px solid var(--text); outline-offset:1px; }
-  .settings-input[type="number"] { width:9ch; font-variant-numeric:tabular-nums; }
-  .key-input { flex:1 1 260px; font-family:var(--mono); font-size:14px; }
-  .key-block { display:grid; gap:8px; padding-top:16px; border-top:1px solid var(--line); }
-  .key-block:first-of-type { border-top:0; padding-top:0; }
-  .key-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:4px 12px; }
-  .key-head .field-label { margin:0; }
-  .key-state { font-size:13px; color:var(--muted); }
-  .key-state.set { color:var(--ok); }
+  /* Number fields: no spinner arrows, tabular figures, right aligned. */
+  .num-input { width:8ch; text-align:right; font-variant-numeric:tabular-nums; -moz-appearance:textfield; appearance:textfield; }
+  .num-input::-webkit-outer-spin-button, .num-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+  .key-input { flex:0 1 380px; font-family:var(--mono); font-size:13.5px; }
+  .model-control { width:100%; max-width:420px; }
+  .model-control select, .model-control .settings-input { width:100%; }
+  .model-control select { height:38px; min-height:38px; font-size:15px; }
   .result-ok { color:var(--ok); } .result-bad { color:var(--bad); }
-  .model-field { display:grid; gap:6px; max-width:520px; }
-  .model-field select, .model-field .settings-input { width:100%; }
-  .checks { display:grid; gap:6px; }
-  .checks label { display:flex; align-items:center; gap:8px; min-height:32px; font-size:14px; }
+  .checks { gap:2px; }
+  .checks label { display:flex; align-items:center; gap:10px; min-height:32px; font-size:14px; }
   .checks input { width:16px; height:16px; margin:0; }
-  .number-fields { display:flex; flex-wrap:wrap; gap:16px 28px; }
-  .number-field { display:grid; gap:6px; align-content:start; max-width:300px; }
-  .number-field label { font-size:14px; font-weight:500; }
-  .number-field .hint { margin:0; }
-  .suffix-input { display:flex; align-items:center; gap:6px; }
+  .number-fields { display:grid; grid-template-columns:repeat(auto-fill, 128px); gap:16px; justify-content:start; }
+  .number-field { display:grid; gap:6px; align-content:start; }
+  .number-field label { font-size:13px; font-weight:500; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .number-field small { font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .number-field small.changed, .cost-table tr.changed small { color:var(--warn); }
+  .affix-input { display:inline-flex; align-items:center; height:38px; border:1px solid var(--line-strong); border-radius:8px; background:var(--surface); overflow:hidden; }
+  .affix-input:focus-within { outline:2px solid var(--text); outline-offset:1px; }
+  .affix-input > span { padding:0 0 0 10px; color:var(--muted); font-size:14px; }
+  .affix-input > span:last-child:not(:first-child) { padding:0 10px 0 2px; }
+  .affix-input .settings-input { border:0; height:100%; background:transparent; flex:1; width:100%; }
+  .affix-input .settings-input:focus { outline:none; }
+  .number-field .affix-input { width:128px; }
   .data-table-wrap { overflow-x:auto; margin:0 -4px; padding:0 4px; }
   .data-table { width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums; }
-  .data-table th { text-align:left; font-weight:500; color:var(--muted); font-size:13px; padding:6px 10px 6px 0; border-bottom:1px solid var(--line-strong); white-space:nowrap; }
-  .data-table td { padding:6px 10px 6px 0; border-bottom:1px solid var(--line); vertical-align:middle; }
+  .data-table th { text-align:left; font-weight:500; color:var(--muted); font-size:12.5px; padding:6px 12px 6px 0; border-bottom:1px solid var(--line-strong); white-space:nowrap; }
+  .data-table td { padding:6px 12px 6px 0; border-bottom:1px solid var(--line); vertical-align:middle; }
+  .data-table .r { text-align:right; }
   .data-table tr.current td { font-weight:600; }
   .data-table tr.suggested td { background:var(--primary-soft); }
-  .data-table .settings-input[type="number"] { width:10ch; min-height:34px; font-size:14px; }
   .data-table a { color:var(--muted); font-size:13px; }
+  .cost-table tbody th { font-weight:400; font-size:14px; color:var(--text); white-space:normal; border-bottom:1px solid var(--line); padding:8px 12px 8px 0; }
+  .cost-table tbody th small { display:block; font-size:12px; }
+  .cost-table .unit { color:var(--muted); font-size:13px; white-space:nowrap; }
+  .cost-table .affix-input { height:34px; width:108px; margin-left:auto; }
+  .cost-table td:last-child { padding-left:8px; }
+  .cost-table tr.changed th { font-weight:500; }
+  /* Phones: each unit cost becomes a two-line card instead of a sideways-scrolling table. */
+  @media (max-width:600px) {
+    .number-fields { grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; }
+    .number-field .affix-input { width:100%; }
+    .cost-table thead { display:none; }
+    .cost-table, .cost-table tbody { display:block; }
+    .cost-table tr { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) auto; align-items:end; gap:6px 10px; padding:12px 0; border-bottom:1px solid var(--line); }
+    .cost-table tbody th { grid-column:1 / 3; border:0; padding:0; }
+    .cost-table td { border:0; padding:0; }
+    .cost-table .unit { grid-column:3; grid-row:1; align-self:start; text-align:right; }
+    .cost-table td.r { display:grid; gap:4px; text-align:left; }
+    .cost-table td.r::before { content:attr(data-label); font-size:12px; color:var(--muted); }
+    .cost-table .affix-input { width:100%; margin:0; }
+    .cost-table td:last-child { padding:0 0 8px; }
+  }
+  .tuning-results { display:grid; gap:16px; padding-top:4px; }
+  .tuning-results h3 { margin-top:8px; }
+  .tuning-results .hint { margin:0; }
   .suggestion { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; padding:12px 14px; border-radius:8px; background:var(--surface-2); font-size:14px; }
   .suggestion p { margin:0; flex:1 1 280px; }
   .seg { display:inline-flex; gap:4px; flex-wrap:wrap; }
@@ -2183,39 +2232,43 @@ function settingsSaved(next, message) {
 function renderKeys() {
   const s = state.settings;
   const needsAnthropic = [s.models.current.reasoning, ...s.models.current.analysis].some((m) => m.startsWith("anthropic/"));
-  const block = (id) => {
+  const row = (id) => {
     const k = s.keys[id];
-    const status = k.source === "settings" ? `Saved here${k.hint && k.hint !== "…" ? ` · ends in ${esc(k.hint.slice(1))}` : ""}`
-      : k.source === "environment" ? `From .env.local${k.hint && k.hint !== "…" ? ` · ends in ${esc(k.hint.slice(1))}` : ""}`
-      : id === "anthropic" && !needsAnthropic ? "Not set · not needed with the current models" : "Not set";
-    return `<form class="key-block" data-key-form="${id}" novalidate>
-      <div class="key-head"><label class="field-label" for="key-${id}">${esc(k.name)} API key</label><span class="key-state ${k.source ? "set" : ""}">${status}</span></div>
-      <div class="field-row">
-        <input class="settings-input key-input" type="password" id="key-${id}" autocomplete="off" spellcheck="false" placeholder="${k.source ? "Paste a new key to replace it" : "Paste your key"}">
-        <button class="btn btn-primary btn-small" type="submit">Save</button>
-        <button class="btn btn-small" type="button" data-test-key="${id}">Check</button>
-        ${k.source === "settings" ? `<button class="btn btn-quiet btn-small detail-delete" type="button" data-remove-key="${id}">Remove</button>` : ""}
+    const ends = k.hint && k.hint !== "…" ? ` · ends in ${esc(k.hint.slice(1))}` : "";
+    const status = k.source === "settings" ? `Saved${ends}` : k.source === "environment" ? `From .env.local${ends}`
+      : id === "anthropic" && !needsAnthropic ? "Not needed with the current models" : "Not set";
+    const purpose = id === "openai" ? "Always needed. It makes the image edits." : "Needed only when a Claude model is picked under Models.";
+    return `<form class="setting-row" data-key-form="${id}" novalidate>
+      <div class="setting-label"><label for="key-${id}">${esc(k.name)}</label><p>${purpose} <a href="${esc(k.url)}" target="_blank" rel="noopener">Get a key</a></p></div>
+      <div class="setting-control">
+        <span class="pill ${k.source ? "pill-ok" : ""}">${k.source ? icon("check") : ""}${status}</span>
+        <div class="control-line">
+          <input class="settings-input key-input" type="password" id="key-${id}" autocomplete="off" spellcheck="false" placeholder="${k.source ? "Paste a new key to replace it" : "Paste your key"}">
+          <button class="btn btn-primary btn-small" type="submit">Save</button>
+          <button class="btn btn-small" type="button" data-test-key="${id}">Check</button>
+          ${k.source === "settings" ? `<button class="btn btn-quiet btn-small detail-delete" type="button" data-remove-key="${id}">Remove</button>` : ""}
+        </div>
+        <p class="control-note" data-key-result="${id}" role="status" aria-live="polite"></p>
       </div>
-      <p class="hint" data-key-result="${id}" role="status" aria-live="polite">Create one at <a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(new URL(k.url).host)}</a>.</p>
     </form>`;
   };
-  $("#settings-keys").innerHTML = `<h2 id="keys-h">API keys</h2>
-    <p class="hint">OpenAI is always needed because it makes the image edits. Anthropic is needed only when a Claude model is picked under Models. Keys stay on this computer and are sent only to their own provider; once saved, only the last four characters are shown.</p>
-    ${s.keysError ? `<p class="notice">${esc(s.keysError)}</p>` : ""}
-    ${block("openai")}${block("anthropic")}`;
+  $("#settings-keys").innerHTML = `<div class="panel-head"><h2 id="keys-h">API keys</h2>
+    <p class="hint">Keys stay on this computer and are sent only to their own provider. Once saved, only the last four characters are shown.</p></div>
+    ${s.keysError ? `<p class="notice">${esc(s.keysError.replace(/ Add (it|them) on.*$/, ""))}</p>` : ""}
+    ${row("openai")}${row("anthropic")}`;
 }
 
 async function checkKey(id) {
   const out = $(`[data-key-result="${id}"]`);
   const typed = $(`#key-${id}`).value.trim();
-  out.className = "hint";
+  out.className = "control-note";
   out.textContent = "Checking…";
   try {
     const result = await api("/api/settings/test-key", { method: "POST", body: JSON.stringify({ provider: id, ...(typed ? { key: typed } : {}) }) });
-    out.className = `hint ${result.ok ? "result-ok" : "result-bad"}`;
+    out.className = `control-note ${result.ok ? "result-ok" : "result-bad"}`;
     out.textContent = result.ok && typed ? `${result.message} Save it to use it.` : result.message;
   } catch (error) {
-    out.className = "hint result-bad";
+    out.className = "control-note result-bad";
     out.textContent = error.message;
   }
 }
@@ -2227,7 +2280,7 @@ async function saveKey(id, value) {
     settingsSaved(next, value ? "Key saved" : "Key removed");
     renderKeys(); renderModels();
   } catch (error) {
-    out.className = "hint result-bad";
+    out.className = "control-note result-bad";
     out.textContent = error.message;
   }
 }
@@ -2237,7 +2290,7 @@ async function saveKey(id, value) {
 function modelSelect(id, options, current, defaultId) {
   const known = options.some((o) => o.id === current);
   return `<select id="${id}" data-other-select>
-      ${options.map((o) => `<option value="${esc(o.id)}" ${o.id === current ? "selected" : ""}>${esc(o.label)}${o.id === defaultId ? " (default)" : ""}</option>`).join("")}
+      ${options.map((o) => `<option value="${esc(o.id)}" ${o.id === current ? "selected" : ""}>${esc(o.label)}${o.id === defaultId ? " · default" : ""}</option>`).join("")}
       <option value="${OTHER}" ${known ? "" : "selected"}>Other model ID…</option>
     </select>
     <input class="settings-input" type="text" id="${id}-other" value="${known ? "" : esc(current)}" ${known ? "hidden" : ""} spellcheck="false" autocomplete="off" aria-label="Model ID" placeholder="${id === "image-model" ? "e.g. gpt-image-2" : "openai/… or anthropic/…"}">`;
@@ -2249,29 +2302,31 @@ function renderModels() {
   const analysisOptions = [...m.options.reasoning];
   for (const id of m.current.analysis) if (!analysisOptions.some((o) => o.id === id)) analysisOptions.push({ id, label: id });
   const saved = Object.keys(m.saved).length > 0;
-  $("#settings-models").innerHTML = `<h2 id="models-h">Models</h2>
-    <form id="models-form" class="settings-panel" novalidate>
-      <div class="model-field">
-        <label class="field-label" for="reasoning-model" style="margin:0">Reasoning model</label>
-        <p class="hint" style="margin:0 0 4px">Merges the reference analyses, writes taste rules, inventories each room, plans the changes, and judges every redesign.</p>
-        ${modelSelect("reasoning-model", m.options.reasoning, m.current.reasoning, m.defaults.reasoning)}
-        <p class="hint" style="margin:0" data-model-note="reasoning-model">${esc(notes(m.options.reasoning, m.current.reasoning))}</p>
+  $("#settings-models").innerHTML = `<div class="panel-head"><h2 id="models-h">Models</h2></div>
+    <form id="models-form" novalidate>
+      <div class="setting-row">
+        <div class="setting-label"><label for="reasoning-model">Reasoning model</label><p>Writes taste rules, inventories each room, plans the changes, and judges every redesign.</p></div>
+        <div class="setting-control model-control">
+          ${modelSelect("reasoning-model", m.options.reasoning, m.current.reasoning, m.defaults.reasoning)}
+          <p class="control-note" data-model-note="reasoning-model">${esc(notes(m.options.reasoning, m.current.reasoning))}</p>
+        </div>
       </div>
-      <fieldset class="model-field">
-        <legend>Reference analysis models</legend>
-        <p class="hint" style="margin:0 0 4px">Each one studies every reference photo on its own. With two or more, the reasoning model merges their notes.</p>
-        <div class="checks">${analysisOptions.map((o) => `<label><input type="checkbox" name="analysis" value="${esc(o.id)}" ${m.current.analysis.includes(o.id) ? "checked" : ""}>${esc(o.label)}${m.defaults.analysis.includes(o.id) ? ' <span class="muted">(default)</span>' : ""}</label>`).join("")}</div>
+      <fieldset class="setting-row">
+        <legend class="sr-only">Reference analysis models</legend>
+        <div class="setting-label" aria-hidden="true"><span class="label-text">Reference analysis</span><p>Each model studies every reference photo on its own; the reasoning model merges their notes.</p></div>
+        <div class="setting-control checks">${analysisOptions.map((o) => `<label><input type="checkbox" name="analysis" value="${esc(o.id)}" ${m.current.analysis.includes(o.id) ? "checked" : ""}><span>${esc(o.label)}${m.defaults.analysis.includes(o.id) ? ' <span class="muted">· default</span>' : ""}</span></label>`).join("")}</div>
       </fieldset>
-      <div class="model-field">
-        <label class="field-label" for="image-model" style="margin:0">Image model</label>
-        <p class="hint" style="margin:0 0 4px">Makes the redesigned photos. Always OpenAI.</p>
-        ${modelSelect("image-model", m.options.image, m.current.image, m.defaults.image)}
-        <p class="hint" style="margin:0" data-model-note="image-model">${esc(notes(m.options.image, m.current.image))}</p>
+      <div class="setting-row">
+        <div class="setting-label"><label for="image-model">Image model</label><p>Makes the redesigned photos. Always OpenAI.</p></div>
+        <div class="setting-control model-control">
+          ${modelSelect("image-model", m.options.image, m.current.image, m.defaults.image)}
+          <p class="control-note" data-model-note="image-model">${esc(notes(m.options.image, m.current.image))}</p>
+        </div>
       </div>
-      <p class="error" id="models-error" role="alert" hidden></p>
-      <div class="field-row">
-        <button class="btn btn-primary" type="submit">Save models</button>
+      <div class="panel-foot">
+        <p class="error" id="models-error" role="alert" hidden></p>
         ${saved ? `<button class="btn btn-quiet" type="button" data-reset-models>Reset to defaults</button>` : ""}
+        <button class="btn btn-primary" type="submit">Save models</button>
       </div>
     </form>`;
 }
@@ -2310,18 +2365,24 @@ async function saveModels(reset) {
 
 function renderTuning() {
   const t = state.settings.tuning;
-  $("#settings-tuning").innerHTML = `<h2 id="tuning-h">Tuning</h2>
-    <p class="hint">After each redesign, an edge check compares the outlines of windows, doors, and other fixed elements in the before and after photos. An image is flagged for review when any of them matches less than the threshold. Higher catches more changed structure but flags more good images.</p>
-    <form id="threshold-form" class="field-row" novalidate>
-      <label class="field-label" for="edge-threshold" style="margin:0">Edge threshold</label>
-      <input class="settings-input" type="number" id="edge-threshold" min="0.05" max="0.95" step="0.01" value="${num2(t.edgeThreshold)}" inputmode="decimal">
-      <button class="btn btn-primary btn-small" type="submit">Save</button>
-      ${t.saved != null ? `<button class="btn btn-quiet btn-small" type="button" data-reset-threshold>Reset to ${num2(t.default)}</button>` : `<span class="hint" style="margin:0">Default ${num2(t.default)}</span>`}
+  $("#settings-tuning").innerHTML = `<div class="panel-head"><h2 id="tuning-h">Tuning</h2>
+    <p class="hint">After each redesign, an edge check compares the outlines of windows, doors, and other fixed elements before and after. Images that fall below the threshold are flagged for review.</p></div>
+    <form id="threshold-form" class="setting-row" novalidate>
+      <div class="setting-label"><label for="edge-threshold">Edge threshold</label><p>Higher catches more changed structure but flags more good images.</p></div>
+      <div class="setting-control">
+        <div class="control-line">
+          <input class="settings-input num-input" type="number" id="edge-threshold" min="0.05" max="0.95" step="0.01" value="${num2(t.edgeThreshold)}" inputmode="decimal">
+          <button class="btn btn-primary btn-small" type="submit">Save</button>
+          ${t.saved != null ? `<button class="btn btn-quiet btn-small" type="button" data-reset-threshold>Reset to ${num2(t.default)}</button>` : ""}
+        </div>
+        <p class="control-note">${t.saved != null ? `Default ${num2(t.default)}` : "Default"}</p>
+      </div>
     </form>
-    <hr class="zone-divider" style="margin:4px 0">
-    <div class="section-head" style="margin:0"><div><h3>Score past runs</h3><p class="hint">Re-scores every redesign saved on this computer against your labels and the vision judge. No API calls, no cost.</p></div>
-      <button class="btn btn-small" type="button" data-tune-scan>${icon("refresh")}${state.tuning ? "Rescan" : "Score past runs"}</button></div>
-    <div id="tuning-results" class="settings-panel">${state.tuningLoading ? `<p class="muted" role="status">Scoring past runs…</p>` : state.tuning ? tuningResults() : ""}</div>`;
+    <div class="setting-row">
+      <div class="setting-label"><span class="label-text">Past runs</span><p>Re-scores every saved redesign against your labels and the vision judge. No API calls.</p></div>
+      <div class="setting-control"><div class="control-line"><button class="btn btn-small" type="button" data-tune-scan>${icon("refresh")}${state.tuning ? "Rescan" : "Score past runs"}</button></div></div>
+    </div>
+    <div id="tuning-results" class="tuning-results">${state.tuningLoading ? `<p class="muted" role="status">Scoring past runs…</p>` : state.tuning ? tuningResults() : ""}</div>`;
 }
 
 const pct = (n) => (n == null ? "–" : pf.format(n));
@@ -2405,68 +2466,85 @@ async function saveThreshold(value) {
 
 /* Cost assumptions */
 
+const GRADE_NAMES = ["basic", "mid", "premium"];
+
 function renderCosts() {
   const c = state.settings.costs;
   const saved = c.saved;
-  const field = (id, label, value, placeholder, hint, attrs = 'step="0.01" min="0.01" max="10"') => `<div class="number-field">
-      <label for="${id}">${label}</label>
-      <input class="settings-input" type="number" id="${id}" ${attrs} value="${value == null ? "" : num2(value)}" placeholder="${placeholder}" inputmode="decimal">
-      ${hint ? `<p class="hint">${hint}</p>` : ""}</div>`;
+  // Fields show the value in effect; a "default" note appears only once it has been changed.
+  const field = (id, label, value, fallback, opts = {}) => {
+    const shown = value ?? fallback;
+    const changed = value != null && Math.abs(value - fallback) > 1e-9;
+    return `<div class="number-field">
+      <label for="${id}" ${opts.hideLabel ? 'class="sr-only"' : ""}>${label}</label>
+      <span class="affix-input">${opts.prefix ? `<span>${opts.prefix}</span>` : ""}<input class="settings-input num-input" type="number" id="${id}" data-default="${fallback}" step="${opts.step ?? "0.01"}" min="${opts.min ?? "0.01"}" max="${opts.max ?? "10"}" value="${num2(shown)}" inputmode="decimal">${opts.suffix ? `<span>${opts.suffix}</span>` : ""}</span>
+      <small class="${changed ? "changed" : ""}">${changed ? `Default ${num2(fallback)}${opts.suffix ?? ""}` : opts.note ?? "Default"}</small></div>`;
+  };
   const customized = Object.keys(saved).length > 0;
-  $("#settings-costs").innerHTML = `<h2 id="costs-h">Cost assumptions</h2>
-    <p class="hint">Remodel costs come from a unit-cost table: national installed cost × local labor × finish grade × overhead. Leave a field blank to use the default shown in it. Changes apply to new redesigns; past reports keep the prices they were run with.</p>
-    <form id="costs-form" class="settings-panel" novalidate>
-      <h3>Local labor</h3>
-      <div class="number-fields">
-        ${field("labor-seattle", esc(c.regions.seattle.name), saved.laborFactor?.seattle, num2(c.defaults.laborFactor.seattle), `Construction wages vs. the US average (${esc(c.regions.seattle.source)}). Used when a listing's location is in the Seattle area.`)}
-        ${field("labor-national", "Everywhere else", saved.laborFactor?.national, num2(c.defaults.laborFactor.national), "For listings outside the Seattle area. Set your own area's factor here.")}
+  $("#settings-costs").innerHTML = `<div class="panel-head"><h2 id="costs-h">Cost assumptions</h2>
+    <p class="hint">Price = national installed cost × local labor × finish grade × overhead. Changes apply to new redesigns; past reports keep their prices.</p></div>
+    <form id="costs-form" novalidate>
+      <div class="setting-row">
+        <div class="setting-label"><span class="label-text">Local labor</span><p>Construction wages relative to the US average (Seattle from ${esc(c.regions.seattle.source)}). Listings outside the Seattle area use Elsewhere.</p></div>
+        <div class="setting-control number-fields">
+          ${field("labor-seattle", "Seattle area", saved.laborFactor?.seattle, c.defaults.laborFactor.seattle, { prefix: "×" })}
+          ${field("labor-national", "Elsewhere", saved.laborFactor?.national, c.defaults.laborFactor.national, { prefix: "×" })}
+        </div>
       </div>
-      <h3>Finish grade</h3>
-      <div class="number-fields">
-        ${["basic", "mid", "premium"].map((g) => field(`grade-${g}`, sentence(g), saved.grades?.[g], num2(c.defaults.grades[g]), g === "mid" ? "What the planner proposes by default." : "")).join("")}
+      <div class="setting-row">
+        <div class="setting-label"><span class="label-text">Finish grade</span><p>Multiplies the builder-grade price. The planner proposes mid by default. Assumed, not sourced.</p></div>
+        <div class="setting-control number-fields">
+          ${GRADE_NAMES.map((g) => field(`grade-${g}`, sentence(g), saved.grades?.[g], c.defaults.grades[g], { prefix: "×" })).join("")}
+        </div>
       </div>
-      <p class="hint" style="margin-top:-8px">Multiplies the builder-grade price. These are assumptions, not sourced figures.</p>
-      <h3>Overhead</h3>
-      <div class="number-fields">
-        <div class="number-field"><label for="overhead">Contractor overhead and permits</label>
-          <span class="suffix-input"><input class="settings-input" type="number" id="overhead" min="0" max="200" step="1" value="${saved.overhead == null ? "" : Math.round(saved.overhead * 100)}" placeholder="${Math.round(c.defaults.overhead * 100)}" inputmode="decimal">%</span>
-          <p class="hint">Overhead and profit, permits, and cleanup, added on top.</p></div>
+      <div class="setting-row">
+        <div class="setting-label"><span class="label-text">Overhead</span><p>Contractor overhead and profit, permits, and cleanup, added on top.</p></div>
+        <div class="setting-control number-fields">
+          ${field("overhead", "Overhead", saved.overhead == null ? null : saved.overhead * 100, c.defaults.overhead * 100, { suffix: "%", step: "1", min: "0", max: "200", hideLabel: true })}
+        </div>
       </div>
-      <h3>Unit costs</h3>
-      <p class="hint" style="margin-top:-8px">National builder-grade installed cost per unit, in dollars, before the adjustments above. Defaults are from Homewyse (September 2026).</p>
-      <div class="data-table-wrap"><table class="data-table">
-        <caption class="sr-only">Unit costs</caption>
-        <thead><tr><th scope="col">Item</th><th scope="col">Unit</th><th scope="col">Low</th><th scope="col">High</th><th scope="col"><span class="sr-only">Source</span></th></tr></thead>
-        <tbody>${c.items.map((item) => `<tr>
-          <th scope="row" style="font-weight:400;color:var(--text);white-space:normal;border-bottom-color:var(--line)">${esc(item.label)}</th><td>${esc(item.unit)}</td>
-          <td><input class="settings-input" type="number" min="0" step="0.01" data-cost="${item.key}" data-bound="low" value="${saved.items?.[item.key] ? num2(saved.items[item.key].low) : ""}" placeholder="${num2(item.low)}" aria-label="${esc(item.label)}, low"></td>
-          <td><input class="settings-input" type="number" min="0" step="0.01" data-cost="${item.key}" data-bound="high" value="${saved.items?.[item.key] ? num2(saved.items[item.key].high) : ""}" placeholder="${num2(item.high)}" aria-label="${esc(item.label)}, high"></td>
-          <td><a href="${esc(item.source)}" target="_blank" rel="noopener">Source</a></td></tr>`).join("")}</tbody>
-      </table></div>
-      <p class="error" id="costs-error" role="alert" hidden></p>
-      <div class="field-row">
-        <button class="btn btn-primary" type="submit">Save cost assumptions</button>
+      <div class="setting-row setting-row-wide">
+        <div class="setting-label"><span class="label-text">Unit costs</span><p>National builder-grade installed cost per unit, before the adjustments above. Defaults from Homewyse, September 2026.</p></div>
+        <div class="data-table-wrap"><table class="data-table cost-table">
+          <caption class="sr-only">Unit costs</caption>
+          <thead><tr><th scope="col">Item</th><th scope="col">Unit</th><th scope="col" class="r">Low</th><th scope="col" class="r">High</th><th scope="col"><span class="sr-only">Source</span></th></tr></thead>
+          <tbody>${c.items.map((item) => {
+            const o = saved.items?.[item.key];
+            const changed = o && (Math.abs(o.low - item.low) > 1e-9 || Math.abs(o.high - item.high) > 1e-9);
+            const input = (bound) => `<span class="affix-input"><span>$</span><input class="settings-input num-input" type="number" min="0" step="0.01" data-cost="${item.key}" data-bound="${bound}" value="${num2(o?.[bound] ?? item[bound])}" aria-label="${esc(item.label)}, ${bound}"></span>`;
+            return `<tr class="${changed ? "changed" : ""}">
+            <th scope="row">${esc(item.label)}${changed ? `<small>Default $${num2(item.low)}–$${num2(item.high)}</small>` : ""}</th><td class="unit">${esc(item.unit)}</td>
+            <td class="r" data-label="Low">${input("low")}</td><td class="r" data-label="High">${input("high")}</td>
+            <td><a href="${esc(item.source)}" target="_blank" rel="noopener" aria-label="Source for ${esc(item.label)}">Source</a></td></tr>`;
+          }).join("")}</tbody>
+        </table></div>
+      </div>
+      <div class="panel-foot">
+        <p class="error" id="costs-error" role="alert" hidden></p>
         ${customized ? `<button class="btn btn-quiet" type="button" data-reset-costs>Reset all to defaults</button>` : ""}
+        <button class="btn btn-primary" type="submit">Save cost assumptions</button>
       </div>
     </form>`;
 }
 
+/** Only values that differ from the defaults are saved, so a cleared or untouched field keeps tracking the default. */
 function readCosts() {
   const c = state.settings.costs;
-  const value = (id) => { const v = $(`#${id}`).value.trim(); return v === "" ? undefined : Number(v); };
+  // Defaults are shown rounded to two places, so an untouched field matches the rounded default.
+  const differs = (a, b) => Math.abs(a - Number(num2(b))) > 1e-9;
+  const value = (id, fallback) => { const v = $(`#${id}`).value.trim(); const n = Number(v); return v === "" || !Number.isFinite(n) || !differs(n, fallback) ? undefined : n; };
   const out = {};
-  const labor = { seattle: value("labor-seattle"), national: value("labor-national") };
-  if (labor.seattle !== undefined || labor.national !== undefined) out.laborFactor = labor;
-  const grades = Object.fromEntries(["basic", "mid", "premium"].map((g) => [g, value(`grade-${g}`)]));
+  const labor = { seattle: value("labor-seattle", c.defaults.laborFactor.seattle), national: value("labor-national", c.defaults.laborFactor.national) };
+  if (Object.values(labor).some((v) => v !== undefined)) out.laborFactor = labor;
+  const grades = Object.fromEntries(GRADE_NAMES.map((g) => [g, value(`grade-${g}`, c.defaults.grades[g])]));
   if (Object.values(grades).some((v) => v !== undefined)) out.grades = grades;
-  const overhead = value("overhead");
+  const overhead = value("overhead", c.defaults.overhead * 100);
   if (overhead !== undefined) out.overhead = overhead / 100;
   const items = {};
   for (const item of c.items) {
-    const low = $(`[data-cost="${item.key}"][data-bound="low"]`).value.trim();
-    const high = $(`[data-cost="${item.key}"][data-bound="high"]`).value.trim();
-    if (low === "" && high === "") continue;
-    items[item.key] = { low: low === "" ? item.low : Number(low), high: high === "" ? item.high : Number(high) };
+    const read = (bound) => { const v = $(`[data-cost="${item.key}"][data-bound="${bound}"]`).value.trim(); return v === "" ? item[bound] : Number(v); };
+    const low = read("low"), high = read("high");
+    if (differs(low, item.low) || differs(high, item.high)) items[item.key] = { low, high };
   }
   if (Object.keys(items).length) out.items = items;
   return JSON.parse(JSON.stringify(out)); // drops undefined fields

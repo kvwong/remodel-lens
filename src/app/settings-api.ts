@@ -19,12 +19,12 @@ type Provider = keyof typeof PROVIDERS;
 
 export const MODEL_OPTIONS = {
   reasoning: [
-    { id: "openai/gpt-6.1-sol", label: "GPT-6.1 Sol", note: "OpenAI. The default." },
+    { id: "openai/gpt-6.1-sol", label: "GPT-6.1 Sol", note: "OpenAI." },
     { id: "anthropic/claude-sonnet-5-5", label: "Claude Sonnet 5.5", note: "Anthropic." },
     { id: "anthropic/claude-opus-5-5", label: "Claude Opus 5.5", note: "Anthropic. Most capable, slower and pricier." },
   ],
   image: [
-    { id: "gpt-image-2.5-sunburst", label: "gpt-image-2.5-sunburst", note: "The default. Most precise edits." },
+    { id: "gpt-image-2.5-sunburst", label: "gpt-image-2.5-sunburst", note: "Most precise edits." },
     { id: "gpt-image-2.5-flare", label: "gpt-image-2.5-flare", note: "Same price, faster, less precise." },
     { id: "gpt-image-2", label: "gpt-image-2", note: "Older. Edits through a mask." },
   ],
