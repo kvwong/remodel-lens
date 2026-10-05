@@ -24,8 +24,9 @@ import {
 
 /**
  * Shareable PDF of a run's report, for someone who won't open the app.
- * "summary" is the cover, room-by-room costs, and what to know before deciding (about three pages);
- * "full" adds a page per room with every planned change, its cost basis, and what to check.
+ * Landscape, so listing photos and redesigns can sit side by side at a readable size.
+ * "summary" is the cover, a before and after of every room with its costs, and what to know before deciding;
+ * "full" adds every scope of every room: both photos large, what to check, and every planned change with its cost basis.
  */
 export type PdfDetail = "summary" | "full";
 
@@ -44,10 +45,10 @@ export const PDF_DETAIL_LABELS: Record<PdfDetail, string> = { summary: "Summary"
 
 /* ---------- Page geometry and palette (matches the HTML report) ---------- */
 
-const PAGE = { w: 612, h: 792 }; // US Letter
-const M = 54; // 0.75in side margins
-const TOP = 54;
-const BOTTOM = PAGE.h - 64; // content stops here; the footer sits below
+const PAGE = { w: 792, h: 612 }; // US Letter, landscape
+const M = 40;
+const TOP = 38;
+const BOTTOM = PAGE.h - 46; // content stops here; the footer sits below
 const W = PAGE.w - M * 2;
 
 const C = {
@@ -127,25 +128,24 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Buffer> {
   const heroTier = feature ? showcase(feature, null) : null;
   const preferred = heroTier?.tier ?? null;
 
-  // Sizes are in points; images are rendered at 2× for print sharpness.
-  const HERO = { w: (W - 12) / 2, h: (W - 12) / 3 };
-  const THUMB = { w: 76, h: 76 / 1.5 };
-  const ROOM_IMG = { w: 216, h: 144 };
+  // Sizes are in points; images are rendered at 2x for print sharpness. All photos keep the report's 3:2 crop.
+  const PAIR = { w: (W - 16) / 2, h: (W - 16) / 3 }; // listing photo and redesign side by side, full page width
+  const ROW = { w: 204, h: 136 }; // room-by-room gallery
   const wanted: Img[] = [];
   const want = (rel: string | null, size: { w: number; h: number }) => {
     const file = runFile(input.runDir, rel);
     if (file) wanted.push({ key: `${rel}@${size.w}`, file, w: size.w * 2, h: size.h * 2 });
   };
   if (feature) {
-    want(feature.original, HERO);
-    want(heroTier?.image ?? null, HERO);
+    want(feature.original, PAIR);
+    want(heroTier?.image ?? null, PAIR);
   }
   for (const p of photos) {
-    want(p.original, THUMB);
-    want(showcase(p, preferred)?.image ?? null, THUMB);
+    want(p.original, ROW);
+    want(showcase(p, preferred)?.image ?? null, ROW);
     if (full) {
-      want(p.original, ROOM_IMG);
-      for (const t of p.tiers) want(t.image, ROOM_IMG);
+      want(p.original, PAIR);
+      for (const t of p.tiers) want(t.image, PAIR);
     }
   }
   const images = await loadImages(wanted);
@@ -153,6 +153,7 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Buffer> {
   const started = input.run ? new Date(input.run.startedAt) : null;
   const doc = new PDFDocument({
     size: "LETTER",
+    layout: "landscape",
     margins: { top: TOP, bottom: 24, left: M, right: M },
     bufferPages: true,
     info: {
@@ -210,15 +211,16 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Buffer> {
     if (y + h > BOTTOM) newPage();
   };
 
-  const picture = (rel: string | null, size: { w: number; h: number }, x: number, at: number, empty = "No image") => {
+  /** Draws a prepared image (looked up by the size it was loaded at), optionally scaled to `box`. */
+  const picture = (rel: string | null, size: { w: number; h: number }, x: number, at: number, empty = "No image", box = size) => {
     const buf = rel ? images.get(`${rel}@${size.w}`) : undefined;
     if (buf) {
-      doc.save().roundedRect(x, at, size.w, size.h, 3).clip();
-      doc.image(buf, x, at, { width: size.w, height: size.h });
+      doc.save().roundedRect(x, at, box.w, box.h, 3).clip();
+      doc.image(buf, x, at, { width: box.w, height: box.h });
       doc.restore();
     } else {
-      doc.roundedRect(x, at, size.w, size.h, 3).fill(C.soft);
-      write(empty, x + 8, at + size.h / 2 - 6, size.w - 16, { size: 8.5, color: C.muted, align: "center" });
+      doc.roundedRect(x, at, box.w, box.h, 3).fill(C.soft);
+      write(empty, x + 8, at + box.h / 2 - 6, box.w - 16, { size: 8.5, color: C.muted, align: "center" });
     }
   };
 
@@ -243,7 +245,7 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Buffer> {
   /** Section title, kept on the same page as at least `keep` points of what follows it. */
   const heading = (s: string, keep = 60, gapAbove = 26) => {
     ensure(gapAbove + 30 + keep);
-    y += gapAbove;
+    if (y > TOP) y += gapAbove;
     y += write(s, M, y, W, { font: "bold", size: 14 });
     y += 10;
   };
@@ -257,9 +259,9 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Buffer> {
   /* ---------- Cover ---------- */
 
   label(`Remodel Lens · ${full ? "Full scope report" : "Summary"}`, M, y);
-  y += 18;
+  y += 16;
   y += write(input.title, M, y, W, { font: "bold", size: 26, lineGap: 0 });
-  y += 6;
+  y += 4;
   const dateText = started ? new Intl.DateTimeFormat("en-US", { dateStyle: "long" }).format(started) : null;
   const meta = [
     input.location?.replace(/\s*\(.*\)$/, ""),
@@ -269,22 +271,27 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Buffer> {
   ].filter(Boolean) as string[];
   y += write(meta.join("   ·   "), M, y, W, { size: 9.5, color: C.muted });
   if (input.run?.stopped) {
-    y += 6;
+    y += 4;
     y += write("This run was stopped early, so some rooms or scopes are missing.", M, y, W, { size: 9, color: C.review });
   }
 
+  // The cover's photos shrink if a long title leaves less room, so the cost cards always fit below.
+  const cardH = 74;
+  const coverRest = 14 + 26 + 18 + 14 + cardH + 12 + 24;
+  const heroH = Math.min(PAIR.h, BOTTOM - (y + 16) - coverRest);
+  const HERO = { w: heroH * 1.5, h: heroH };
   if (feature) {
-    y += 22;
+    y += 16;
     const room = roomName(feature);
     label(heroTier ? `The ${room.toLowerCase()}, before and after` : `The ${room.toLowerCase()}`, M, y);
     y += 14;
-    picture(feature.original, HERO, M, y);
-    picture(heroTier?.image ?? null, HERO, M + HERO.w + 12, y, "No redesign image");
+    picture(feature.original, PAIR, M, y, "No image", HERO);
+    picture(heroTier?.image ?? null, PAIR, M + HERO.w + 16, y, "No redesign image", HERO);
     y += HERO.h + 7;
     write("Listing photo", M, y, HERO.w, { font: "medium", size: 9 });
     write("As photographed", M, y + 12, HERO.w, { size: 8.5, color: C.muted });
     if (heroTier) {
-      const x = M + HERO.w + 12;
+      const x = M + HERO.w + 16;
       write(`${tierName(heroTier.tier)} redesign`, x, y, HERO.w, { font: "medium", size: 9 });
       write(TIER_LABELS[heroTier.tier].blurb, x, y + 12, HERO.w, { size: 8.5, color: C.muted });
       const tag = STATUS[heroTier.status].label;
@@ -292,7 +299,7 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Buffer> {
       const tw = doc.widthOfString(tag) + 10;
       statusMark(heroTier.status, x + HERO.w - tw, y + 1, { w: tw + 4 });
     }
-    y += 28;
+    y += 26;
   }
 
   // Whole-listing estimate per scope
@@ -300,21 +307,20 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Buffer> {
   label("Estimated cost for the whole listing", M, y);
   y += 14;
   if (tiers.length) {
-    const gap = 10;
+    const gap = 12;
     const cw = (W - gap * (tiers.length - 1)) / tiers.length;
-    const cardH = 92;
     tiers.forEach((tier, i) => {
       const x = M + i * (cw + gap);
-      const x0 = x + 14;
-      const iw = cw - 28;
+      const x0 = x + 16;
+      const iw = cw - 32;
       const t = totals.get(tier);
       const c = tally(tier);
       doc.roundedRect(x, y, cw, cardH, 8).fill(tier === preferred ? C.primarySoft : C.soft);
       write(tierName(tier), x0, y + 13, iw, { font: "bold", size: 11 });
-      write(TIER_LABELS[tier].blurb, x0, y + 28, iw, { size: 8, color: C.muted });
-      write(t ? formatRange(t.range) : "No estimate", x0, y + 44, iw, { font: "medium", size: 17, color: t ? C.text : C.muted });
+      write(TIER_LABELS[tier].blurb, x0, y + 13, iw, { size: 8, color: C.muted, align: "right" });
+      write(t ? formatRange(t.range) : "No estimate", x0, y + 31, iw, { font: "medium", size: 18, color: t ? C.text : C.muted });
       const sub = [t ? `${t.rooms} ${t.rooms === 1 ? "room" : "rooms"}` : null, `${c.verified} of ${c.total} verified`].filter(Boolean).join(" · ");
-      write(sub, x0, y + 70, iw, { size: 8, color: C.muted });
+      write(sub, x0, y + 55, iw, { size: 8, color: C.muted });
     });
     y += cardH;
   }
@@ -328,26 +334,22 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Buffer> {
     { size: 8, color: C.muted, lineGap: 2 },
   );
 
-  // Status legend
-  y += 14;
-  const legend = ["verified", "review", "failed"] as const;
-  const lw = (W - 20) / legend.length;
-  const legendH = Math.max(...legend.map((s) => measure(STATUS[s].meaning, lw - 10, { size: 8 }))) + 14;
-  ensure(legendH + 12);
-  rule(y);
-  y += 8;
-  legend.forEach((s, i) => {
-    const x = M + i * (lw + 10);
-    statusMark(s, x, y, { w: lw });
-    write(STATUS[s].meaning, x + 10, y + 12, lw - 10, { size: 8, color: C.muted });
-  });
-  y += legendH;
-
   /* ---------- Room by room ---------- */
 
+  const legendLine = (at: number) => {
+    // Right-aligned key for the status dots: "● Verified  ● Needs review  ● Structure changed"
+    const items = (["verified", "review", "failed"] as const).map((s) => ({ s, w: (style({ font: "medium", size: 8 }), doc.widthOfString(STATUS[s].label) + 22) }));
+    let x = M + W - items.reduce((a, i) => a + i.w, 0);
+    for (const i of items) {
+      statusMark(i.s, x, at, { w: i.w });
+      x += i.w;
+    }
+  };
+
   newPage();
-  y += write("Room by room", M, y, W, { font: "bold", size: 14 });
-  y += 4;
+  write("Room by room", M, y, W, { font: "bold", size: 14 });
+  legendLine(y + 4);
+  y += 20;
   y += write(
     preferred
       ? `Each room's listing photo next to its redesign (${tierName(preferred)} where it held up, otherwise the next best), with the estimate at every scope.`
@@ -357,58 +359,46 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Buffer> {
     W,
     { size: 9, color: C.muted },
   );
-  y += 14;
+  y += 12;
 
-  const col = { before: M, after: M + THUMB.w + 6, room: M + THUMB.w * 2 + 18 };
-  const roomW = 104;
-  const tiersX = col.room + roomW + 8;
-  const tierW = (M + W - tiersX) / Math.max(1, tiers.length);
-  const tableHead = () => {
-    label("Listing", col.before, y, THUMB.w);
-    label("Redesign", col.after, y, THUMB.w);
-    label("Room", col.room, y, roomW);
-    tiers.forEach((t, i) => label(tierName(t), tiersX + i * tierW, y, tierW - 6));
-    y += 13;
-    rule(y, M, W, C.text);
-    y += 8;
-  };
-  tableHead();
+  const infoX = M + ROW.w * 2 + 10 + 20;
+  const infoW = M + W - infoX;
+  const rowH = ROW.h + 18;
   for (const p of photos) {
     const shown = showcase(p, preferred);
-    const nameH = measure(roomName(p), roomW, { font: "bold", size: 9.5 });
-    const rowH = Math.max(THUMB.h, nameH + 14) + 16;
-    if (y + rowH > BOTTOM) {
-      newPage();
-      tableHead();
-    }
-    picture(p.original, THUMB, col.before, y);
-    picture(shown?.image ?? null, THUMB, col.after, y, "None");
-    const nh = write(roomName(p), col.room, y + 1, roomW, { font: "bold", size: 9.5 });
-    if (shown) write(`Shown: ${tierName(shown.tier)}`, col.room, y + nh + 3, roomW, { size: 8, color: C.muted });
-    tiers.forEach((tier, i) => {
-      const x = tiersX + i * tierW;
+    ensure(rowH);
+    picture(p.original, ROW, M, y);
+    picture(shown?.image ?? null, ROW, M + ROW.w + 10, y, "No redesign image");
+    write("Listing photo", M, y + ROW.h + 3, ROW.w, { size: 7.5, color: C.muted });
+    if (shown) write(`${tierName(shown.tier)} redesign`, M + ROW.w + 10, y + ROW.h + 3, ROW.w, { size: 7.5, color: C.muted });
+
+    let iy = y;
+    iy += write(roomName(p), infoX, iy, infoW, { font: "bold", size: 12 }) + 8;
+    for (const tier of tiers) {
       const t = p.tiers.find((r) => r.tier === tier);
-      if (!t) return write("Not run", x, y + 1, tierW - 6, { size: 8.5, color: C.muted });
-      const cost = planCost(t.plan);
-      const h = cost ? write(formatRange(cost), x, y + 1, tierW - 6, { font: "medium", size: 9.5 }) : 0;
-      statusMark(t.status, x, y + h + (h ? 4 : 1), { w: tierW - 4, size: 7.5 });
-    });
-    y += rowH - 8;
-    rule(y);
-    y += 8;
+      const cost = t ? planCost(t.plan) : null;
+      write(tierName(tier), infoX, iy, 70, { size: 9, color: C.muted });
+      write(t ? (cost ? formatRange(cost) : "–") : "Not run", infoX + 70, iy, 90, { font: "medium", size: 9.5, color: t ? C.text : C.muted });
+      if (t) statusMark(t.status, infoX + 166, iy + 1, { w: infoW - 166, size: 8 });
+      iy += 18;
+      rule(iy - 5, infoX, infoW);
+    }
+    y += rowH;
   }
   if (totals.size) {
-    ensure(30);
-    y += 2;
-    write("Whole listing", col.room, y, roomW, { font: "bold", size: 10 });
-    tiers.forEach((tier, i) => {
+    ensure(26);
+    write("Whole listing", infoX - 120, y, 110, { font: "bold", size: 10, align: "right" });
+    let ty = y;
+    for (const tier of tiers) {
       const t = totals.get(tier);
-      write(t ? formatRange(t.range) : "–", tiersX + i * tierW, y, tierW - 6, { font: "bold", size: 10 });
-    });
-    y += 18;
+      write(tierName(tier), infoX, ty, 70, { size: 9, color: C.muted });
+      write(t ? formatRange(t.range) : "–", infoX + 70, ty, 120, { font: "bold", size: 10 });
+      ty += 16;
+    }
+    y = ty + 4;
   }
 
-  /* ---------- Where the money goes ---------- */
+    /* ---------- Where the money goes ---------- */
 
   const driverCols = tiers.map((tier) => ({ tier, drivers: largestCosts(photos, tier) })).filter((d) => d.drivers.length);
   if (driverCols.length) {
@@ -477,136 +467,131 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Buffer> {
     }
   }
 
-  /* ---------- Full scope: a section per room ---------- */
+  /* ---------- Full scope: every scope of every room, listing photo and redesign side by side ---------- */
 
   if (full) {
+    const colGap = 24;
+    const colW = (W - colGap) / 2;
     photos.forEach((p, n) => {
       newPage();
       const room = roomName(p);
       label(`Room ${n + 1} of ${photos.length}`, M, y);
       y += 14;
-      y += write(room, M, y, W, { font: "bold", size: 20, lineGap: 0 });
-      y += 3;
-      y += write(`Kept as is: ${fixedSummary(p) || "nothing structural detected"}`, M, y, W, { size: 8.5, color: C.muted });
-      y += 12;
+      write(room, M, y, W, { font: "bold", size: 20, lineGap: 0 });
+      write(`Kept as is: ${fixedSummary(p) || "nothing structural detected"}`, M, y + 6, W, { size: 8.5, color: C.muted, align: "right" });
+      y += 28;
+      const today = [p.inventory.condition && sentence(p.inventory.condition), p.inventory.uncertainties.length ? `Can't tell from this photo: ${p.inventory.uncertainties.join("; ")}.` : ""].filter(Boolean).join(" ");
+      if (today) y += write(today, M, y, W, { size: 8.5, color: C.muted, lineGap: 2 }) + 4;
 
-      // Listing photo with what the photo shows about the room today.
-      const sideX = M + ROOM_IMG.w + 16;
-      const sideW = W - ROOM_IMG.w - 16;
-      const top = y;
-      picture(p.original, ROOM_IMG, M, y);
-      write("Listing photo", M, y + ROOM_IMG.h + 5, ROOM_IMG.w, { size: 8, color: C.muted });
-      let sy = top;
-      sy += write("The room today", sideX, sy, sideW, { font: "bold", size: 10 });
-      sy += 4;
-      if (p.inventory.condition) sy += write(sentence(p.inventory.condition), sideX, sy, sideW, { size: 9, lineGap: 2 }) + 8;
-      if (p.inventory.uncertainties.length) {
-        sy += write("Can't tell from this photo", sideX, sy, sideW, { font: "medium", size: 8.5, color: C.muted });
-        sy += 3;
-        for (const u of p.inventory.uncertainties.slice(0, 5)) {
-          const h = measure(u, sideW - 10, { size: 8.5 });
-          if (sy + h > top + ROOM_IMG.h + 60) break;
-          write("•", sideX, sy, 8, { size: 8.5, color: C.faint });
-          write(u, sideX + 10, sy, sideW - 10, { size: 8.5 });
-          sy += h + 2;
-        }
-      }
-      y = Math.max(top + ROOM_IMG.h + 18, sy);
-
-      for (const t of p.tiers) {
+      p.tiers.forEach((t) => {
         const total = planCost(t.plan);
-        ensure(ROOM_IMG.h + 70);
-        y += 22;
-        // Scope header: name and blurb on the left, the room's estimate on the right.
-        write(tierName(t.tier), M, y, W, { font: "bold", size: 13 });
-        style({ font: "bold", size: 13 });
-        const nw = doc.widthOfString(tierName(t.tier));
-        write(TIER_LABELS[t.tier].blurb, M + nw + 8, y + 3.5, W - nw - 120, { size: 8.5, color: C.muted });
-        if (total) write(formatRange(total), M, y, W, { font: "medium", size: 13, align: "right" });
-        y += 19;
-        rule(y, M, W, C.text);
+        // A scope starts with its header and both photos together, on a fresh page if they don't fit.
+        ensure(30 + PAIR.h + 40);
         y += 10;
+        write(tierName(t.tier), M, y, W, { font: "bold", size: 14 });
+        style({ font: "bold", size: 14 });
+        const nw = doc.widthOfString(tierName(t.tier));
+        write(TIER_LABELS[t.tier].blurb, M + nw + 10, y + 4.5, W - nw - 160, { size: 9, color: C.muted });
+        if (total) write(formatRange(total), M, y, W, { font: "medium", size: 14, align: "right" });
+        y += 21;
+        rule(y, M, W, C.text);
+        y += 8;
 
-        const blockTop = y;
-        picture(t.image, ROOM_IMG, M, y, `${STATUS[t.status].label}. ${STATUS[t.status].meaning}.`);
-        let ry = blockTop;
-        ry += statusMark(t.status, sideX, ry, { size: 9, meaning: true, w: sideW }) + 6;
+        const rx = M + PAIR.w + 16;
+        picture(p.original, PAIR, M, y);
+        picture(t.image, PAIR, rx, y, `${STATUS[t.status].label}. ${STATUS[t.status].meaning}.`);
+        y += PAIR.h + 6;
+        write("Listing photo", M, y, PAIR.w, { size: 8.5, color: C.muted });
+        statusMark(t.status, rx, y, { size: 8.5, meaning: true, w: PAIR.w * 0.5 });
+        const openings = t.edges.length ? `${t.edges.filter((e) => e.pass).length} of ${t.edges.length} openings match` : null;
+        const fine = [openings, t.judgement ? `plan followed ${t.judgement.planAdherence}/10` : null].filter(Boolean).join(" · ");
+        if (fine) write(sentence(fine), rx + PAIR.w * 0.5, y + 0.5, PAIR.w * 0.5, { size: 7.5, color: C.faint, align: "right" });
+        y += 16;
+
         const direction = [t.plan.expression && sentence(t.plan.expression), t.plan.architecturalLanguage].filter(Boolean).join(" · ");
-        if (direction) ry += write(direction, sideX, ry, sideW, { size: 8.5, color: C.muted, lineGap: 2 }) + 8;
+        if (direction) {
+          ensure(14);
+          y += write(direction, M, y, W, { size: 8.5, color: C.muted }) + 4;
+        }
         const reasons = t.reasons.map(plainReason);
         if (reasons.length) {
-          ry += write("What to check", sideX, ry, sideW, { font: "medium", size: 8.5 });
-          ry += 3;
-          for (const r of reasons.slice(0, 4)) {
-            const h = measure(r, sideW - 10, { size: 8 });
-            if (ry + h > blockTop + ROOM_IMG.h) break;
-            write("•", sideX, ry, 8, { size: 8, color: C.faint });
-            write(r, sideX + 10, ry, sideW - 10, { size: 8, color: C.muted });
-            ry += h + 2;
-          }
+          ensure(30);
+          y += write("What to check", M, y, W, { font: "medium", size: 9 }) + 3;
+          bullets(reasons, M, W, { size: 8.5 });
+          y += 4;
         }
-        const openings = t.edges.length ? `${t.edges.filter((e) => e.pass).length} of ${t.edges.length} window and door outlines match` : null;
-        const fine = [openings, t.judgement ? `plan followed ${t.judgement.planAdherence}/10` : null].filter(Boolean).join(" · ");
-        if (fine && ry + 12 <= blockTop + ROOM_IMG.h) write(sentence(fine), sideX, blockTop + ROOM_IMG.h - 10, sideW, { size: 7.5, color: C.faint });
-        y = Math.max(blockTop + ROOM_IMG.h, ry) + 14;
 
-        // Every planned change, with what it replaces and how it was priced.
+        // Planned changes in two columns, row by row, so a long list still reads top to bottom.
         const changes = t.plan.changes;
         if (changes.length) {
-          ensure(40);
+          const amountW = 84;
+          const textW = colW - amountW - 8;
+          const item = (c: (typeof changes)[number]) => {
+            const basis = c.costBasis ? `${c.costSource === "estimate" ? "Model estimate, not from the cost table: " : ""}${c.costBasis}` : "";
+            return { c, basis, h: measure(sentence(c.element), textW, { font: "bold", size: 9.5 }) + measure(c.proposed, colW, { size: 9 }) + measure(`Now: ${c.current}`, colW, { size: 8.5 }) + (basis ? measure(basis, colW, { size: 8 }) + 1 : 0) + 6 };
+          };
+          const drawItem = ({ c, basis }: ReturnType<typeof item>, x: number) => {
+            let cy = y;
+            cy += write(sentence(c.element), x, cy, textW, { font: "bold", size: 9.5 }) + 1;
+            if (Number.isFinite(c.costLow) && Number.isFinite(c.costHigh)) {
+              write(formatRange({ low: Math.min(c.costLow, c.costHigh), high: Math.max(c.costLow, c.costHigh) } satisfies CostRange), x + colW - amountW, y, amountW, { font: "medium", size: 9.5, align: "right" });
+            }
+            cy += write(c.proposed, x, cy, colW, { size: 9 });
+            cy += write(`Now: ${c.current}`, x, cy + 1, colW, { size: 8.5, color: C.muted }) + 1;
+            if (basis) write(basis, x, cy + 1, colW, { size: 8, color: C.faint });
+          };
+          // Keep the section label with its first row of changes.
+          ensure(18 + Math.max(...changes.slice(0, 2).map((c) => item(c).h)) + 10);
+          y += 4;
           label(`Planned changes (${changes.length})`, M, y);
           y += 14;
-          const textW = W - 96;
-          for (const c of changes) {
-            const basis = c.costBasis ? `${c.costSource === "estimate" ? "Model estimate, not from the cost table: " : ""}${c.costBasis}` : "";
-            const h =
-              measure(sentence(c.element), textW, { font: "bold", size: 9.5 }) +
-              measure(c.proposed, textW, { size: 9 }) +
-              measure(`Now: ${c.current}`, textW, { size: 8.5 }) +
-              (basis ? measure(basis, textW, { size: 8 }) + 2 : 0) +
-              16;
-            ensure(h);
-            let cy = y;
-            cy += write(sentence(c.element), M, cy, textW, { font: "bold", size: 9.5 }) + 1;
-            if (Number.isFinite(c.costLow) && Number.isFinite(c.costHigh)) {
-              write(formatRange({ low: Math.min(c.costLow, c.costHigh), high: Math.max(c.costLow, c.costHigh) } satisfies CostRange), M + W - 90, y, 90, { font: "medium", size: 9.5, align: "right" });
-            }
-            cy += write(c.proposed, M, cy, textW, { size: 9 });
-            cy += write(`Now: ${c.current}`, M, cy + 1, textW, { size: 8.5, color: C.muted }) + 1;
-            if (basis) cy += write(basis, M, cy + 1, textW, { size: 8, color: C.faint }) + 2;
-            y = cy + 7;
-            rule(y);
+          for (let i = 0; i < changes.length; i += 2) {
+            const pair = changes.slice(i, i + 2).map(item);
+            const h = Math.max(...pair.map((x) => x.h));
+            ensure(h + 10);
+            pair.forEach((it, j) => drawItem(it, M + j * (colW + colGap)));
+            y += h + 4;
+            pair.forEach((_, j) => rule(y, M + j * (colW + colGap), colW));
             y += 8;
           }
         }
-        const extra: Array<[string, string[]]> = [
+
+        // Walls, beyond-scope work, and contractor checks side by side.
+        const extra = ([
           ["Walls removed", t.plan.removedWalls],
           ["For the full look, beyond this scope", t.plan.beyondScope ?? []],
           ["Check with a contractor", t.plan.feasibilityFlags],
-        ];
-        for (const [title, items] of extra) {
-          if (!items.length) continue;
-          ensure(36);
-          y += 4;
-          y += write(title, M, y, W, { font: "medium", size: 9, color: C.muted });
-          y += 4;
-          bullets(items, M, W, { size: 9 });
-          y += 4;
+        ] as Array<[string, string[]]>).filter(([, items]) => items.length);
+        if (extra.length) {
+          const ew = (W - colGap * (extra.length - 1)) / extra.length;
+          const heights = extra.map(([, items]) => 16 + items.reduce((a, s) => a + measure(s, ew - 10, { size: 8.5 }) + 3, 0));
+          ensure(Math.max(...heights) + 6);
+          y += 2;
+          extra.forEach(([title, items], i) => {
+            const x = M + i * (ew + colGap);
+            let ey = y;
+            ey += write(title, x, ey, ew, { font: "medium", size: 9, color: C.muted }) + 4;
+            for (const s of items) {
+              write("•", x, ey, 8, { size: 8.5, color: C.faint });
+              ey += write(s, x + 10, ey, ew - 10, { size: 8.5 }) + 3;
+            }
+          });
+          y += Math.max(...heights) + 6;
         }
-      }
+      });
     });
   }
 
-  /* ---------- Footer on every page ---------- */
+    /* ---------- Footer on every page ---------- */
 
   const range = doc.bufferedPageRange();
   const footer = `${input.title} · ${PDF_DETAIL_LABELS[detail]}${dateText ? ` · ${dateText}` : ""}`;
   for (let i = range.start; i < range.start + range.count; i++) {
     doc.switchToPage(i);
     doc.page.margins.bottom = 0; // writing below the bottom margin would otherwise start a new page
-    rule(PAGE.h - 44);
-    write(footer, M, PAGE.h - 36, W - 80, { size: 7.5, color: C.faint });
-    write(`${i - range.start + 1} of ${range.count}`, M + W - 80, PAGE.h - 36, 80, { size: 7.5, color: C.faint, align: "right" });
+    rule(PAGE.h - 34);
+    write(footer, M, PAGE.h - 27, W - 80, { size: 7.5, color: C.faint });
+    write(`${i - range.start + 1} of ${range.count}`, M + W - 80, PAGE.h - 27, 80, { size: 7.5, color: C.faint, align: "right" });
   }
 
   doc.end();
