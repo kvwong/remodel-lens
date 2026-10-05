@@ -173,7 +173,7 @@ function tierInfo(t: TierResult): string {
               <div class="change-head"><strong>${esc(sentence(c.element))}</strong><span class="num">${changeCost(c)}</span></div>
               <p>${esc(c.proposed)}</p>
               <p class="was">Now: ${esc(c.current)}</p>
-              ${c.costBasis ? `<p class="basis">${esc(c.costBasis)}</p>` : ""}
+              ${c.costBasis ? `<p class="basis">${c.costSource === "estimate" ? "Model estimate, not from the cost table: " : ""}${esc(c.costBasis)}</p>` : ""}
             </li>`).join("")}
           </ul>
           ${t.plan.removedWalls.length ? `<h3 class="sub">Walls removed</h3><p>${esc(t.plan.removedWalls.join("; "))}</p>` : ""}
@@ -261,7 +261,7 @@ export function renderReport(input: {
     </dl>
     <details class="fold method">
       <summary>How these estimates work</summary>
-      <p>Installed costs (materials and labor) for ${esc(input.location ?? "a typical US metro")} in ${new Date().getFullYear()} dollars, from quantities visible in each photo. Rooms photographed from more than one angle are counted once. These are a ballpark for comparing scopes, not a contractor bid. Structural figures exclude engineering and design fees.</p>
+      <p>Installed costs (materials and labor) for ${esc(input.location ?? "a typical US metro")} in ${new Date().getFullYear()} dollars, from quantities visible in each photo. Most changes are priced from a unit-cost table (Homewyse national figures, adjusted for local construction wages from BLS, material grade, and 20% contractor overhead and permits); the rest, such as furniture and appliances, are the model's own estimate and say so. Rooms photographed from more than one angle are counted once. These are a ballpark for comparing scopes, not a contractor bid. Structural figures exclude engineering and design fees.</p>
       ${input.profileSummary ? `<p><strong>Taste applied:</strong> ${esc(input.profileSummary)}</p>` : ""}
     </details>
   </section>`

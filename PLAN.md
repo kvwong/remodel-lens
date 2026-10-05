@@ -71,7 +71,7 @@ padded and verification doesn't rely on exact pixel edges.
 | major | + removing non-load-bearing walls, moving plumbing, new layouts | Speculative, needs a contractor or engineer |
 
 The planner combines the inventory and the taste profile into a list of changes:
-element → proposed change, tier, cost band (`$`/`$$`/`$$$`), and notes. It also
+element → proposed change, tier, installed cost range, and notes. It also
 lists what must stay untouched. It can only change elements the tier allows.
 
 ### 4. Generation (`src/redesign/generate.ts`, `mask.ts`)
@@ -109,7 +109,13 @@ bands, verification results, and feasibility flags.
 3. **Stricter structure preservation if needed:** if masked gpt-image edits keep
    drifting, add a Flux/SDXL + ControlNet (depth and straight-line) backend
    through Replicate or fal behind the same `generate` interface.
-4. **Cost model:** swap the cost bands for regional cost ranges per change.
+4. **Cost model:** price changes from a unit-cost table (`src/pricing/`) instead of
+   the model's guess. The planner picks a table item, measures the quantity, and
+   names a material grade; the code multiplies by Homewyse national unit costs,
+   adjusted for local construction wages (BLS; Seattle and the Eastside so far),
+   grade, and contractor overhead. Items with no table entry (furniture,
+   appliances, wall removal) keep the model's estimate and are labeled as such.
+   Next: calibrate against real local quotes when there are some.
 5. **Web UI:** upload a listing, view tiers side by side, tweak the taste profile.
 
 ## Out of scope / notes

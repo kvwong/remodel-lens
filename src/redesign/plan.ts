@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import type { RoomInventory } from "../listing/inventory.js";
+import { COST_ITEM_KEYS, COST_ITEMS, GRADES } from "../pricing/catalog.js";
+import { priceChanges } from "../pricing/price.js";
 import { generateStructured } from "../providers.js";
 import { isStrongRule } from "../taste/pipeline.js";
 import type { TasteProfile } from "../taste/schema.js";
@@ -50,6 +52,11 @@ export const ChangePlan = z.object({
       current: z.string(),
       proposed: z.string().describe("Specific material, finish, color, silhouette."),
       minTier: z.enum(TIERS),
+      costItem: z
+        .enum([...COST_ITEM_KEYS, "other"])
+        .describe("The cost table item this change is priced as, or 'other' if none fits (furniture, decor, appliances, wall removal, built-ins)."),
+      quantity: z.number().describe("Quantity in the cost item's unit, measured from the photo. 0 for 'other'."),
+      grade: z.enum(GRADES).describe("Material grade of what is proposed: basic (builder-grade), mid (mid-market custom), premium (designer-level, natural stone, solid hardwood)."),
       costLow: z.number().int().describe("Low end of installed cost in USD (materials + labor) for this change in this room."),
       costHigh: z.number().int().describe("High end of installed cost in USD."),
       costBasis: z.string().describe("Quantity and assumption behind the range, e.g. '≈18 lf base + 12 lf upper cabinets, solid oak slab, plywood boxes'."),
@@ -66,7 +73,9 @@ export const ChangePlan = z.object({
   rationale: z.string(),
 });
 
-export type ChangePlan = z.infer<typeof ChangePlan>;
+type PlannedChange = z.infer<typeof ChangePlan>["changes"][number];
+/** costSource is set after planning: "table" when priced from src/pricing, "estimate" when the model's own figure stands. */
+export type ChangePlan = Omit<z.infer<typeof ChangePlan>, "changes"> & { changes: Array<PlannedChange & { costSource?: "table" | "estimate" }> };
 
 export function tasteBrief(profile: TasteProfile): string {
   const total = profile.imageCount ?? 0;
@@ -104,6 +113,9 @@ ${PRACTICAL_CONSTRAINTS.map((c) => `- ${c}`).join("\n")}
 - Use the full allowance of this tier where the taste calls for it. When a change is allowed but carries uncertainty (e.g. whether coffers or soffits are structural), make the change and add a feasibility flag to verify it, rather than preserving the item. Reserve beyondScope for work above this tier.
 - If this tier cannot reach the taste authentically, do the honest smaller version (or leave an item as-is) and put the real construction needed in beyondScope. Never render a cheaper change as if it were the full one (e.g. painted cabinets shown as new solid-wood cabinets).
 - Choose one expression from the profile for this room (if it has any), based on the room's architecture and existing finishes, and keep every change consistent with it.
+- Price each change against the cost table where one item fits: set costItem and measure quantity in that item's unit (count cabinet boxes, not linear feet; wall and ceiling paint is surface area, not floor area). The code computes the dollars for these from local unit costs. Use "other" only when nothing in the table fits.
+- Cost table items: ${COST_ITEM_KEYS.map((k) => `${k} (${COST_ITEMS[k].label}, per ${COST_ITEMS[k].unit})`).join("; ")}.
+- Still give your own costLow/costHigh for every change; it is used for "other" items and as a cross-check.
 - Cost each change as an installed range (materials + labor, permits where typical) in ${new Date().getFullYear()} USD for ${location ? location : "a typical US metro"}. Estimate visible quantities from the photo (linear feet of cabinets, square feet of floor or tile, number of windows) and state them in costBasis. Price the specific materials proposed (e.g. solid wood vs. veneer vs. laminate, natural stone vs. quartz) at mid-market custom quality, not luxury designer pricing and not big-box. Keep ranges honest: high is typically 1.3–2× low. Cosmetic decor and furniture count at retail.
 - First decide architecturalLanguage from what the existing room is (traditional, modern, vaulted, etc.), then choose finishes consistent with it. Where the taste offers conditional options ("in a traditional room… / in a modern room…"), pick the branch that fits this house.
 
@@ -129,7 +141,7 @@ export async function planRedesign(input: {
     prompt: planPrompt(input.inventory, input.profile, input.tier, input.location),
     schema: ChangePlan,
   });
-  return enforceTier(plan, input.tier);
+  return priceChanges(enforceTier(plan, input.tier), input.location);
 }
 
 export type CostRange = { low: number; high: number };

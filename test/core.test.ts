@@ -38,7 +38,7 @@ const plan = (changes: Partial<ChangePlan["changes"][number]>[], tier: ChangePla
   expression: "",
   architecturalLanguage: "traditional",
   beyondScope: [],
-  changes: changes.map((c) => ({ element: "x", current: "", proposed: "", minTier: "cosmetic", costLow: 1000, costHigh: 2000, costBasis: "", tasteRules: [], note: null, ...c })),
+  changes: changes.map((c) => ({ element: "x", current: "", proposed: "", minTier: "cosmetic", costItem: "other", quantity: 0, grade: "mid", costLow: 1000, costHigh: 2000, costBasis: "", tasteRules: [], note: null, ...c })),
   removedWalls: ["wall between kitchen and dining"],
   preserve: [],
   feasibilityFlags: [],
