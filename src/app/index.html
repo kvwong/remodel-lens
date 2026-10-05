@@ -500,7 +500,7 @@
   .settings-link[aria-current="page"] { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
   @media (max-width:860px) { .settings-link { display:none; } }
   .settings-panel { display:grid; gap:0; }
-  .settings-panel code, .subhead code { font-family:var(--mono); font-size:13px; }
+  .settings-panel code { font-family:var(--mono); font-size:13px; }
   .panel-head { display:grid; gap:6px; padding-bottom:20px; }
   .panel-head .hint { margin:0; }
   .settings-panel > .notice { margin-bottom:20px; }
@@ -2212,7 +2212,7 @@ async function loadSettingsPage() {
 function renderSettings() {
   document.title = "Settings · Remodel Lens";
   $("#content").innerHTML = `<header class="head collection-head"><div><h1>Settings</h1>
-      <p class="subhead">Saved on this computer in <code>.settings.json</code>. Anything set here replaces the same value in <code>.env.local</code>.</p></div></header>
+      <p class="subhead">API keys, models, tuning, and cost assumptions · saved on this computer</p></div></header>
     <section class="panel settings-panel" id="settings-keys" aria-labelledby="keys-h"></section>
     <section class="panel settings-panel" id="settings-models" aria-labelledby="models-h"></section>
     <section class="panel settings-panel" id="settings-tuning" aria-labelledby="tuning-h"></section>
@@ -2253,7 +2253,7 @@ function renderKeys() {
     </form>`;
   };
   $("#settings-keys").innerHTML = `<div class="panel-head"><h2 id="keys-h">API keys</h2>
-    <p class="hint">Keys stay on this computer and are sent only to their own provider. Once saved, only the last four characters are shown.</p></div>
+    <p class="hint">Keys stay on this computer and are sent only to their own provider. Once saved, only the last four characters are shown. Everything on this page is stored in <code>.settings.json</code> and replaces the same value in <code>.env.local</code>.</p></div>
     ${s.keysError ? `<p class="notice">${esc(s.keysError.replace(/ Add (it|them) on.*$/, ""))}</p>` : ""}
     ${row("openai")}${row("anthropic")}`;
 }
