@@ -435,13 +435,16 @@ export function renderReport(input: {
 
   .crumb { display:inline-flex; align-items:center; gap:6px; min-height:32px; font-size:14px; color:var(--muted); text-decoration:none; }
   .crumb:hover { color:var(--text); }
-  .page-head { margin:8px 0 28px; }
+  .page-head { margin:8px 0 28px; display:grid; grid-template-columns:minmax(0, 1fr) auto; column-gap:32px; }
+  .page-head > * { grid-column:1; }
   .card { background:var(--surface); border:0; border-radius:12px; box-shadow:var(--shadow); padding:28px; }
   @media (max-width: 680px) { .card { padding:18px 16px; border-radius:10px; } }
   .meta { margin:8px 0 0; color:var(--muted); font-size:14px; }
   .meta span + span::before { content:"·"; margin:0 8px; opacity:.6; }
-  .share { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin:18px 0 0; }
-  .share-label { font-size:13px; color:var(--muted); margin-right:4px; }
+  /* PDF downloads sit in the header's upper right corner, beside the title. */
+  .page-head > .share { grid-column:2; grid-row:1 / span 4; align-self:start; }
+  .share { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px 10px; max-width:560px; }
+  .share-label { flex-basis:100%; text-align:right; font-size:13px; color:var(--muted); }
   .share-btn { display:inline-flex; align-items:center; gap:10px; min-height:44px; padding:6px 14px 6px 12px; border-radius:9px; border:1px solid var(--line-strong); background:var(--surface); text-decoration:none; color:var(--text); }
   .share-btn:hover { border-color:var(--primary); background:var(--primary-soft); }
   .share-btn .icon { color:var(--primary); }
@@ -449,8 +452,13 @@ export function renderReport(input: {
   .share-text { display:grid; line-height:1.25; }
   .share-text strong { font-size:14px; font-weight:600; }
   .share-text span { font-size:12px; color:var(--muted); }
-  .share-status { font-size:13px; color:var(--muted); }
-  @media (max-width: 680px) { .share-label { flex-basis:100%; } .share-btn { flex:1 1 100%; } }
+  .share-status { flex-basis:100%; text-align:right; font-size:13px; color:var(--muted); }
+  .share-status:empty { display:none; }
+  @media (max-width: 900px) {
+    .page-head > .share { grid-column:1; grid-row:auto; margin-top:18px; justify-content:flex-start; max-width:none; }
+    .share-label, .share-status { text-align:left; }
+  }
+  @media (max-width: 680px) { .share-btn { flex:1 1 100%; } }
   .notice { margin:16px 0 0; font-size:14px; color:var(--warn); }
 
   .status { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; white-space:nowrap; }
@@ -637,8 +645,8 @@ export function renderReport(input: {
     ${input.pdf
       ? `<div class="share" role="group" aria-labelledby="share-label">
       <span class="share-label" id="share-label">Download PDF</span>
-      <a class="share-btn" href="${esc(input.pdf.summary)}" data-pdf download>${icon("download")}<span class="share-text"><strong>Summary</strong><span>Costs and before and after, about 3 pages</span></span></a>
-      <a class="share-btn" href="${esc(input.pdf.full)}" data-pdf download>${icon("download")}<span class="share-text"><strong>Full scope</strong><span>Every room, change, and cost basis</span></span></a>
+      <a class="share-btn" href="${esc(input.pdf.summary)}" data-pdf download>${icon("download")}<span class="share-text"><strong>Summary</strong><span>Costs and before and after, 3 pages</span></span></a>
+      <a class="share-btn" href="${esc(input.pdf.full)}" data-pdf download>${icon("download")}<span class="share-text"><strong>Full scope</strong><span>Every room and change</span></span></a>
       <span class="share-status" role="status" aria-live="polite"></span>
     </div>`
       : ""}
