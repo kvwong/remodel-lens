@@ -186,8 +186,6 @@
   .disclosure:disabled .chevron { visibility:hidden; }
   .chevron { display:inline-grid; place-items:center; transition:transform .2s var(--ease); }
   .disclosure[aria-expanded="false"] .chevron { transform:rotate(-90deg); }
-  .strip { display:flex; gap:6px; overflow:hidden; mask-image:linear-gradient(to right, #000 85%, transparent); }
-  .strip img { width:54px; height:36px; object-fit:cover; border-radius:3px; flex:none; background:var(--surface-2); }
   .collapse { display:grid; grid-template-rows:1fr; opacity:1; transition:grid-template-rows .34s var(--ease), opacity .22s var(--ease); }
   .collapse > .collapse-inner { overflow:hidden; min-height:0; padding:4px; margin:-4px; } /* room for focus rings */
   .collapse[data-collapsed="true"] { grid-template-rows:0fr; opacity:0; visibility:hidden; transition:grid-template-rows .34s var(--ease), opacity .16s var(--ease), visibility 0s linear .34s; }
@@ -297,12 +295,15 @@
   .run { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px 20px; padding:14px 0; border-bottom:1px solid var(--line); }
   .run-main { min-width:0; display:grid; gap:4px; }
   /* A loose, overlapping hand of photos, each at its own slight angle like the Home reel; it fans out on hover. */
-  .run-images { display:flex; margin-left:auto; padding:6px 10px 6px 4px; }
-  .run-images img { --tilt:0deg; --lift:0px; position:relative; width:96px; aspect-ratio:4 / 3; object-fit:cover; border-radius:7px; background:var(--surface-2); display:block; box-shadow:0 0 0 2px var(--surface), 0 2px 6px rgba(0,0,0,.18), 0 8px 18px rgba(0,0,0,.14); transform:translateY(var(--lift)) rotate(var(--tilt)); transition:transform var(--slow) var(--ease), margin var(--slow) var(--ease); }
-  .run-images img + img { margin-left:-26px; }
-  .run-images:hover img + img { margin-left:-12px; }
-  .run-images:hover img { transform:translateY(calc(var(--lift) * .5)) rotate(calc(var(--tilt) * .5)); }
-  @media (prefers-reduced-motion: reduce) { .run-images img { transition:none; } }
+  .run-images { margin-left:auto; }
+  .photo-stack { display:flex; padding:6px 10px 6px 4px; }
+  .photo-stack img { --tilt:0deg; --lift:0px; position:relative; width:96px; aspect-ratio:4 / 3; object-fit:cover; border-radius:7px; background:var(--surface-2); display:block; box-shadow:0 0 0 2px var(--surface), 0 2px 6px rgba(0,0,0,.18), 0 8px 18px rgba(0,0,0,.14); transform:translateY(var(--lift)) rotate(var(--tilt)); transition:transform var(--slow) var(--ease), margin var(--slow) var(--ease); }
+  .photo-stack img + img { margin-left:-26px; }
+  .photo-stack:hover img + img, .photo-stack:focus-visible img + img { margin-left:-12px; }
+  .photo-stack:hover img, .photo-stack:focus-visible img { transform:translateY(calc(var(--lift) * .5)) rotate(calc(var(--tilt) * .5)); }
+  @media (prefers-reduced-motion: reduce) { .photo-stack img { transition:none; } }
+  /* The collapsed Listing photos section shows the same stack; clicking it expands the section. */
+  button.photo-stack { margin:0; padding:8px 12px 10px 6px; border:0; background:none; border-radius:10px; cursor:pointer; max-width:100%; overflow:hidden; }
   .run-images + .btn { margin-left:0; }
   /* Rows with photos stay on one line: text, photos, then the button, however long the metadata runs. */
   .run:has(.run-images) { flex-wrap:nowrap; }
@@ -467,6 +468,8 @@
     .run .report-listing { position:relative; z-index:1; display:inline-flex; align-items:center; min-height:32px; margin:-6px 0 -2px; }
     .run > .btn { display:none; }
     .run-images { padding:4px 4px 4px 2px; }
+    button.photo-stack img { width:84px; }
+    button.photo-stack img:nth-child(n+5) { display:none; }
     .run-images img { width:72px; }
     .run-images img:nth-child(n+2) { display:none; }
     .run .run-chevron { display:block; flex:none; color:var(--muted); transform:rotate(-90deg); }
@@ -1326,7 +1329,7 @@ function runRow(r, aggregate = false) {
         <div class="run-meta">${meta}</div>
         ${statuses ? `<div class="statuses">${statuses}</div>` : ""}
       </div>
-      ${r.images?.length ? `<a class="run-images" href="${esc(r.reportUrl)}" tabindex="-1" aria-hidden="true">${r.images.map((img, i) => `<img src="${esc(img.src)}" alt="" loading="lazy" decoding="async" title="${esc(img.caption)}" style="${thumbTilt(img.src, i)}">`).join("")}</a>` : ""}
+      ${r.images?.length ? `<a class="run-images photo-stack" href="${esc(r.reportUrl)}" tabindex="-1" aria-hidden="true">${r.images.map((img, i) => `<img src="${esc(img.src)}" alt="" loading="lazy" decoding="async" title="${esc(img.caption)}" style="${thumbTilt(img.src, i)}">`).join("")}</a>` : ""}
       ${r.reportUrl ? `<a class="btn btn-small" href="${esc(r.reportUrl)}" aria-label="Open report from ${esc(fmtDate(r.startedAt))}">Open report</a><span class="run-chevron" aria-hidden="true">${icon("chevron")}</span>` : ""}
     </li>`;
 }
@@ -1440,7 +1443,7 @@ function renderListing() {
     <section class="panel zone" aria-labelledby="photos-h" id="photos-zone">
       <div class="section-head">
         <h2 id="photos-h"><button class="disclosure" type="button" aria-expanded="${!photosHidden}" aria-controls="photos-body" data-toggle="photos" ${l.photos.length ? "" : "disabled"}>
-          <span>Photos to redesign <span class="muted num" style="font-weight:400">· ${selected} of ${l.photos.length}</span></span>
+          <span>Listing photos <span class="muted num" style="font-weight:400">· ${selected} of ${l.photos.length}</span></span>
           <span class="chevron">${icon("chevron")}</span>
         </button></h2>
         <div class="tools">
@@ -1453,10 +1456,10 @@ function renderListing() {
         </div>
       </div>
       ${l.photos.length ? `
-      <div class="collapse" data-photos-strip data-collapsed="${!photosHidden}" aria-hidden="true">
-        <div class="collapse-inner"><div class="strip">
-          ${l.photos.filter((p) => p.selected).map((p) => `<img src="${esc(p.thumb.replace("w=640", "w=160"))}" alt="" width="54" height="36" loading="lazy">`).join("")}
-        </div></div>
+      <div class="collapse" data-photos-strip data-collapsed="${!photosHidden}">
+        <div class="collapse-inner"><button class="photo-stack" type="button" data-toggle="photos" aria-expanded="${!photosHidden}" aria-controls="photos-body" aria-label="Show all ${l.photos.length} listing photos">
+          ${(selected ? l.photos.filter((p) => p.selected) : l.photos).slice(0, 8).map((p, i) => `<img src="${esc(p.thumb.replace("w=640", "w=240"))}" alt="" loading="lazy" decoding="async" style="${thumbTilt(p.file, i)}">`).join("")}
+        </button></div>
       </div>
       <div class="collapse" id="photos-body" data-collapsed="${photosHidden}">
         <div class="collapse-inner dropzone-quiet" id="photo-drop">
@@ -1581,7 +1584,7 @@ function updateSelection(files, selected) {
 
 function setPhotosHidden(hidden) {
   setParams({ photos: hidden ? "hidden" : null });
-  $('[data-toggle="photos"]')?.setAttribute("aria-expanded", String(!hidden));
+  for (const el of document.querySelectorAll('[data-toggle="photos"]')) el.setAttribute("aria-expanded", String(!hidden));
   // Animated via CSS grid rows; visibility:hidden at rest keeps collapsed content out of the tab order.
   for (const el of document.querySelectorAll("#photos-body, [data-photos-only]")) el.dataset.collapsed = String(hidden);
   const strip = $("[data-photos-strip]");
@@ -2074,7 +2077,12 @@ document.addEventListener("click", async (event) => {
     return $("[data-edit-input]")?.focus();
   }
   const toggle = event.target.closest('[data-toggle="photos"]');
-  if (toggle) return setPhotosHidden(toggle.getAttribute("aria-expanded") === "true");
+  if (toggle) {
+    setPhotosHidden(toggle.getAttribute("aria-expanded") === "true");
+    // The photo stack hides itself once the section opens, so keep focus on the heading's toggle.
+    if (toggle.classList.contains("photo-stack")) $(".disclosure[data-toggle=\"photos\"]")?.focus({ preventScroll: true });
+    return;
+  }
 
   const remove = event.target.closest("[data-remove]");
   if (remove) {
