@@ -1,4 +1,5 @@
 import { planCost, type ChangePlan, type CostRange } from "./redesign/plan.js";
+import { appearanceScript, brandHead, brandLockup } from "./branding.js";
 import type { PhotoResult, TierResult } from "./redesign/run.js";
 import { TIER_LABELS, TIER_RANK, type Tier } from "./redesign/tiers.js";
 
@@ -230,7 +231,7 @@ export function renderReport(input: {
     `${photos.length} ${photos.length === 1 ? "photo" : "photos"}`,
   ].filter(Boolean) as string[];
   const back = input.backHref ? { href: esc(input.backHref), label: `Back to ${esc(input.title)}` } : null;
-  const docTitle = `${input.title}${started ? ` · ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(started)}` : ""} · Remodel Lens`;
+  const docTitle = `${input.title}${started ? ` · ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(started)}` : ""} · Whim`;
 
   const tally = (tier: Tier) => {
     const list = photos.map((p) => p.tiers.find((t) => t.tier === tier)).filter((t): t is TierResult => !!t);
@@ -373,30 +374,8 @@ export function renderReport(input: {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>${esc(docTitle)}</title>
-<script>
-(() => {
-  // Display follows the system setting; the sidebar toggle flips it for this tab only (sessionStorage).
-  const system = matchMedia('(prefers-color-scheme: dark)');
-  const read = () => { try { return sessionStorage.getItem('remodel-lens-display'); } catch { return null; } };
-  const apply = () => {
-    const base = system.matches ? 'dark' : 'light';
-    const saved = read();
-    const theme = saved === 'light' || saved === 'dark' ? saved : base;
-    document.documentElement.dataset.theme = theme;
-    const next = theme === 'dark' ? 'light' : 'dark';
-    document.querySelectorAll('[data-display-toggle]').forEach(button => {
-      button.dataset.current = theme;
-      button.setAttribute('aria-label', 'Switch to ' + next + ' mode');
-      button.dataset.tip = next === 'dark' ? 'Dark mode' : 'Light mode';
-    });
-  };
-  try { localStorage.removeItem('remodel-lens-display'); document.cookie = 'remodel-lens-display=; Path=/; Max-Age=0'; } catch {}
-  apply();
-  system.addEventListener('change', apply);
-  addEventListener('display-change', apply);
-  document.addEventListener('DOMContentLoaded', apply);
-})();
-</script>
+${brandHead}
+${appearanceScript}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
@@ -635,6 +614,7 @@ export function renderReport(input: {
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <main id="content">
+  ${back ? `<a class="report-brand" href="/" aria-label="Whim home">${brandLockup}</a>` : `<div class="report-brand" role="img" aria-label="Whim">${brandLockup}</div>`}
   <header class="page-head">
     ${back ? `<a class="crumb" href="${back.href}" data-back>${icon("arrowLeft")}${back.label}</a>` : ""}
     <h1 id="top" tabindex="-1">${esc(input.title)}</h1>

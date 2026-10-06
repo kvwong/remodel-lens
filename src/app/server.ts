@@ -14,6 +14,7 @@ import { addListingPhoto, createListing, duplicateListing, deleteListing, restor
 import { listProfiles, listRuns, loadProfile, runListingRedesign, RUNS_DIR, type RunSummary } from "../redesign/job.js";
 import type { PhotoResult } from "../redesign/run.js";
 import { renderReport } from "../report.js";
+import { brandAppHtml } from "../branding.js";
 import { homeView } from "./home-api.js";
 import { labelAttempt, settingsView, testKey, tuningView, updateSettings } from "./settings-api.js";
 import { pdfFilename, renderReportPdf, type PdfDetail } from "../report-pdf.js";
@@ -521,7 +522,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   }
   if (req.method === "GET") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" });
-    return res.end(await readFile(INDEX));
+    return res.end(brandAppHtml(await readFile(INDEX, "utf8")));
   }
   send(res, 405, { error: "Method not allowed" });
 }
@@ -533,5 +534,5 @@ createServer((req, res) => {
     send(res, status, { error: error instanceof z.ZodError ? "Invalid request" : (error as Error).message });
   });
 }).listen(PORT, HOST, () => {
-  process.stderr.write(`[remodel-lens] Listing picker at http://localhost:${PORT}\n`);
+  process.stderr.write(`[whim] Listing picker at http://localhost:${PORT}\n`);
 });

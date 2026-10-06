@@ -108,7 +108,7 @@ export const progressContext = new AsyncLocalStorage<Progress>();
 export const logContext = new AsyncLocalStorage<(message: string) => void>();
 
 export function log(message: string): void {
-  process.stderr.write(`[remodel-lens] ${message}\n`);
+  process.stderr.write(`[whim] ${message}\n`);
   logContext.getStore()?.(message);
   const p = progressContext.getStore();
   if (p) p.label = message; // show the step in flight, not just the last one finished
