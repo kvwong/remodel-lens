@@ -95,6 +95,7 @@
   .display-options button[aria-pressed="true"] { background:var(--primary-soft); color:var(--primary); }
   .side .brand { display:block; padding-left:10px; font-size:17px; min-height:32px; line-height:32px; }
   @media (max-width: 860px) { .side { position:static; height:auto; } .side-content { overflow-x:hidden; overflow-y:auto; } }
+  .side ul > li.muted { padding-left:10px; }
   .side-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; min-height:32px; padding-left:10px; }
   .side-head h2 { font-size:14px; font-weight:500; color:var(--muted); }
   nav ul { list-style:none; margin:0; padding:0; display:grid; gap:2px; }
@@ -326,7 +327,7 @@
   .s-verified { color:var(--ok); } .s-review { color:var(--warn); } .s-failed, .s-error { color:var(--bad); } .s-unchanged { color:var(--muted); }
   .status > span { color:var(--text); }
   .empty { padding:32px; border:1px dashed var(--line-strong); border-radius:10px; color:var(--muted); }
-  .empty code { font-family:var(--mono); font-size:13px; color:var(--text); }
+  .empty-start { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 20px; }
 
   /* Taste profile */
   .title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -819,6 +820,7 @@ const nf = new Intl.NumberFormat();
 const pf = new Intl.NumberFormat(undefined, { style: "percent", maximumFractionDigits: 0 });
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const money = (n) => (n < 1 ? "under $1" : usd.format(Math.round(n)));
+const plural = (n, word) => `${nf.format(n)} ${word}${n === 1 ? "" : "s"}`;
 const sentence = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const statusTag = (s, count) => `<span class="status s-${s}">${icon(STATUS[s].icon)}<span>${count != null ? `${count} ` : ""}${STATUS[s].label}</span></span>`;
 
@@ -917,7 +919,7 @@ function renderCollection(view) {
   const label = tastes ? "Tastes" : "Listings";
   document.title = `${label} · Remodel Lens`;
   $("#content").innerHTML = `<header class="head collection-head">
-    <div><h1>${label}</h1><p class="subhead">${items.length} ${tastes ? "taste profiles" : "listings"}</p></div>
+    <div><h1>${label}</h1><p class="subhead">${items.length} ${tastes ? "taste profile" : "listing"}${items.length === 1 ? "" : "s"}</p></div>
     <button class="btn btn-small" type="button" data-action="${tastes ? "new-profile" : "new-listing"}" aria-label="${tastes ? "New taste profile" : "New listing"}">${icon("plus")}New ${tastes ? "taste" : "listing"}</button>
   </header>
   ${items.length ? `<ul class="collection-grid">${items.map(item => {
@@ -946,7 +948,7 @@ async function loadReports() {
 
 function renderReports() {
   document.title = "Reports · Remodel Lens";
-  $("#content").innerHTML = `<header class="head collection-head"><div><h1>Reports</h1><p class="subhead">${state.reports.length} reports across ${state.listings.length} listings · newest first</p></div></header>
+  $("#content").innerHTML = `<header class="head collection-head"><div><h1>Reports</h1><p class="subhead">${state.reports.length ? `${plural(state.reports.length, "report")} across ${plural(new Set(state.reports.map(run => run.listingId)).size, "listing")} · newest first` : "None yet"}</p></div></header>
     ${state.reportErrors.length ? `<div class="notice" role="alert">Couldn't load reports for ${esc(state.reportErrors.join(", "))}. <button class="btn btn-small" type="button" data-action="retry-reports">Retry</button></div>` : ""}
     <section class="panel">${state.reports.length ? `<ul class="runs">${state.reports.map(run => runRow(run, true)).join("")}</ul>` : `<p class="muted" style="margin:0">${state.reportErrors.length ? "Reports couldn't be loaded. Try again." : "No reports yet. Run a redesign from a listing to create one."}</p>`}</section>`;
   alignSidebar();
@@ -1213,7 +1215,9 @@ function renderHome() {
   $("#content").innerHTML = `${reel}
     <header class="head collection-head home-head"><div><h1>Recent reports</h1><p class="subhead">${!totalReports ? "None yet" : `${totalReports > reports.length ? `Latest ${reports.length} of ${totalReports}` : `${totalReports} ${totalReports === 1 ? "report" : "reports"}`} · newest first`}</p></div>
       ${totalReports > reports.length ? `<a class="btn btn-small nav-inline" href="?view=reports">All reports</a>` : ""}</header>
-    <section class="panel">${reports.length ? `<ul class="runs">${reports.map(run => runRow(run, true)).join("")}</ul>` : `<p class="muted" style="margin:0">No reports yet. Run a redesign from a listing to create one.</p>`}</section>`;
+    <section class="panel">${reports.length ? `<ul class="runs">${reports.map(run => runRow(run, true)).join("")}</ul>` : `${state.listings.length
+      ? `<p class="muted" style="margin:0">No reports yet. Open a listing and run a redesign to create one.</p>`
+      : `<div class="empty-start"><p class="muted" style="margin:0">Start with a listing: add photos of a home, then run a redesign to get a report.</p><button class="btn btn-primary btn-small" type="button" data-action="new-listing">${icon("plus")}New listing</button></div>`}`}</section>`;
   alignSidebar();
   startReel();
 }
@@ -1295,7 +1299,8 @@ function renderEmpty() {
   document.title = "Remodel Lens";
   $("#content").innerHTML = `<div class="empty">
     <h1 style="font-size:20px;margin-bottom:8px;color:var(--text)">No listings yet</h1>
-    <p style="margin:0">Run <code>npm run import -- ~/Desktop/&lt;folder&gt; --id &lt;listing-id&gt;</code>, then reload.</p>
+    <p style="margin:0 0 16px">Create a listing to add photos of a home.</p>
+    <button class="btn btn-primary btn-small" type="button" data-action="new-listing">${icon("plus")}New listing</button>
   </div>`;
 }
 
@@ -2417,7 +2422,8 @@ function renderKeys() {
     const ends = k.hint && k.hint !== "…" ? ` · ends in ${esc(k.hint.slice(1))}` : "";
     const status = k.source === "settings" ? `Saved${ends}` : k.source === "environment" ? `From .env.local${ends}`
       : id === "anthropic" && !needsAnthropic ? "Not needed with the current models" : "Not set";
-    const purpose = id === "openai" ? "Always needed. It makes the image edits." : "Needed only when a Claude model is picked under Models.";
+    const purpose = id === "openai" ? "Always needed. It makes the image edits."
+      : needsAnthropic ? "Needed for the Claude model picked under Models." : "Needed only if you pick a Claude model under Models.";
     return `<form class="setting-row" data-key-form="${id}" novalidate>
       <div class="setting-label"><label for="key-${id}">${esc(k.name)}</label><p>${purpose} <a href="${esc(k.url)}" target="_blank" rel="noopener">Get a key</a></p></div>
       <div class="setting-control">
