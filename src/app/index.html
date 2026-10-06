@@ -180,12 +180,6 @@
   .notice { padding:10px 14px; border-radius:8px; background:var(--warn-bg); color:var(--warn); margin:0; font-size:14px; }
 
   /* Listing: photo selection */
-  .disclosure { display:inline-flex; align-items:center; gap:10px; min-height:44px; margin:-8px 0 -8px -8px; padding:8px; border:0; border-radius:8px; background:none; text-align:left; cursor:pointer; font-weight:600; }
-  .disclosure:hover:not(:disabled) { background:var(--surface-2); }
-  .disclosure:disabled { cursor:default; }
-  .disclosure:disabled .chevron { visibility:hidden; }
-  .chevron { display:inline-grid; place-items:center; transition:transform .2s var(--ease); }
-  .disclosure[aria-expanded="false"] .chevron { transform:rotate(-90deg); }
   .collapse { display:grid; grid-template-rows:1fr; opacity:1; transition:grid-template-rows .34s var(--ease), opacity .22s var(--ease); }
   .collapse > .collapse-inner { overflow:hidden; min-height:0; padding:4px; margin:-4px; } /* room for focus rings */
   .collapse[data-collapsed="true"] { grid-template-rows:0fr; opacity:0; visibility:hidden; transition:grid-template-rows .34s var(--ease), opacity .16s var(--ease), visibility 0s linear .34s; }
@@ -496,7 +490,7 @@
   @media (max-width:860px) { .back-link { display:inline-flex; } .run-chevron { display:block; } }
   /* Touch: hover backgrounds stick after a tap, so only show them for real pointers. */
   @media (hover:none) {
-    .disclosure:hover:not(:disabled), .btn-quiet:hover, .icon-plain:hover, .display-toggle:hover { background:transparent; }
+    .btn-quiet:hover, .icon-plain:hover, .display-toggle:hover { background:transparent; }
     .btn:hover:not(.btn-primary):not(.btn-quiet) { background:var(--surface); border-color:var(--line-strong); box-shadow:none; }
     .savebar .btn:hover:not(.btn-primary) { background:transparent; border-color:color-mix(in srgb, var(--ink-text) 35%, transparent); }
     .tier:hover:not(:has(input:checked)) { border-color:var(--line-strong); box-shadow:none; }
@@ -1442,14 +1436,12 @@ function renderListing() {
 
     <section class="panel zone" aria-labelledby="photos-h" id="photos-zone">
       <div class="section-head">
-        <h2 id="photos-h"><button class="disclosure" type="button" aria-expanded="${!photosHidden}" aria-controls="photos-body" data-toggle="photos" ${l.photos.length ? "" : "disabled"}>
-          <span>Listing photos <span class="muted num" style="font-weight:400">· ${selected} of ${l.photos.length}</span></span>
-          <span class="chevron">${icon("chevron")}</span>
-        </button></h2>
+        <h2 id="photos-h">Listing photos <span class="muted num" style="font-weight:400">· ${selected} of ${l.photos.length}</span></h2>
         <div class="tools">
           <span class="tools fade" data-photos-only data-collapsed="${photosHidden}">
             <button class="btn btn-small" type="button" data-action="all" ${selected === l.photos.length ? "disabled" : ""}>Select all</button>
             <button class="btn btn-small" type="button" data-action="none" ${selected === 0 ? "disabled" : ""}>Clear</button>
+            <button class="btn btn-small" type="button" data-toggle="photos" data-photos-done aria-expanded="${!photosHidden}" aria-controls="photos-body">Done</button>
           </span>
           <button class="btn btn-small" type="button" data-action="pick-photos" ${running ? "disabled" : ""}>${icon("plus")}Add photos</button>
           <input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp,image/tiff" multiple hidden>
@@ -2079,8 +2071,8 @@ document.addEventListener("click", async (event) => {
   const toggle = event.target.closest('[data-toggle="photos"]');
   if (toggle) {
     setPhotosHidden(toggle.getAttribute("aria-expanded") === "true");
-    // The photo stack hides itself once the section opens, so keep focus on the heading's toggle.
-    if (toggle.classList.contains("photo-stack")) $(".disclosure[data-toggle=\"photos\"]")?.focus({ preventScroll: true });
+    // Each toggle hides itself, so hand focus to the other one: Done once open, the photo stack once closed.
+    $(toggle.classList.contains("photo-stack") ? "[data-photos-done]" : "button.photo-stack")?.focus({ preventScroll: true });
     return;
   }
 
