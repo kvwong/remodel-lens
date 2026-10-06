@@ -1,3 +1,4 @@
+import { motionScript } from "./motion.js";
 import { planCost, type ChangePlan, type CostRange } from "./redesign/plan.js";
 import { appearanceScript, brandHead, brandLockup } from "./branding.js";
 import type { PhotoResult, TierResult } from "./redesign/run.js";
@@ -78,6 +79,7 @@ const ICON_PATHS = {
   arrowUp: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
   download: '<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>',
   expand: '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>',
+  keyboard: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 15h10"/>',
 } as const;
 type IconName = keyof typeof ICON_PATHS;
 
@@ -380,6 +382,7 @@ ${appearanceScript}
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+  * { --motion:none; }
   :root {
     --bg:#f5f4f1; --surface:#ffffff; --surface-2:#f3f1ed; --text:#1b1a19; --muted:#625e58;
     --line:rgba(27,26,25,.1); --line-strong:rgba(27,26,25,.22);
@@ -464,9 +467,9 @@ ${appearanceScript}
 
   /* Images */
   .zoom { position:relative; display:block; width:100%; padding:0; border:0; background:var(--surface-2); border-radius:3px; overflow:hidden; cursor:zoom-in; aspect-ratio:3 / 2; }
-  .zoom img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .5s var(--ease); }
+  .zoom img { width:100%; height:100%; object-fit:cover; display:block; --motion:transform .5s var(--ease); }
   .zoom:hover img { transform:scale(1.015); }
-  .zoom-hint { position:absolute; right:10px; bottom:10px; width:32px; height:32px; display:grid; place-items:center; border-radius:50%; background:rgba(18,18,17,.55); color:#fff; opacity:0; transition:opacity .2s; }
+  .zoom-hint { position:absolute; right:10px; bottom:10px; width:32px; height:32px; display:grid; place-items:center; border-radius:50%; background:rgba(18,18,17,.55); color:#fff; opacity:0; --motion:opacity .2s; }
   .zoom:hover .zoom-hint, .zoom:focus-visible .zoom-hint { opacity:1; }
   .no-image { aspect-ratio:3 / 2; display:grid; place-items:center; border-radius:3px; border:1px dashed var(--line-strong); color:var(--muted); font-size:13px; text-align:center; padding:16px; }
 
@@ -517,8 +520,8 @@ ${appearanceScript}
   details.fold { border-bottom:1px solid var(--line); }
   details.fold > summary { display:flex; align-items:center; gap:8px; min-height:44px; padding:0; cursor:pointer; list-style:none; font-weight:500; font-size:14px; }
   details.fold > summary::-webkit-details-marker { display:none; }
-  details.fold > summary::after { content:""; margin-left:auto; width:7px; height:7px; border-right:1.5px solid var(--muted); border-bottom:1.5px solid var(--muted); transform:translateY(-2px) rotate(45deg); transition:transform .2s; }
-  details.fold[open] > summary::after { transform:translateY(2px) rotate(-135deg); }
+  details.fold > summary::after { content:""; margin-left:auto; width:7px; height:7px; border-right:1.5px solid var(--muted); border-bottom:1.5px solid var(--muted); transform:translateY(var(--fold-y, -2px)) rotate(var(--fold-angle, 45deg)); --motion:transform .2s; }
+  details.fold[open] > summary { --fold-y:2px; --fold-angle:-135deg; }
   details.fold[open] { padding-bottom:14px; }
   .count { font-size:12px; color:var(--muted); font-weight:500; padding:1px 7px; border-radius:999px; background:var(--surface-2); }
   .info-listing p, .checks, .plain { font-size:14px; }
@@ -561,13 +564,15 @@ ${appearanceScript}
     .tabs { width:100%; } .tabs [role="tab"] { flex:1; justify-content:center; }
   }
 
-  .to-top { position:fixed; right:max(16px, env(safe-area-inset-right)); bottom:max(16px, env(safe-area-inset-bottom)); z-index:6; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; border:1px solid var(--line-strong); background:var(--surface); color:inherit; cursor:pointer; opacity:0; transform:translateY(8px); transition:opacity .25s, transform .25s var(--ease); pointer-events:none; }
+  .to-top { position:fixed; right:max(16px, env(safe-area-inset-right)); bottom:max(16px, env(safe-area-inset-bottom)); z-index:6; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; border:1px solid var(--line-strong); background:var(--surface); color:inherit; cursor:pointer; opacity:0; transform:translateY(8px); --motion:opacity .25s, transform .25s var(--ease); pointer-events:none; }
   .to-top.show { opacity:1; transform:none; pointer-events:auto; }
 
   dialog.viewer { width:100vw; height:100dvh; max-width:none; max-height:none; margin:0; padding:0; border:0; background:#0f0f0e; color:#efede9; }
   dialog.viewer::backdrop { background:rgba(0,0,0,.85); }
+  dialog.viewer[open] { display:flex; flex-direction:column; }
+  dialog.viewer:focus { outline:none; }
   /* Fixed columns and a reserved status line, so switching versions never moves the tabs or the image. */
-  .viewer-bar { display:grid; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr); gap:8px 16px; align-items:center; padding:0 max(14px, env(safe-area-inset-left)); border-bottom:1px solid rgba(255,255,255,.1); height:66px; }
+  .viewer-bar { display:grid; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr); gap:8px 16px; align-items:center; padding:0 max(14px, env(safe-area-inset-left)); border-bottom:1px solid rgba(255,255,255,.1); height:66px; flex:none; }
   .viewer-title { display:grid; grid-template-rows:20px 20px; gap:2px; min-width:0; }
   .viewer-title strong, #viewer-status { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:20px; }
   #viewer-status .status { white-space:nowrap; }
@@ -578,21 +583,36 @@ ${appearanceScript}
   .viewer-title .status-meaning { color:rgba(239,237,233,.6); }
   .viewer-title .s-verified { color:#8fc49f; } .viewer-title .s-review { color:#e0bd78; } .viewer-title .s-failed, .viewer-title .s-error { color:#ee9d90; }
   .viewer .seg { background:rgba(255,255,255,.08); } .viewer .seg button { color:rgba(239,237,233,.7); } .viewer .seg button[aria-pressed="true"] { background:#efede9; color:#0f0f0e; }
+  .viewer button:focus-visible { outline:2px solid #efede9; outline-offset:-3px; border-radius:6px; }
+  .viewer .seg button[aria-pressed="true"]:focus-visible { outline-color:#0f0f0e; }
   .viewer-actions { display:flex; gap:6px; align-items:center; }
-  .viewer-hint { font-size:12px; color:rgba(239,237,233,.55); margin-right:6px; }
+  .viewer-shortcuts { position:relative; }
+  .viewer-shortcuts > button { display:grid; place-items:center; width:36px; padding:0; }
+  .viewer-shortcuts .icon { width:20px; height:20px; }
+  .viewer-help { position:absolute; right:0; top:calc(100% + 8px); z-index:2; width:220px; padding:12px; border:1px solid rgba(255,255,255,.22); border-radius:10px; background:#242423; box-shadow:0 8px 24px rgba(0,0,0,.35); font-size:12px; visibility:hidden; opacity:0; }
+  .viewer-shortcuts:hover .viewer-help, .viewer-shortcuts:focus-within .viewer-help { visibility:visible; opacity:1; }
+  .viewer-help strong { display:block; margin-bottom:8px; font-weight:600; }
+  .viewer-help div { display:flex; justify-content:space-between; gap:16px; line-height:24px; }
+  .viewer-help kbd { font:inherit; color:#efede9; }
+  .viewer-help span { color:rgba(239,237,233,.7); }
   .vbtn { font:inherit; font-size:13px; min-height:36px; padding:4px 12px; border-radius:8px; border:1px solid rgba(255,255,255,.22); background:transparent; color:inherit; cursor:pointer; }
   .vbtn[aria-pressed="true"] { background:#efede9; color:#0f0f0e; }
-  .viewer-stage { height:calc(100dvh - 66px); overflow:auto; overscroll-behavior:contain; display:grid; place-items:center; cursor:zoom-in; }
-  .viewer-stage img { max-width:100vw; max-height:calc(100dvh - 66px); object-fit:contain; display:block; user-select:none; -webkit-user-drag:none; }
-  .viewer-stage.actual { place-items:start; cursor:grab; } .viewer-stage.actual.dragging { cursor:grabbing; }
+  .viewer-stage { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; display:flex; cursor:zoom-in; }
+  .viewer-stage img { flex:none; margin:auto; max-width:100%; max-height:100%; object-fit:contain; display:block; user-select:none; -webkit-user-drag:none; }
+  .viewer-stage.actual { cursor:grab; } .viewer-stage.actual.dragging { cursor:grabbing; }
   .viewer-stage.actual img { max-width:none; max-height:none; }
   @media (max-width: 680px) {
-    .viewer-hint { display:none; }
-    .viewer-bar { grid-template-columns:minmax(0, 1fr) auto; grid-template-rows:auto auto; height:auto; padding-block:10px; }
-    .viewer-tabs { grid-column:1 / -1; grid-row:2; justify-self:start; }
-    .viewer-stage { height:calc(100dvh - 112px); } .viewer-stage img { max-height:calc(100dvh - 112px); }
+    .viewer-bar { grid-template-columns:minmax(0, 1fr) auto auto; grid-template-rows:auto auto; gap:8px 6px; height:auto; padding-block:10px; }
+    .viewer-title { grid-column:1 / 3; grid-row:1; }
+    .viewer-actions { display:contents; }
+    .viewer-actions > [data-viewer="close"] { grid-column:3; grid-row:1; justify-self:end; }
+    .viewer-tabs { grid-column:1; grid-row:2; justify-self:start; min-width:0; max-width:100%; overflow:auto; }
+    .viewer-tabs button { flex:none; padding-inline:8px; }
+    .viewer-shortcuts { grid-column:2; grid-row:2; }
+    .viewer-zoom { grid-column:3; grid-row:2; }
+    .viewer-help { position:fixed; top:110px; right:14px; }
   }
-  @media (prefers-reduced-motion: reduce) { * { transition:none !important; scroll-behavior:auto !important; } }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; } }
 
   /* Motion + depth system */
   :root { --ease:cubic-bezier(0.22, 1, 0.36, 1); --ease-pop:cubic-bezier(0.35, 1.55, 0.65, 1); --fast:120ms; --base:240ms; --slow:360ms;
@@ -602,13 +622,11 @@ ${appearanceScript}
     --shadow:0 1px 2px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(255,255,255,0.08);
     --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.12); }
   /* Every clickable element presses to 98% on the fast duration. */
-  button, .btn, a.nav-link, .tier, .pick, .zoom, summary, [role="tab"] { transition:transform var(--fast) var(--ease), box-shadow var(--base) var(--ease), background-color var(--base) var(--ease), border-color var(--base) var(--ease), color var(--base) var(--ease), opacity var(--base) var(--ease); }
+  button, .btn, a.nav-link, .tier, .pick, .zoom, summary, [role="tab"] { --motion:transform var(--fast) var(--ease), box-shadow var(--base) var(--ease), background-color var(--base) var(--ease), border-color var(--base) var(--ease), color var(--base) var(--ease), opacity var(--base) var(--ease); }
   button:active:not(:disabled), .btn:active, a.nav-link:active, .tier:active, .pick:active, .zoom:active, summary:active, [role="tab"]:active { transform:scale(0.98); }
-  /* Tooltips: fade, lift 4px, clear a 2px blur. First one waits; never instant. */
-  [data-tip] { position:relative; }
-  [data-tip]::after { content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 6px); translate:-50% 4px; filter:blur(2px); opacity:0; pointer-events:none; white-space:nowrap; font-size:12px; font-weight:500; padding:4px 8px; border-radius:6px; background:var(--ink, #1b1a19); color:var(--ink-text, #fafaf9); box-shadow:var(--shadow); transition:opacity var(--base) var(--ease), translate var(--base) var(--ease), filter var(--base) var(--ease); transition-delay:0s; z-index:40; }
-  [data-tip]:hover::after, [data-tip]:focus-visible::after { opacity:1; translate:-50% 0; filter:blur(0); transition-delay:400ms; }
-  @keyframes pop-in { from { opacity:0; transform:translateY(6px) scale(0.96); } to { opacity:1; transform:none; } }
+  /* Motion fades and lifts tooltip pseudo-elements through these custom properties. */
+  [data-tip] { position:relative; --tip-opacity:0; --tip-y:4px; }
+  [data-tip]::after { content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 6px); translate:-50% var(--tip-y, 4px); opacity:var(--tip-opacity, 0); pointer-events:none; white-space:nowrap; font-size:12px; font-weight:500; padding:4px 8px; border-radius:6px; background:var(--ink, #1b1a19); color:var(--ink-text, #fafaf9); box-shadow:var(--shadow); --motion:opacity var(--base) var(--ease), translate var(--base) var(--ease), filter var(--base) var(--ease);  z-index:40; }
 </style>
 </head>
 <body>
@@ -646,21 +664,29 @@ ${appearanceScript}
 
 <button class="to-top" type="button" aria-label="Back to top" tabindex="-1">${icon("arrowUp")}</button>
 
-<dialog class="viewer" aria-labelledby="viewer-title">
+<dialog class="viewer" aria-labelledby="viewer-title" tabindex="-1">
   <div class="viewer-bar">
     <div class="viewer-title"><strong id="viewer-title"></strong><span id="viewer-status"></span></div>
     <div class="seg viewer-tabs" role="group" aria-label="Compare versions"></div>
     <div class="viewer-actions">
-      <span class="viewer-hint">← → versions · ↑ ↓ rooms · Z zoom</span>
-      <button class="vbtn" type="button" data-viewer="zoom" aria-pressed="false">100%</button>
+      <div class="viewer-shortcuts">
+        <button class="vbtn" type="button" aria-label="Keyboard shortcuts" aria-describedby="viewer-help">${icon("keyboard")}</button>
+        <div class="viewer-help" id="viewer-help" role="tooltip"><strong>Keyboard shortcuts</strong><div><kbd>← →</kbd><span>Switch versions</span></div><div><kbd>↑ ↓</kbd><span>Switch rooms</span></div><div><kbd>Z</kbd><span>Toggle zoom</span></div><div><kbd>Esc</kbd><span>Close viewer</span></div></div>
+      </div>
+      <div class="seg viewer-zoom" role="group" aria-label="Image size">
+        <button type="button" data-viewer="fit" aria-pressed="true">Fit</button>
+        <button type="button" data-viewer="actual" aria-pressed="false">100%</button>
+      </div>
       <button class="vbtn" type="button" data-viewer="close">Close</button>
     </div>
   </div>
   <div class="viewer-stage"></div>
 </dialog>
 
+<script>${motionScript}</script>
 <script>
 (() => {
+  const motion = window.whimMotion;
   const STATUS = ${JSON.stringify(Object.fromEntries(Object.entries(STATUS).map(([k, v]) => [k, { label: v.label, meaning: v.meaning, icon: icon(v.icon) }])))};
 
   /* Scope tabs: WAI-ARIA tabs with automatic activation */
@@ -708,7 +734,8 @@ ${appearanceScript}
   document.getElementById("room-jump")?.addEventListener("change", (e) => {
     const id = e.target.value;
     if (!id) return;
-    document.getElementById(id)?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    const room = document.getElementById(id);
+    if (room) motion.scroll(scrollY + room.getBoundingClientRect().top - parseFloat(getComputedStyle(room).scrollMarginTop || 0));
     const h = document.getElementById(id + "-h");
     h?.setAttribute("tabindex", "-1");
     h?.focus({ preventScroll: true });
@@ -724,8 +751,20 @@ ${appearanceScript}
   const tabsEl = dialog.querySelector(".viewer-tabs");
   const title = dialog.querySelector("#viewer-title");
   const statusEl = dialog.querySelector("#viewer-status");
-  const zoomBtn = dialog.querySelector('[data-viewer="zoom"]');
+  const fitBtn = dialog.querySelector('[data-viewer="fit"]');
+  const actualBtn = dialog.querySelector('[data-viewer="actual"]');
   let items = [], index = 0, trigger = null;
+
+  function centerImage() {
+    stage.scrollLeft = (stage.scrollWidth - stage.clientWidth) / 2;
+    stage.scrollTop = (stage.scrollHeight - stage.clientHeight) / 2;
+  }
+  img.addEventListener("load", () => {
+    if (stage.classList.contains("actual")) centerImage();
+  });
+  new ResizeObserver(() => {
+    if (stage.classList.contains("actual")) centerImage();
+  }).observe(stage);
 
   function show(i, keepZoom) {
     index = (i + items.length) % items.length;
@@ -740,17 +779,23 @@ ${appearanceScript}
       : '<span class="viewer-plain">As photographed for the listing</span>';
     tabsEl.querySelectorAll("button").forEach((b, n) => b.setAttribute("aria-pressed", String(n === index)));
     if (!keepZoom) setZoom(false);
+    else if (img.complete) centerImage();
   }
   function setZoom(actual, point) {
-    const before = stage.getBoundingClientRect();
-    const ratio = point ? { x: (point.x - before.left) / before.width, y: (point.y - before.top) / before.height } : null;
+    const before = img.getBoundingClientRect();
+    const ratio = point && before.width && before.height ? {
+      x: Math.max(0, Math.min(1, (point.x - before.left) / before.width)),
+      y: Math.max(0, Math.min(1, (point.y - before.top) / before.height))
+    } : null;
     stage.classList.toggle("actual", actual);
-    zoomBtn.setAttribute("aria-pressed", String(actual));
-    zoomBtn.textContent = actual ? "Fit" : "100%";
+    fitBtn.setAttribute("aria-pressed", String(!actual));
+    actualBtn.setAttribute("aria-pressed", String(actual));
     if (actual && ratio) {
-      stage.scrollLeft = img.naturalWidth * ratio.x - stage.clientWidth / 2;
-      stage.scrollTop = img.naturalHeight * ratio.y - stage.clientHeight / 2;
-    }
+      const after = img.getBoundingClientRect(), viewport = stage.getBoundingClientRect();
+      stage.scrollLeft += after.left - viewport.left + after.width * ratio.x - stage.clientWidth / 2;
+      stage.scrollTop += after.top - viewport.top + after.height * ratio.y - stage.clientHeight / 2;
+    } else if (actual) centerImage();
+    else { stage.scrollLeft = 0; stage.scrollTop = 0; }
   }
   document.addEventListener("click", (e) => {
     const tab = e.target.closest('[role="tab"]');
@@ -759,18 +804,23 @@ ${appearanceScript}
     if (all) return setAll(all.dataset.allTier);
     const z = e.target.closest(".zoom");
     if (z) {
+      const wasOpen = dialog.open;
+      const focusVersion = wasOpen && tabsEl.contains(document.activeElement);
       trigger = z;
       items = [...document.querySelectorAll('.zoom[data-group="' + CSS.escape(z.dataset.group) + '"]')];
       tabsEl.innerHTML = items.map((it, n) => '<button type="button" data-index="' + n + '" aria-pressed="false">' + it.dataset.label.split(" · ").pop().replace("Listing photo", "Listing") + "</button>").join("");
-      if (!dialog.open) dialog.showModal();
-      show(items.indexOf(z), dialog.open && stage.classList.contains("actual"));
-      tabsEl.querySelector('[aria-pressed="true"]')?.focus();
+      show(items.indexOf(z), wasOpen && stage.classList.contains("actual"));
+      if (!wasOpen) {
+        dialog.showModal();
+        dialog.focus({ preventScroll: true });
+      } else if (focusVersion) tabsEl.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
       return;
     }
     const vt = e.target.closest(".viewer-tabs button");
     if (vt) return show(Number(vt.dataset.index), true);
     if (e.target.closest('[data-viewer="close"]')) return dialog.close();
-    if (e.target.closest('[data-viewer="zoom"]')) return setZoom(!stage.classList.contains("actual"));
+    if (e.target.closest('[data-viewer="fit"]')) return setZoom(false);
+    if (e.target.closest('[data-viewer="actual"]')) return setZoom(true);
   });
   let drag = null, moved = false;
   stage.addEventListener("pointerdown", (e) => {
@@ -795,7 +845,7 @@ ${appearanceScript}
   dialog.addEventListener("keydown", (e) => {
     if (e.key === "ArrowRight") { e.preventDefault(); show(index + 1, true); }
     if (e.key === "ArrowLeft") { e.preventDefault(); show(index - 1, true); }
-    if (e.key === "z" || e.key === "Z") setZoom(!stage.classList.contains("actual"));
+    if (e.key === "z" || e.key === "Z") { e.preventDefault(); setZoom(!stage.classList.contains("actual")); }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       // Next/previous room, same version (Listing/Cosmetic/…), so a scope can be scanned room by room.
       e.preventDefault();
@@ -809,7 +859,7 @@ ${appearanceScript}
       if (target) { trigger = target; target.click(); }
     }
   });
-  dialog.addEventListener("close", () => { img.remove(); trigger?.focus(); });
+  dialog.addEventListener("close", () => { img.remove(); trigger?.focus({ preventScroll: true }); });
 
   /* Return to the exact picker state when that's where we came from. */
   try {
@@ -848,7 +898,6 @@ ${appearanceScript}
   }));
 
   const toTop = document.querySelector(".to-top");
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)");
   let ticking = false;
   addEventListener("scroll", () => {
     if (ticking) return;
@@ -861,7 +910,7 @@ ${appearanceScript}
     });
   }, { passive: true });
   toTop.addEventListener("click", () => {
-    scrollTo({ top: 0, behavior: reduce.matches ? "auto" : "smooth" });
+    motion.scroll(0);
     document.getElementById("top").focus({ preventScroll: true });
   });
 })();

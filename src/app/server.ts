@@ -14,6 +14,7 @@ import { addListingPhoto, createListing, duplicateListing, deleteListing, restor
 import { listProfiles, listRuns, loadProfile, runListingRedesign, RUNS_DIR, type RunSummary } from "../redesign/job.js";
 import type { PhotoResult } from "../redesign/run.js";
 import { renderReport } from "../report.js";
+import { motionScript } from "../motion.js";
 import { brandAppHtml } from "../branding.js";
 import { homeView } from "./home-api.js";
 import { labelAttempt, settingsView, testKey, tuningView, updateSettings } from "./settings-api.js";
@@ -268,6 +269,11 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   if (!isAllowedRequestHost(req.headers.host ?? "")) return send(res, 421, { error: "Unexpected host" });
   const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
   const parts = url.pathname.split("/").filter(Boolean);
+
+  if (req.method === "GET" && url.pathname === "/assets/motion.js") {
+    res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" });
+    return res.end(motionScript);
+  }
 
   // Writes must come from this page, not from another site in the same browser.
   if (req.method !== "GET" && req.method !== "HEAD") {

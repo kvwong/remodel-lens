@@ -29,7 +29,8 @@ the last tab on a phone). There you can:
 - **API keys:** paste your OpenAI and Anthropic keys and check that each one
   works. Once saved, only the last four characters are shown.
 - **Models:** pick the reasoning model, the reference analysis models, and the
-  image model.
+  image model. **Image edits at once** controls generation concurrency (default
+  6; choose 1–16).
 - **Tuning:** set the edge-check threshold, score your past runs (no API
   calls), label images where the structure changed, and apply the suggested
   threshold.
@@ -38,7 +39,9 @@ the last tab on a phone). There you can:
 
 Settings are saved in `.settings.json` at the repository root, which git
 ignores and only your user can read. They apply to the command-line tools too,
-and they win over `.env.local`. Clearing a setting falls back to `.env.local`.
+and override shell environment variables and env files. Clearing a setting
+falls back to the shell environment, then `.env.local`, then `.env`, then the
+built-in default. Changes saved in the app take effect without restarting it.
 
 If you prefer files, copy `.env.example` to `.env.local` and add your keys:
 
@@ -74,9 +77,21 @@ Tailscale tailnet. Find the Mac's Tailscale IPv4 address in the Tailscale app,
 then open `http://<mac-address>:4310` on the other device. The app has no
 sign-in, so only use it on a network you trust.
 
+### Find your way around
+
+The app opens on **Home**, with a reel of redesigned photos and the five most
+recent reports. Click the Whim logo to return there. On a phone, the bottom bar
+has **Home**, **Listings**, **Tastes**, **Reports**, and **Settings**.
+
+**Reports** collects reports across your listings, newest first. Each listing
+also keeps its own past runs. The sun/moon switch follows your device's
+appearance by default; a manual light/dark choice lasts for the current tab
+session. The logo and favicon adapt to the selected mode.
+
 ## Create a taste profile
 
-1. In **Taste profiles**, open **Example** or choose **New** to create a profile.
+1. In **Taste profiles** (**Tastes** on a phone), open **Example** or use
+   **New taste profile** to create a profile.
 2. Add at least 3 interior reference photos you like; 10–20 gives the models
    more to work with. JPG, PNG, WebP, and TIFF are supported. Near-duplicates
    are skipped.
@@ -147,8 +162,14 @@ and [image generation](src/redesign/generate.ts).
 
 ## Add a listing
 
-Import photos from a local folder. Replace the example path, ID, and name with
-your own:
+In the app, choose **New listing** on Home or beside **Listings**, enter a name
+and optional location, then choose **Add photos** or drop photos onto the
+listing. Label rooms (for example, `kitchen` or `den`), choose which photos to
+redesign, select a taste profile, and choose the budget tiers: **Cosmetic**,
+**Finishes**, or **Structural**.
+
+You can also import photos from a local folder using the CLI. Replace the
+example path, ID, and name with your own:
 
 ```bash
 npm run import -- ~/Pictures/123-main-st --id 123-main-st --name "123 Main St"
@@ -157,18 +178,23 @@ npm run import -- ~/Pictures/123-main-st --id 123-main-st --name "123 Main St"
 The importer accepts JPG, PNG, WebP, and TIFF files, corrects photo rotation,
 resizes large images, skips near-duplicates, and adds new photos as selected.
 Reload the app to see the listing. You can also import individual files by
-passing their paths instead of a folder. In the app, label rooms (for example,
-`kitchen` or `den`), choose which photos to redesign, select a taste profile,
-and choose the budget tiers.
+passing their paths instead of a folder.
 
 Listings and their selections are stored in `listings/<id>/`. To add more
-photos to an existing listing, run the import command again with the same ID.
+photos to an existing listing, use **Add photos** or run the import command
+again with the same ID.
 
 ## Generate a redesign
 
 In the app, open the listing and choose **Run redesign**. The report opens when
 the run finishes. Each room includes before-and-after images by tier, a change
 list with cost bands, and a verification status.
+
+Each photo's selected scopes run in parallel after its room inventory is
+complete. The app shares the **Image edits at once** limit across running
+listings; separate CLI processes each have their own limit. An image that
+fails the architecture check is regenerated once with feedback, which adds
+API calls. Wait for active runs to finish before restarting the app.
 
 To share a report with someone who won't open the app, use **Summary PDF** or
 **Full scope PDF** at the upper right of the report. Both are landscape, so each
@@ -193,7 +219,7 @@ reference photos.
 |---|---|
 | Verified | Fixed elements (windows, doors, stairs, ceiling) passed both the edge check and the vision judge. |
 | Needs review | The judge passed, but an edge shifted near a fixed element or the plan was only partly followed. |
-| Unverified | Verification failed twice. Architecture changed; don't rely on the image for decisions. |
+| Unverified | The architecture checks still failed after a retry. Review the reported problems before relying on the image. |
 
 ## Tune verification
 
@@ -246,8 +272,9 @@ Whim does not scrape listing sites; source listing photos yourself.
 
 ## Configuration
 
-Settings are read from `.env.local` (preferred) or `.env` in the repository
-root. `.env.example` lists the defaults:
+Saved app settings take precedence over the shell environment, `.env.local`,
+and `.env`, in that order. Env files live in the repository root.
+`.env.example` lists the optional overrides; the defaults are:
 
 | Setting | Default | Purpose |
 |---|---|---|
@@ -256,11 +283,19 @@ root. `.env.example` lists the defaults:
 | `ANALYSIS_MODELS` | `openai/gpt-6.1-sol,anthropic/claude-sonnet-5-5` | Models that analyze each taste reference. |
 | `REASONING_MODEL` | `openai/gpt-6.1-sol` | Planning, rule extraction, and verification. |
 | `IMAGE_MODEL` | `gpt-image-2.5-sunburst` | Image-edit model. |
-| `IMAGE_CONCURRENCY` | `6` | Maximum image edits in flight across listings (also on the Settings page). Lower it if OpenAI rate-limits. |
+| `IMAGE_CONCURRENCY` | `6` | Maximum image edits in flight per process, shared across app listings. Set 1–16 with **Image edits at once** in Settings; lower it if OpenAI rate-limits. |
 | `EDGE_THRESHOLD` | `0.45` | Minimum edge correlation for a fixed element to pass. See [Tune verification](#tune-verification). |
 | `PORT` | `4310` | Local app port. |
 
 ## Development checks
+
+UI motion uses the locally installed [Motion](https://motion.dev/docs/animate) bundle, shared by the app and embedded
+in generated HTML reports so animations also work when a report is opened from
+disk. `src/app/motion.js` owns timing, interruption, reduced motion, and cleanup
+when a view is removed. CSS `--motion` declarations list the properties and
+durations to animate between hover, focus, pressed, and other state destinations.
+Use `whimMotion.animate()` or a tracked sequence for coordinated interactions. Keep
+continuous motion on transforms; measure layout outside the animation clock.
 
 ```bash
 npm run check

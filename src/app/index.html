@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+  * { --motion:none; }
   /* Gallery system: near-white neutrals, hairlines instead of shadows, color reserved for status and progress. */
   :root {
     --bg:#f5f4f1; --surface:#ffffff; --surface-2:#f5f3ef; --text:#1b1a19; --muted:#625e58;
@@ -149,7 +150,7 @@
     .collection-grid { grid-template-columns:minmax(0, 1fr); }
     .collection-link { min-height:108px; }
     .mobile-tabs { position:fixed; z-index:25; bottom:calc(12px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:4px; padding:6px; border:1px solid var(--line-strong); border-radius:24px; background:var(--surface); box-shadow:0 8px 32px rgba(0,0,0,.2), 0 2px 8px rgba(0,0,0,.08); }
-    .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-height:56px; border-radius:18px; color:var(--muted); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; transition:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
+    .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-height:56px; border-radius:18px; color:var(--muted); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; --motion:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
     .mobile-tabs .icon { width:22px; height:22px; }
     .mobile-tabs a[aria-current="page"] { background:var(--primary-soft); color:var(--primary); font-weight:600; }
     .mobile-tabs a:active { transform:scale(.96); }
@@ -170,8 +171,7 @@
   .btn-quiet:hover { background:var(--surface-2); border-color:transparent; }
   .btn-small { min-height:32px; padding:4px 10px; font-size:13px; }
   .btn:disabled { opacity:.45; cursor:not-allowed; }
-  .spinner { width:14px; height:14px; border-radius:50%; border:2px solid currentColor; border-right-color:transparent; animation:spin .8s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
+  .spinner { width:14px; height:14px; border-radius:50%; border:2px solid currentColor; border-right-color:transparent; }
   select { min-height:40px; padding:6px 32px 6px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2366625d' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E") no-repeat right 10px center; appearance:none; max-width:100%; font-size:16px; }
   textarea { width:100%; font-size:15px; line-height:1.55; background:var(--surface); border:1px solid var(--line-strong); border-radius:8px; padding:10px 12px; resize:vertical; }
   textarea:focus, select:focus, input[type="text"]:focus { outline:2px solid var(--text); outline-offset:1px; }
@@ -182,14 +182,14 @@
   .notice { padding:10px 14px; border-radius:8px; background:var(--warn-bg); color:var(--warn); margin:0; font-size:14px; }
 
   /* Listing: photo selection */
-  .fade { transition:opacity .2s var(--ease), visibility 0s; }
-  .fade[data-collapsed="true"] { opacity:0; visibility:hidden; transition:opacity .16s var(--ease), visibility 0s linear .16s; }
+  .fade { --motion:opacity .2s var(--ease), visibility 0s; }
+  .fade[data-collapsed="true"] { opacity:0; visibility:hidden; --motion:opacity .16s var(--ease), visibility 0s linear .16s; }
   .skip-inline { position:absolute; left:-9999px; }
   .skip-inline:focus { position:static; display:inline-flex; margin-bottom:10px; }
   .grid { display:grid; gap:20px 16px; grid-template-columns:repeat(auto-fill, minmax(min(100%, 230px), 1fr)); }
   .card { min-width:0; }
   .pick { position:relative; display:block; cursor:pointer; aspect-ratio:3 / 2; background:var(--surface-2); border-radius:3px; overflow:hidden; }
-  .pick img { width:100%; height:100%; object-fit:cover; display:block; transition:opacity .2s, filter .2s; }
+  .pick img { width:100%; height:100%; object-fit:cover; display:block; --motion:opacity .2s, filter .2s; }
   .card[data-selected="false"] .pick img { opacity:.4; filter:grayscale(.7); }
   .pick input { position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; }
   .check { position:absolute; top:10px; left:10px; width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,.92); border:1.5px solid rgba(0,0,0,.3); display:grid; place-items:center; color:transparent; }
@@ -211,7 +211,7 @@
   fieldset { border:0; margin:0; padding:0; min-width:0; }
   legend { font-weight:500; margin-bottom:8px; padding:0; font-size:14px; }
   .tiers { display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
-  .tier { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border:1px solid var(--line-strong); border-radius:8px; cursor:pointer; min-height:44px; transition:border-color .15s, background .15s; }
+  .tier { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border:1px solid var(--line-strong); border-radius:8px; cursor:pointer; min-height:44px; --motion:border-color .15s, background .15s; }
   .tier:hover { border-color:var(--text); box-shadow:var(--shadow-hover); }
   .tier:has(input:checked) { border-color:var(--primary); background:var(--primary-soft); }
   .tier input { width:16px; height:16px; margin:3px 0 0; flex:none; }
@@ -239,7 +239,7 @@
   .profile-edit:hover, .profile-change:hover { color:var(--text); background:var(--surface-2); }
   .profile-tools::before { content:""; order:1; width:1px; height:14px; background:var(--line-strong); }
   .profile-change { order:2; }
-  .profile-change .icon { transition:transform var(--base) var(--ease); }
+  .profile-change .icon { --motion:transform var(--base) var(--ease); }
   .profile-change[aria-expanded="true"] { color:var(--text); }
   .profile-change[aria-expanded="true"] .icon { transform:rotate(180deg); }
   .profile-description { margin:8px 0 0; color:var(--muted); font-size:13px; }
@@ -270,13 +270,13 @@
   .progress-head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
   .progress-head strong { font-weight:500; }
   .bar { height:4px; border-radius:999px; background:var(--surface-2); overflow:hidden; }
-  .bar > span { display:block; height:100%; background:var(--primary); transform-origin:0 50%; transition:transform .6s var(--ease); }
+  .bar > span { display:block; height:100%; background:var(--primary); transform-origin:0 50%; --motion:transform .6s var(--ease); }
   .bar.error > span { background:var(--bad); }
   .progress-label { margin:0; font-size:13px; color:var(--muted); }
   details.log-details { margin-top:6px; }
   details.log-details > summary { cursor:pointer; min-height:36px; display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); list-style:none; }
   details.log-details > summary::-webkit-details-marker { display:none; }
-  details.log-details > summary .icon { transform:rotate(-90deg); transition:transform .2s; }
+  details.log-details > summary .icon { transform:rotate(-90deg); --motion:transform .2s; }
   details.log-details[open] > summary .icon { transform:none; }
   .log { margin:4px 0 0; max-height:260px; overflow:auto; overscroll-behavior:contain; padding:12px; background:var(--surface-2); border-radius:8px; font:12.5px/1.6 var(--mono); white-space:pre-wrap; }
 
@@ -289,22 +289,29 @@
   .run-main { min-width:0; display:grid; gap:4px; }
   /* A loose, overlapping hand of photos, each at its own slight angle like the Home reel; it fans out on hover. */
   .run-images { margin-left:auto; }
-  .photo-stack { display:flex; padding:6px 10px 6px 4px; }
-  .photo-stack img { --tilt:0deg; --lift:0px; position:relative; width:96px; aspect-ratio:4 / 3; object-fit:cover; border-radius:7px; background:var(--surface-2); display:block; box-shadow:0 0 0 2px var(--surface), 0 2px 6px rgba(0,0,0,.18), 0 8px 18px rgba(0,0,0,.14); transform:translateY(var(--lift)) rotate(var(--tilt)); transition:transform var(--slow) var(--ease), margin var(--slow) var(--ease); }
+  .photo-stack { --stack-thumb:96px; --stack-limit:4; --stack-cap:4; --stack-visible:min(var(--stack-count, 1), var(--stack-limit), var(--stack-cap)); display:flex; padding:12px calc(14px + (var(--stack-visible) - 1) * 14px) 16px 8px; overflow:visible; }
+  .photo-stack img { --tilt:0deg; --lift:0px; position:relative; flex:none; width:var(--stack-thumb); aspect-ratio:4 / 3; object-fit:cover; border-radius:7px; background:var(--surface-2); display:block; box-shadow:0 0 0 2px var(--surface), 0 2px 6px rgba(0,0,0,.18), 0 8px 18px rgba(0,0,0,.14); transform:translateY(var(--lift)) rotate(var(--tilt)); --motion:transform var(--slow) var(--ease); }
   .photo-stack img + img { margin-left:-26px; }
-  .photos-area { position:relative; display:flow-root; } /* its own block context, so margins measure the same with or without overflow clipping */
+  .photos-area { position:relative; display:flow-root; container:listing-photos / inline-size; } /* measure only the outer height during a swap */
   .photos-area > [data-photos-strip] > div, .photos-area #photo-drop { padding:4px; margin:-4px; } /* room for focus rings */
-  .photo-stack:hover img + img, .photo-stack:focus-visible img + img { margin-left:-12px; }
-  .photo-stack:hover img, .photo-stack:focus-visible img { transform:translateY(calc(var(--lift) * .5)) rotate(calc(var(--tilt) * .5)); }
-  @media (prefers-reduced-motion: reduce) { .photo-stack img { transition:none; } }
+  .photo-stack:hover img, .photo-stack:focus-visible img { transform:translateX(var(--fan, 0px)) translateY(calc(var(--lift) * .5)) rotate(calc(var(--tilt) * .5)); }
   /* The collapsed Listing photos section shows the same stack; clicking it expands the section. */
-  button.photo-stack { margin:0; padding:8px 12px 10px 6px; border:0; background:none; border-radius:10px; cursor:pointer; max-width:100%; overflow:hidden; }
+  button.photo-stack { --stack-limit:8; --stack-cap:8; margin:0; border:0; background:none; border-radius:10px; cursor:pointer; max-width:100%; }
+  /* Reserve the fan's full width at rest; hover never moves the neighboring report button. */
   .run-images + .btn { margin-left:0; }
   /* Rows with photos stay on one line: text, photos, then the button, however long the metadata runs. */
   .run:has(.run-images) { flex-wrap:nowrap; }
   .run:has(.run-images) .run-main { flex:1 1 0; }
   .run-images { flex:none; }
-  @media (max-width:1100px) { .run-images img:nth-child(n+3) { display:none; } }
+  @media (max-width:1100px) { .run-images { --stack-limit:2; } .run-images img:nth-child(n+3) { display:none; } }
+  /* Show whole photos instead of squeezing or clipping the stack on narrow detail panels. */
+  @container listing-photos (max-width:710px) { button.photo-stack { --stack-cap:7; } button.photo-stack img:nth-child(n+8) { display:none; } }
+  @container listing-photos (max-width:626px) { button.photo-stack { --stack-cap:6; } button.photo-stack img:nth-child(n+7) { display:none; } }
+  @container listing-photos (max-width:542px) { button.photo-stack { --stack-cap:5; } button.photo-stack img:nth-child(n+6) { display:none; } }
+  @container listing-photos (max-width:458px) { button.photo-stack { --stack-cap:4; } button.photo-stack img:nth-child(n+5) { display:none; } }
+  @container listing-photos (max-width:374px) { button.photo-stack { --stack-cap:3; } button.photo-stack img:nth-child(n+4) { display:none; } }
+  @container listing-photos (max-width:290px) { button.photo-stack { --stack-cap:2; } button.photo-stack img:nth-child(n+3) { display:none; } }
+  @container listing-photos (max-width:206px) { button.photo-stack { --stack-cap:1; } button.photo-stack img:nth-child(n+2) { display:none; } }
   .run-title { font-weight:500; text-decoration:none; justify-self:start; }
   a.run-title:hover { text-decoration:underline; }
   .run-meta { font-size:13px; color:var(--muted); }
@@ -342,7 +349,7 @@
   .verdict-bar .v-verified { background:var(--ok); opacity:1; }
   .verdict-bar .v-review { background:var(--warn); opacity:1; }
   .verdict-bar .v-failed, .verdict-bar .v-error { background:var(--bad); opacity:1; }
-  .verdict[data-tip]::after { left:0; translate:0 4px; }
+  .verdict[data-tip]::after { left:0; translate:0 var(--tip-y, 4px); }
   .verdict[data-tip]:hover::after, .verdict[data-tip]:focus-visible::after { translate:0 0; }
   .empty { padding:32px; border:1px dashed var(--line-strong); border-radius:10px; color:var(--muted); }
   .empty-start { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 20px; }
@@ -357,22 +364,22 @@
   .ref { position:relative; border-radius:3px; overflow:hidden; background:var(--surface-2); aspect-ratio:4 / 5; }
   .ref a { display:block; height:100%; }
   .ref img { width:100%; height:100%; object-fit:cover; display:block; }
-  .ref .remove { position:absolute; top:6px; right:6px; width:30px; height:30px; border-radius:50%; border:0; background:rgba(18,18,17,.6); color:#fff; cursor:pointer; display:grid; place-items:center; opacity:0; transition:opacity .15s; }
+  .ref .remove { position:absolute; top:6px; right:6px; width:30px; height:30px; border-radius:50%; border:0; background:rgba(18,18,17,.6); color:#fff; cursor:pointer; display:grid; place-items:center; opacity:0; --motion:opacity .15s; }
   .ref:hover .remove, .ref:focus-within .remove { opacity:1; }
   @media (hover: none) { .ref .remove { opacity:1; } }
   .ref .remove:hover { background:var(--bad); }
   .ref .remove .icon { width:14px; height:14px; }
   .ref .name { position:absolute; left:6px; bottom:6px; font-size:11px; padding:1px 6px; border-radius:999px; background:rgba(18,18,17,.55); color:#fff; }
-  .dropzone { border:1px dashed var(--line-strong); border-radius:10px; padding:16px; transition:border-color .15s, background .15s; }
+  .dropzone { border:1px dashed var(--line-strong); border-radius:10px; padding:16px; --motion:border-color .15s, background .15s; }
   .dropzone.over { border-color:var(--primary); background:var(--primary-soft); }
-  .dropzone-quiet { border-radius:10px; transition:background .15s, outline-color .15s; outline:2px dashed transparent; outline-offset:4px; }
+  .dropzone-quiet { border-radius:10px; --motion:background .15s, outline-color .15s; outline:2px dashed transparent; outline-offset:4px; }
   .dropzone-quiet.over { outline-color:var(--primary); background:var(--primary-soft); }
   .dropzone-empty { display:grid; place-items:center; gap:10px; padding:40px 16px; text-align:center; color:var(--muted); }
   .dropzone-empty .icon { width:22px; height:22px; }
   .upload-list { list-style:none; margin:10px 0 0; padding:0; font-size:13px; display:grid; gap:2px; }
   .upload-list .bad { color:var(--bad); }
   .text-field { min-width:0; }
-  .read-text { display:block; width:100%; padding:8px 10px; border:1px solid transparent; border-radius:6px; background:transparent; color:var(--text); font:inherit; font-size:14px; line-height:1.6; text-align:left; white-space:pre-wrap; overflow-wrap:anywhere; cursor:text; transition:background .15s, border-color .15s; }
+  .read-text { display:block; width:100%; padding:8px 10px; border:1px solid transparent; border-radius:6px; background:transparent; color:var(--text); font:inherit; font-size:14px; line-height:1.6; text-align:left; white-space:pre-wrap; overflow-wrap:anywhere; cursor:text; --motion:background .15s, border-color .15s; }
   .read-text:hover { background:var(--surface); border-color:var(--line); }
   .read-text:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
   .read-text .empty-text { color:var(--muted); }
@@ -393,8 +400,8 @@
   details.category > summary::-webkit-details-marker { display:none; }
   details.category > summary .cat-name { font-weight:500; }
   details.category > summary .cat-meta { font-size:13px; color:var(--muted); }
-  details.category > summary::after { content:""; margin-left:auto; width:7px; height:7px; border-right:1.5px solid var(--muted); border-bottom:1.5px solid var(--muted); transform:translateY(-2px) rotate(45deg); transition:transform .2s; }
-  details.category[open] > summary::after { transform:translateY(2px) rotate(-135deg); }
+  details.category > summary::after { content:""; margin-left:auto; width:7px; height:7px; border-right:1.5px solid var(--muted); border-bottom:1.5px solid var(--muted); transform:translateY(var(--fold-y, -2px)) rotate(var(--fold-angle, 45deg)); --motion:transform .2s; }
+  details.category[open] > summary { --fold-y:2px; --fold-angle:-135deg; }
   .category-body { padding:0 16px 16px; }
   .category-body > .sub-label:first-child { margin-top:0; }
   .rule-row { display:grid; grid-template-columns:minmax(0, 1fr) 64px 32px; gap:10px; align-items:start; margin-top:8px; padding:12px; border:1px solid var(--line); border-radius:8px; background:var(--surface-2); }
@@ -414,17 +421,16 @@
   .icon-btn:hover, .icon-btn:focus-visible { color:var(--bad); background:var(--bad-bg); }
   .icon-plain:hover, .icon-plain:focus-visible { color:var(--text); background:var(--surface-2); }
   .sub-label { display:block; font-size:13px; font-weight:500; margin:16px 0 6px; }
-  .savebar:not([hidden]) { animation:pop-in var(--base) var(--ease-pop); }
+
   .savebar { position:sticky; bottom:16px; z-index:6; display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; padding:10px 10px 10px 18px; border-radius:10px; background:var(--ink); color:var(--ink-text); box-shadow:0 2px 4px rgba(0,0,0,.08), 0 12px 32px rgba(0,0,0,.16); }
   .savebar p { margin:0; flex:1 1 220px; font-size:14px; }
   .savebar .btn { background:transparent; color:var(--ink-text); border-color:color-mix(in srgb, var(--ink-text) 35%, transparent); }
   .savebar .btn-primary { background:var(--ink-text); color:var(--ink); border-color:var(--ink-text); }
-  .toast { animation:pop-in var(--base) var(--ease-pop); position:fixed; left:50%; bottom:max(20px, env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:var(--ink-text); padding:10px 10px 10px 16px; border-radius:10px; display:flex; gap:12px; align-items:center; box-shadow:0 2px 4px rgba(0,0,0,.08), 0 12px 32px rgba(0,0,0,.16); z-index:20; font-size:14px; }
+  .toast { position:fixed; left:50%; bottom:max(20px, env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:var(--ink-text); padding:10px 10px 10px 16px; border-radius:10px; display:flex; gap:12px; align-items:center; box-shadow:0 2px 4px rgba(0,0,0,.08), 0 12px 32px rgba(0,0,0,.16); z-index:20; font-size:14px; }
   .toast button { background:transparent; color:inherit; border:1px solid color-mix(in srgb, currentColor 40%, transparent); border-radius:7px; padding:4px 12px; min-height:32px; font-weight:500; cursor:pointer; }
   dialog.modal { border:1px solid var(--line); border-radius:12px; padding:24px; width:min(440px, calc(100vw - 32px)); background:var(--surface); color:var(--text); box-shadow:0 2px 4px rgba(0,0,0,.06), 0 16px 48px rgba(0,0,0,.16); }
   dialog.modal::backdrop { background:rgba(0,0,0,.4); }
   dialog.modal input[type="text"], dialog.modal select { width:100%; min-height:42px; font-size:16px; padding:8px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); }
-  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration:2.4s; } * { transition:none !important; } }
 
   /* Motion + depth system */
   :root { --ease:cubic-bezier(0.22, 1, 0.36, 1); --ease-pop:cubic-bezier(0.35, 1.55, 0.65, 1); --fast:120ms; --base:240ms; --slow:360ms;
@@ -434,16 +440,14 @@
     --shadow:0 1px 2px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(255,255,255,0.18);
     --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.24); }
   /* Every clickable element presses to 98% on the fast duration. */
-  button, .btn, a.nav-link, .side .brand, .tier, .pick, .zoom, summary, [role="tab"] { transition:transform var(--fast) var(--ease), box-shadow var(--base) var(--ease), background-color var(--base) var(--ease), border-color var(--base) var(--ease), color var(--base) var(--ease), opacity var(--base) var(--ease); }
+  button, .btn, a.nav-link, .side .brand, .tier, .pick, .zoom, summary, [role="tab"] { --motion:transform var(--fast) var(--ease), box-shadow var(--base) var(--ease), background-color var(--base) var(--ease), border-color var(--base) var(--ease), color var(--base) var(--ease), opacity var(--base) var(--ease); }
   button:active:not(:disabled), .btn:active, a.nav-link:active, .side .brand:active, .tier:active, .pick:active, .zoom:active, summary:active, [role="tab"]:active { transform:scale(0.98); }
-  /* Tooltips: fade, lift 4px, clear a 2px blur. First one waits; never instant. */
-  [data-tip] { position:relative; }
-  [data-tip]::after { content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 6px); translate:-50% 4px; filter:blur(2px); opacity:0; pointer-events:none; white-space:nowrap; font-size:12px; font-weight:500; padding:4px 8px; border-radius:6px; background:var(--ink, #1b1a19); color:var(--ink-text, #fafaf9); box-shadow:var(--shadow); transition:opacity var(--base) var(--ease), translate var(--base) var(--ease), filter var(--base) var(--ease); transition-delay:0s; z-index:40; }
-  [data-tip]:hover::after, [data-tip]:focus-visible::after { opacity:1; translate:-50% 0; filter:blur(0); transition-delay:400ms; }
+  /* Motion fades and lifts tooltip pseudo-elements through these custom properties. */
+  [data-tip] { position:relative; --tip-opacity:0; --tip-y:4px; }
+  [data-tip]::after { content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 6px); translate:-50% var(--tip-y, 4px); opacity:var(--tip-opacity, 0); pointer-events:none; white-space:nowrap; font-size:12px; font-weight:500; padding:4px 8px; border-radius:6px; background:var(--ink, #1b1a19); color:var(--ink-text, #fafaf9); box-shadow:var(--shadow); --motion:opacity var(--base) var(--ease), translate var(--base) var(--ease), filter var(--base) var(--ease);  z-index:40; }
   /* Keep the plus-button tooltips inside the sidebar scroll area. */
-  .side-head [data-tip]::after { left:auto; right:0; translate:0 4px; }
-  .side-head [data-tip]:hover::after, .side-head [data-tip]:focus-visible::after { translate:0 0; }
-  @keyframes pop-in { from { opacity:0; transform:translateY(6px) scale(0.96); } to { opacity:1; transform:none; } }
+  .side-head [data-tip]::after { left:auto; right:0; translate:0 var(--tip-y, 4px); }
+  .display-setting [data-tip]::after { left:auto; right:0; translate:0 var(--tip-y, 4px); }
   /* Mobile layout (kept last so it wins over the base component rules above). */
   @media (max-width:860px) {
     .savebar { bottom:calc(96px + env(safe-area-inset-bottom)); }
@@ -493,10 +497,9 @@
     .run:has(a.run-title) a.run-title::after { content:""; position:absolute; inset:0; }
     .run .report-listing { position:relative; z-index:1; display:inline-flex; align-items:center; min-height:32px; margin:-6px 0 -2px; }
     .run > .btn { display:none; }
-    .run-images { padding:4px 4px 4px 2px; }
-    button.photo-stack img { width:84px; }
+    .run-images { --stack-thumb:72px; --stack-limit:1; padding:10px 8px 12px; }
+    button.photo-stack { --stack-thumb:84px; --stack-limit:4; }
     button.photo-stack img:nth-child(n+5) { display:none; }
-    .run-images img { width:72px; }
     .run-images img:nth-child(n+2) { display:none; }
     .run .run-chevron { display:block; flex:none; color:var(--muted); transform:rotate(-90deg); }
     .run:has(a.run-title):active { background:var(--surface-2); }
@@ -513,11 +516,10 @@
 
     /* Dialogs become bottom sheets with thumb-reachable actions. */
     dialog.modal { margin:auto 0 0; width:100%; max-width:100%; max-height:calc(100dvh - 24px); border-radius:16px 16px 0 0; border-width:1px 0 0; padding:20px 16px calc(16px + env(safe-area-inset-bottom)); overscroll-behavior:contain; }
-    dialog.modal[open] { animation:sheet-up var(--slow) var(--ease); }
+
     dialog.modal .field-row:last-child { display:grid; grid-template-columns:1fr 1fr; }
     dialog.modal .field-row:last-child .btn { min-height:48px; }
   }
-  @keyframes sheet-up { from { transform:translateY(100%); } to { transform:none; } }
   .back-link, .run-chevron { display:none; }
   @media (max-width:860px) { .back-link { display:inline-flex; } .run-chevron { display:block; } }
   /* Touch: hover backgrounds stick after a tap, so only show them for real pointers. */
@@ -605,17 +607,17 @@
   .cost-rail { position:absolute; left:0; right:0; top:18px; height:4px; border-radius:2px; background:var(--line); }
   .cost-band { position:absolute; top:11px; height:18px; border-radius:4px; background:repeating-linear-gradient(135deg, color-mix(in srgb, var(--primary) 9%, transparent) 0 5px, transparent 5px 8px), var(--primary-soft); }
   /* Default ticks stay hidden until the row is in use. */
-  .cost-tick { position:absolute; top:6px; width:2px; height:28px; margin-left:-1px; border-radius:1px; background:color-mix(in srgb, var(--primary) 55%, transparent); opacity:0; transition:opacity .15s, background .15s; pointer-events:none; }
+  .cost-tick { position:absolute; top:6px; width:2px; height:28px; margin-left:-1px; border-radius:1px; background:color-mix(in srgb, var(--primary) 55%, transparent); opacity:0; --motion:opacity .15s, background .15s; pointer-events:none; }
   .cost-row:hover .cost-tick, .cost-row:has(:focus-visible) .cost-tick, .cost-row.dragging .cost-tick { opacity:1; }
   .cost-tick.hit { background:var(--primary); }
   .cost-fill { position:absolute; top:18px; height:4px; border-radius:2px; background:var(--primary); }
   .cost-row.changed .cost-fill { background:var(--warn); }
-  .cost-thumb { position:absolute; top:20px; width:20px; height:20px; margin:-10px 0 0 -10px; border-radius:50%; background:var(--surface); border:2px solid var(--primary); box-shadow:0 1px 3px rgba(0,0,0,.18); cursor:grab; transition:transform .12s; z-index:2; }
+  .cost-thumb { position:absolute; top:20px; width:20px; height:20px; margin:-10px 0 0 -10px; border-radius:50%; background:var(--surface); border:2px solid var(--primary); box-shadow:0 1px 3px rgba(0,0,0,.18); cursor:grab; --motion:transform .12s; z-index:2; }
   .cost-thumb.on-default::after { content:""; position:absolute; inset:4px; border-radius:50%; background:var(--primary); }
   .cost-thumb.off { border-color:var(--warn); }
   .cost-thumb.dragging { cursor:grabbing; transform:scale(1.12); }
   .cost-thumb:focus-visible { border-radius:50%; outline-offset:3px; }
-  .cost-scale { position:absolute; top:31px; left:0; right:0; display:flex; justify-content:space-between; font-size:11px; color:var(--muted); pointer-events:none; opacity:0; transition:opacity .15s; }
+  .cost-scale { position:absolute; top:31px; left:0; right:0; display:flex; justify-content:space-between; font-size:11px; color:var(--muted); pointer-events:none; opacity:0; --motion:opacity .15s; }
   .cost-row:hover .cost-scale, .cost-row:has(:focus-visible) .cost-scale, .cost-row.dragging .cost-scale { opacity:1; }
   .cost-vals { display:grid; gap:4px; justify-items:end; }
   .cost-pair { display:flex; align-items:center; gap:6px; color:var(--muted); }
@@ -624,7 +626,6 @@
   .cost-note { display:flex; gap:8px; align-items:baseline; min-height:18px; font-size:12px; color:var(--muted); }
   .cost-row.changed .cost-note { color:var(--warn); }
   .cost-note button { border:0; background:none; padding:0; color:inherit; font-size:12px; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
-  @media (prefers-reduced-motion: reduce) { .cost-tick, .cost-thumb, .cost-scale { transition:none; } }
   /* Phones: unit costs put the slider under the name and values. */
   @media (max-width:600px) {
     .number-fields { grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; }
@@ -660,8 +661,8 @@
   .reel-track { list-style:none; margin:0; padding:0 0 0 12px; display:flex; align-items:center; width:max-content; will-change:transform; }
   /* Each photo gets its own size, tilt and lift (set per card), so the strip reads as a loose, uneven pile. */
   /* Neighbours overlap (negative gap) and stack in a set but shuffled order (--z). */
-  .reel-card { --size:1; --tilt:0deg; --lift:0px; position:relative; z-index:var(--z, 1); flex:none; margin-right:-2px; width:calc(var(--reel-card, 250px) * var(--size)); transform:translateY(var(--lift)) rotate(var(--tilt)); transition:transform var(--slow) var(--ease), filter var(--slow) var(--ease), opacity var(--slow) var(--ease); }
-  .reel-card a { position:relative; display:block; aspect-ratio:4 / 3; border-radius:14px; overflow:hidden; background:var(--surface-2); box-shadow:0 2px 6px rgba(0,0,0,.08), 0 10px 24px rgba(0,0,0,.12), 0 0 0 .5px rgba(0,0,0,.08); text-decoration:none; transition:box-shadow var(--base) var(--ease); }
+  .reel-card { --size:1; --tilt:0deg; --lift:0px; position:relative; z-index:var(--z, 1); flex:none; margin-right:-2px; width:calc(var(--reel-card, 250px) * var(--size)); transform:translateY(var(--lift)) rotate(var(--tilt)); --motion:transform var(--slow) var(--ease), filter var(--slow) var(--ease), opacity var(--slow) var(--ease); }
+  .reel-card a { position:relative; display:block; aspect-ratio:4 / 3; border-radius:14px; overflow:hidden; background:var(--surface-2); box-shadow:0 2px 6px rgba(0,0,0,.08), 0 10px 24px rgba(0,0,0,.12), 0 0 0 .5px rgba(0,0,0,.08); text-decoration:none; --motion:box-shadow var(--base) var(--ease); }
   /* Hovering a photo brings it forward, straight and a little larger; the rest sink back, soft as bokeh. */
   @media (hover: hover) {
     .reel-card:has(a:hover) { z-index:20; transform:translateY(0) rotate(0deg) scale(1.06); }
@@ -669,8 +670,9 @@
     .reel-track:has(a:hover) .reel-card:not(:has(a:hover)) { transform:translateY(var(--lift)) rotate(var(--tilt)) scale(.98); filter:blur(3px) saturate(.85); opacity:.85; }
   }
   .reel-card:has(a:focus-visible) { z-index:20; transform:translateY(0) rotate(0deg) scale(1.06); }
+  .reel-track:not(:has(a:hover)):has(a:focus-visible) .reel-card:not(:has(a:focus-visible)) { transform:translateY(var(--lift)) rotate(var(--tilt)) scale(.98); filter:blur(3px) saturate(.85); opacity:.85; }
   .reel-card img { width:100%; height:100%; object-fit:cover; display:block; }
-  .reel-card span { position:absolute; inset:auto 0 0; padding:28px 12px 10px; background:linear-gradient(transparent, rgba(18,18,17,.62)); color:#fff; font-size:12.5px; line-height:1.35; opacity:0; transform:translateY(6px); transition:opacity var(--base) var(--ease), transform var(--base) var(--ease); }
+  .reel-card span { position:absolute; inset:auto 0 0; padding:28px 12px 10px; background:linear-gradient(transparent, rgba(18,18,17,.62)); color:#fff; font-size:12.5px; line-height:1.35; opacity:0; transform:translateY(6px); --motion:opacity var(--base) var(--ease), transform var(--base) var(--ease); }
   .reel-card a:hover span, .reel-card a:focus-visible span { opacity:1; transform:none; }
   @media (hover: none) { .reel-card span { opacity:1; transform:none; } }
   .reel-toggle { position:absolute; right:6px; bottom:34px; width:30px; height:30px; border:1px solid var(--line); background:var(--surface); color:var(--muted); box-shadow:var(--shadow); border-radius:999px; }
@@ -683,14 +685,10 @@
   .home-head h1 { font-size:17px; line-height:32px; } /* same as the listing and taste page titles */
   @media (max-width:600px) { .reel { --reel-card:200px; } }
   /* Still frames: no drift; the reel scrolls by hand instead. */
-  /* The reel can be scrolled sideways and grabbed; touch keeps vertical page scrolling. */
   .reel-viewport { touch-action:pan-y; user-select:none; -webkit-user-select:none; }
   @media (pointer:fine) { .reel-viewport { cursor:grab; } .reel-viewport a { cursor:inherit; } .reel[data-dragging] .reel-viewport { cursor:grabbing; } }
   .reel[data-still] .reel-viewport { overflow-x:auto; touch-action:auto; scrollbar-width:none; }
   .reel[data-still] .reel-viewport::-webkit-scrollbar { display:none; }
-  @media (prefers-reduced-motion: reduce) {
-    .reel-card, .reel-card a, .reel-card span { transition:none; }
-  }
 </style>
 </head>
 <body>
@@ -778,7 +776,9 @@
     </div>
   </form>
 </dialog>
+<script src="/assets/motion.js"></script>
 <script type="module">
+const motion = window.whimMotion;
 document.addEventListener('click', event => {
   const button = event.target.closest('[data-display-toggle]');
   if (!button) return;
@@ -1162,7 +1162,14 @@ function renderJobInto(el, job, doneHtml) {
   if (!job) { el.innerHTML = ""; return; }
   const log = el.querySelector(".log");
   const atBottom = !log || log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+  const previous = el.querySelector(".bar > span");
+  const progress = previous ? new DOMMatrixReadOnly(getComputedStyle(previous).transform).a : 0;
   el.innerHTML = jobPanel(job, doneHtml);
+  const bar = el.querySelector(".bar > span");
+  if (bar) {
+    const target = new DOMMatrixReadOnly(getComputedStyle(bar).transform).a;
+    motion.animate(bar, { transform: [`scaleX(${progress})`, `scaleX(${target})`] }, { duration: .6 });
+  }
   const next = el.querySelector(".log");
   if (next && atBottom) next.scrollTop = next.scrollHeight;
 }
@@ -1261,58 +1268,60 @@ function reelCard(slide, i, copy = false) {
   </a></li>`;
 }
 
-const REEL_SPEED = 6; // px per second: a very slow, steady drift
-const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-let reelFrame = 0;
-let reelListeners = null;
+const REEL_SPEED = 6; // pixels per second
+const reducedMotion = motion.reduce;
+let stopReel = null;
 
-/** Drift the reel left at a steady pace, looping through a copy of the photos; it eases to a stop on hover.
- *  A trackpad's sideways swipe scrolls it, and a mouse, finger or pen can grab it and fling it either way. */
+/** Motion owns the clock and speed easing; layout is measured only when the reel changes size. */
 function startReel() {
-  cancelAnimationFrame(reelFrame);
-  reelListeners?.abort();
+  stopReel?.();
   const reel = $(".reel:not(.reel-empty)");
   if (!reel) return;
   const viewport = $(".reel-viewport", reel);
   const track = $(".reel-track", reel);
   const toggle = $("[data-reel-toggle]", reel);
   const slides = state.home.slides;
-  let offset = 0, speed = 0, fling = 0, last = 0, userPaused = false, hovering = false, drag = null, dragged = false;
-  const span = () => {
-    const [a] = track.children;
-    const next = track.children[slides.length];
-    return next ? next.offsetLeft - a.offsetLeft : 0; // layout positions, unaffected by the cards' tilt
-  };
-  // Enough copies that the strip never shows a gap as the originals drift out.
-  const fill = () => {
-    track.querySelectorAll("[aria-hidden]").forEach((el) => el.remove());
-    if (reducedMotion.matches) return;
-    const one = track.lastElementChild.offsetLeft + track.lastElementChild.offsetWidth - track.firstElementChild.offsetLeft;
-    const copies = Math.max(1, Math.ceil(reel.clientWidth / Math.max(one, 1)) + 1);
-    track.insertAdjacentHTML("beforeend", Array.from({ length: copies }, () => slides.map((s, i) => reelCard(s, i, true)).join("")).join(""));
+  const listeners = new AbortController();
+  const { signal } = listeners;
+  const position = { speed: 0 };
+  const setX = x => { track.style.transform = `translateX(${x}px)`; };
+  let offset = 0, loop = 0, userPaused = false, hovering = false, focused = false;
+  let ticking = false, velocity, fling = 0, drag = null, dragged = false;
+  const clock = (on) => {
+    if (on === ticking) return;
+    ticking = on;
+    if (on) motion.frame.render(tick, true);
+    else motion.cancelFrame(tick);
   };
   const still = () => reducedMotion.matches;
   const place = () => {
-    const loop = span();
-    if (loop) offset = ((offset % loop) + loop) % loop; // wrap both ways: a copy always sits where the originals were
-    track.style.transform = `translateX(${-offset}px)`;
+    if (loop) offset = ((offset % loop) + loop) % loop;
+    track.style.transform = still() ? "" : `translateX(${-offset}px)`;
   };
-  // Move the strip by hand; with reduced motion it is a plain scroller, so move that instead.
-  const nudge = (dx) => {
+  const nudge = dx => {
     if (still()) viewport.scrollLeft += dx;
     else { offset += dx; place(); }
   };
-  const tick = (now) => {
-    if (!reel.isConnected || still()) return;
-    const dt = last ? Math.min(now - last, 100) / 1000 : 0;
-    last = now;
-    const target = hovering || userPaused || drag || document.hidden ? 0 : REEL_SPEED;
-    speed += (target - speed) * Math.min(1, dt * 3); // ease in and out of motion rather than stopping dead
-    fling *= Math.exp(-dt * 4); // a flicked reel glides on and settles
-    if (Math.abs(fling) < 2) fling = 0;
-    if (!drag) offset += (speed + fling) * dt;
+  const tick = ({ delta }) => {
+    if (!reel.isConnected || !loop) { clock(false); return; }
+    const dt = Math.min(delta, 64) / 1000;
+    if (!still() && !document.hidden) {
+      fling *= Math.exp(-dt * 4);
+      if (Math.abs(fling) < 2) fling = 0;
+      if (!drag) offset += (position.speed + fling) * dt;
+      place();
+    }
+    if (!position.speed && !fling && !drag && velocity?.state !== "running") clock(false);
+  };
+  const fill = () => {
+    track.querySelectorAll("[aria-hidden]").forEach(el => el.remove());
+    const first = track.firstElementChild, last = track.lastElementChild;
+    const one = last.offsetLeft + last.offsetWidth - first.offsetLeft;
+    const copies = Math.max(1, Math.ceil(reel.clientWidth / Math.max(one, 1)) + 1);
+    track.insertAdjacentHTML("beforeend", Array.from({ length: copies }, () => slides.map((s, i) => reelCard(s, i, true)).join("")).join(""));
+    loop = track.children[slides.length].offsetLeft - first.offsetLeft;
+    if (loop) offset %= loop;
     place();
-    reelFrame = requestAnimationFrame(tick);
   };
   const update = () => {
     reel.toggleAttribute("data-still", still());
@@ -1320,50 +1329,50 @@ function startReel() {
     toggle.innerHTML = icon(userPaused ? "play" : "pause");
     toggle.setAttribute("aria-label", userPaused ? "Play the photo reel" : "Pause the photo reel");
     toggle.dataset.tip = userPaused ? "Play" : "Pause";
-    cancelAnimationFrame(reelFrame);
-    if (still()) { offset = 0; speed = 0; fling = 0; track.style.transform = ""; return; }
-    last = 0;
-    reelFrame = requestAnimationFrame(tick);
+    velocity?.stop();
+    if (still() || document.hidden) { position.speed = 0; fling = 0; clock(false); place(); return; }
+    const target = userPaused || hovering || focused || drag ? 0 : REEL_SPEED;
+    clock(true);
+    velocity = motion.animate(position, { speed: target }, { duration: .5, onFinish: () => { if (!target && !fling && !drag) clock(false); } });
   };
-  toggle.addEventListener("click", () => { userPaused = !userPaused; update(); });
-  reel.addEventListener("pointerenter", (event) => { if (event.pointerType === "mouse") hovering = true; });
-  reel.addEventListener("pointerleave", (event) => { if (event.pointerType === "mouse") hovering = false; });
-  reel.addEventListener("focusin", () => (hovering = true));
-  reel.addEventListener("focusout", (event) => { if (!reel.contains(event.relatedTarget)) hovering = false; });
-
-  // Trackpad: a sideways swipe (or Shift + wheel) scrolls the reel; an up-and-down swipe still scrolls the page.
-  viewport.addEventListener("wheel", (event) => {
+  toggle.addEventListener("click", () => { userPaused = !userPaused; update(); }, { signal });
+  reel.addEventListener("pointerenter", event => { if (event.pointerType === "mouse") { hovering = true; update(); } }, { signal });
+  reel.addEventListener("pointerleave", event => { if (event.pointerType === "mouse") { hovering = false; update(); } }, { signal });
+  reel.addEventListener("focusin", () => { focused = true; update(); }, { signal });
+  reel.addEventListener("focusout", e => { if (!reel.contains(e.relatedTarget)) { focused = false; update(); } }, { signal });
+  viewport.addEventListener("wheel", event => {
     const dx = event.deltaX || (event.shiftKey ? event.deltaY : 0);
-    if (!dx || Math.abs(dx) < Math.abs(event.shiftKey ? 0 : event.deltaY)) return;
-    if (still()) return; // the native scroller handles it
+    if (!dx || Math.abs(dx) < Math.abs(event.shiftKey ? 0 : event.deltaY) || still()) return;
     event.preventDefault();
     fling = 0;
     nudge(event.deltaMode === 1 ? dx * 16 : dx);
-  }, { passive: false });
-
-  // Grab and pan with a mouse, finger or pen. Touch keeps vertical page scrolling (touch-action: pan-y).
-  viewport.addEventListener("pointerdown", (event) => {
+  }, { passive: false, signal });
+  viewport.addEventListener("pointerdown", event => {
     if (event.button !== 0 || (still() && event.pointerType !== "mouse")) return;
-    drag = { id: event.pointerId, x: event.clientX, lastX: event.clientX, lastT: event.timeStamp, v: 0, moved: false };
+    drag = { id: event.pointerId, type: event.pointerType, x: event.clientX, y: event.clientY, lastX: event.clientX, lastT: event.timeStamp, v: 0, moved: false };
     dragged = false;
-    fling = 0;
-  });
-  viewport.addEventListener("pointermove", (event) => {
+  }, { signal });
+  viewport.addEventListener("pointermove", event => {
     if (!drag || event.pointerId !== drag.id) return;
     if (!drag.moved) {
-      if (Math.abs(event.clientX - drag.x) < 6) return;
+      const dxIntent = Math.abs(event.clientX - drag.x);
+      const dyIntent = Math.abs(event.clientY - drag.y);
+      if (drag.type !== "mouse" && dyIntent > 8 && dyIntent > dxIntent * 1.15) { drag = null; return; }
+      if (dxIntent < 8 || (drag.type !== "mouse" && dxIntent <= dyIntent * 1.15)) return;
       drag.moved = true;
+      fling = 0;
+      update();
       viewport.setPointerCapture(event.pointerId);
       reel.toggleAttribute("data-dragging", true);
     }
     const dx = drag.lastX - event.clientX;
     const dt = Math.max(event.timeStamp - drag.lastT, 1) / 1000;
-    drag.v = drag.v * 0.6 + (dx / dt) * 0.4; // smoothed px/s for the release fling
+    drag.v = drag.v * 0.6 + (dx / dt) * 0.4;
     drag.lastX = event.clientX;
     drag.lastT = event.timeStamp;
     nudge(dx);
-  });
-  const release = (event) => {
+  }, { signal });
+  const release = event => {
     if (!drag || event.pointerId !== drag.id) return;
     if (drag.moved) {
       dragged = true;
@@ -1371,17 +1380,17 @@ function startReel() {
     }
     drag = null;
     reel.removeAttribute("data-dragging");
+    update();
   };
-  viewport.addEventListener("pointerup", release);
-  viewport.addEventListener("pointercancel", release);
-  // A drag that ends over a photo shouldn't open its report.
-  viewport.addEventListener("click", (event) => { if (dragged) { event.preventDefault(); event.stopPropagation(); dragged = false; } }, true);
-  viewport.addEventListener("dragstart", (event) => event.preventDefault());
-
-  reelListeners = new AbortController();
-  const { signal } = reelListeners;
-  reducedMotion.addEventListener("change", () => { if (reel.isConnected) { fill(); update(); } }, { signal });
-  addEventListener("resize", () => { if (reel.isConnected) fill(); }, { signal });
+  viewport.addEventListener("pointerup", release, { signal });
+  viewport.addEventListener("pointercancel", release, { signal });
+  viewport.addEventListener("click", event => { if (dragged) { event.preventDefault(); event.stopPropagation(); dragged = false; } }, { capture: true, signal });
+  viewport.addEventListener("dragstart", event => event.preventDefault(), { signal });
+  reducedMotion.addEventListener("change", () => { fill(); update(); }, { signal });
+  document.addEventListener("visibilitychange", update, { signal });
+  addEventListener("resize", () => { fill(); update(); }, { signal });
+  stopReel = () => { listeners.abort(); velocity?.stop(); clock(false); };
+  motion.own(reel, stopReel);
   fill();
   update();
 }
@@ -1431,7 +1440,7 @@ function runRow(r, aggregate = false) {
         ${statuses ? `<div class="statuses">${statuses}</div>` : ""}
       </div>
       ${verdict ? `<div class="run-verdict">${verdict}</div>` : ""}
-      ${r.images?.length ? `<a class="run-images photo-stack" href="${esc(r.reportUrl)}" tabindex="-1" aria-hidden="true">${r.images.map((img, i) => `<img src="${esc(img.src)}" alt="" loading="lazy" decoding="async" title="${esc(img.caption)}" style="${thumbTilt(img.src, i)}">`).join("")}</a>` : ""}
+      ${r.images?.length ? `<a class="run-images photo-stack" style="--stack-count:${r.images.length}" href="${esc(r.reportUrl)}" tabindex="-1" aria-hidden="true">${r.images.map((img, i) => `<img src="${esc(img.src)}" alt="" loading="lazy" decoding="async" title="${esc(img.caption)}" style="${thumbTilt(img.src, i)}">`).join("")}</a>` : ""}
       ${r.reportUrl ? `<a class="btn btn-small" href="${esc(r.reportUrl)}" aria-label="Open report from ${esc(fmtDate(r.startedAt))}">Open report</a><span class="run-chevron" aria-hidden="true">${icon("chevron")}</span>` : ""}
     </li>`;
 }
@@ -1443,7 +1452,7 @@ function thumbTilt(seed, i) {
   const rand = (shift) => ((h >>> shift) & 255) / 255;
   const tilt = (1 + rand(0) * 3) * (i % 2 ? 1 : -1);
   const lift = (rand(8) - 0.5) * 6;
-  return `--tilt:${tilt.toFixed(1)}deg;--lift:${lift.toFixed(1)}px;z-index:${i}`;
+  return `--tilt:${tilt.toFixed(1)}deg;--lift:${lift.toFixed(1)}px;--fan:${i * 14}px;z-index:${i}`;
 }
 
 function profilePreview(profile) {
@@ -1558,7 +1567,7 @@ function renderListing() {
       ${l.photos.length ? `
       <div class="photos-area" id="photos-area">
       <div data-photos-strip ${photosHidden ? "" : "hidden"}>
-        <div><button class="photo-stack" type="button" data-toggle="photos" aria-expanded="${!photosHidden}" aria-controls="photos-body" aria-label="Show all ${l.photos.length} listing photos">
+        <div><button class="photo-stack" style="--stack-count:${Math.min(8, selected || l.photos.length)}" type="button" data-toggle="photos" aria-expanded="${!photosHidden}" aria-controls="photos-body" aria-label="Show all ${l.photos.length} listing photos">
           ${(selected ? l.photos.filter((p) => p.selected) : l.photos).slice(0, 8).map((p, i) => `<img src="${esc(p.thumb.replace("w=640", "w=240"))}" alt="" loading="lazy" decoding="async" style="${thumbTilt(p.file, i)}">`).join("")}
         </button></div>
       </div>
@@ -1717,26 +1726,27 @@ function swapPhotosArea(hidden) {
   outgoing.hidden = false;
   Object.assign(outgoing.style, { position: "absolute", inset: "0 0 auto 0", pointerEvents: "none" });
   area.style.overflow = "hidden";
-  const duration = Math.round(Math.min(520, Math.max(300, Math.abs(to - from) * 0.45)));
-  const ease = "cubic-bezier(0.22, 1, 0.36, 1)";
-  const animations = [
-    area.animate([{ height: `${from}px` }, { height: `${to}px` }], { duration, easing: ease }),
-    outgoing.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, easing: "ease-out", fill: "forwards" }),
-    incoming.animate(
-      [{ opacity: 0, transform: hidden ? "scale(0.97)" : "translateY(-6px)" }, { opacity: 1, transform: "none" }],
-      { duration: duration - 60, delay: 60, easing: ease, fill: "backwards" },
-    ),
-  ];
+  const duration = Math.min(.52, Math.max(.3, Math.abs(to - from) * .00045));
+  let timeline;
   const settle = () => {
     if (settlePhotosSwap !== settle) return;
     settlePhotosSwap = null;
-    for (const animation of animations) animation.cancel();
+    timeline.stop();
+    area.style.removeProperty("height");
     area.style.removeProperty("overflow");
-    outgoing.removeAttribute("style");
+    for (const view of [incoming, outgoing]) { view.style.removeProperty("opacity"); view.style.removeProperty("transform"); }
+    outgoing.style.removeProperty("position");
+    outgoing.style.removeProperty("inset");
+    outgoing.style.removeProperty("pointer-events");
     outgoing.hidden = true;
   };
   settlePhotosSwap = settle;
-  animations[0].finished.then(settle, () => {});
+  timeline = motion.sequence([
+    [area, { height: [`${from}px`, `${to}px`] }, { duration, at: 0 }],
+    [outgoing, { opacity: [1, 0] }, { duration: .14, at: 0 }],
+    [incoming, { opacity: [0, 1], transform: [hidden ? "scale(.97)" : "translateY(-6px)", "none"] }, { duration: duration - .06, at: .06 }],
+  ], settle);
+  motion.own(area, settle);
 }
 
 /* ---------- Taste profile view ---------- */
@@ -2052,7 +2062,7 @@ function showUndo(text, undo) {
   el.querySelector("button").addEventListener("click", async () => { el.remove(); await undo(); });
   document.body.append(el);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.remove(), 8000);
+  toastTimer = setTimeout(() => motion.animate(el, { opacity: 0, transform: "translateX(-50%) translateY(6px)" }, { duration: .18, onFinish: () => el.remove() }), 8000);
 }
 
 async function saveBrief() {
@@ -3163,7 +3173,7 @@ async function load() {
   state.textEdit = null;
   state.job = null;
   clearTimeout(pollTimer);
-  cancelAnimationFrame(reelFrame);
+  stopReel?.();
   try {
     const [listings, profiles, tasteProfiles, status] = await Promise.all([api("/api/listings"), loadProfiles(), api("/api/taste-profiles"), api("/api/status")]);
     Object.assign(state, { listings, profiles, tasteProfiles });
