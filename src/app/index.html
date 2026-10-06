@@ -180,9 +180,6 @@
   .notice { padding:10px 14px; border-radius:8px; background:var(--warn-bg); color:var(--warn); margin:0; font-size:14px; }
 
   /* Listing: photo selection */
-  .collapse { display:grid; grid-template-rows:1fr; opacity:1; transition:grid-template-rows .34s var(--ease), opacity .22s var(--ease); }
-  .collapse > .collapse-inner { overflow:hidden; min-height:0; padding:4px; margin:-4px; } /* room for focus rings */
-  .collapse[data-collapsed="true"] { grid-template-rows:0fr; opacity:0; visibility:hidden; transition:grid-template-rows .34s var(--ease), opacity .16s var(--ease), visibility 0s linear .34s; }
   .fade { transition:opacity .2s var(--ease), visibility 0s; }
   .fade[data-collapsed="true"] { opacity:0; visibility:hidden; transition:opacity .16s var(--ease), visibility 0s linear .16s; }
   .skip-inline { position:absolute; left:-9999px; }
@@ -293,6 +290,8 @@
   .photo-stack { display:flex; padding:6px 10px 6px 4px; }
   .photo-stack img { --tilt:0deg; --lift:0px; position:relative; width:96px; aspect-ratio:4 / 3; object-fit:cover; border-radius:7px; background:var(--surface-2); display:block; box-shadow:0 0 0 2px var(--surface), 0 2px 6px rgba(0,0,0,.18), 0 8px 18px rgba(0,0,0,.14); transform:translateY(var(--lift)) rotate(var(--tilt)); transition:transform var(--slow) var(--ease), margin var(--slow) var(--ease); }
   .photo-stack img + img { margin-left:-26px; }
+  .photos-area { position:relative; display:flow-root; } /* its own block context, so margins measure the same with or without overflow clipping */
+  .photos-area > [data-photos-strip] > div, .photos-area #photo-drop { padding:4px; margin:-4px; } /* room for focus rings */
   .photo-stack:hover img + img, .photo-stack:focus-visible img + img { margin-left:-12px; }
   .photo-stack:hover img, .photo-stack:focus-visible img { transform:translateY(calc(var(--lift) * .5)) rotate(calc(var(--tilt) * .5)); }
   @media (prefers-reduced-motion: reduce) { .photo-stack img { transition:none; } }
@@ -313,6 +312,26 @@
   .status .icon { width:14px; height:14px; }
   .s-verified { color:var(--ok); } .s-review { color:var(--warn); } .s-failed, .s-error { color:var(--bad); } .s-unchanged { color:var(--muted); }
   .status > span { color:var(--text); }
+  .statuses .s-unchanged > span { color:var(--muted); }
+  /* A listing's run rows center the verdict line between the details and the button, or tuck it under the details when narrow. */
+  .run:has(> .run-verdict) { display:grid; grid-template-columns:minmax(0, 1fr) 13.5rem minmax(0, 1fr); } /* fixed middle column keeps the bars lined up row to row */
+  .run:has(> .run-verdict) > .run-main { grid-column:1; }
+  .run-verdict { grid-column:2; font-size:13px; }
+  .run:has(> .run-verdict) > .btn, .run:has(> .run-verdict) > .run-chevron { grid-column:3; justify-self:end; }
+  @media (max-width:1000px) {
+    .run:has(> .run-verdict) { grid-template-columns:minmax(0, 1fr) auto; row-gap:6px; }
+    .run:has(> .run-verdict) > .run-main { grid-row:1; }
+    .run-verdict { grid-column:1; grid-row:2; }
+    .run:has(> .run-verdict) > .btn, .run:has(> .run-verdict) > .run-chevron { grid-column:2; grid-row:1 / span 2; align-self:center; }
+  }
+  .verdict { display:inline-flex; align-items:center; gap:10px; color:var(--muted); border-radius:4px; }
+  .verdict-bar { display:flex; gap:2px; width:88px; height:6px; }
+  .verdict-bar i { min-width:4px; border-radius:999px; background:var(--muted); opacity:.45; }
+  .verdict-bar .v-verified { background:var(--ok); opacity:1; }
+  .verdict-bar .v-review { background:var(--warn); opacity:1; }
+  .verdict-bar .v-failed, .verdict-bar .v-error { background:var(--bad); opacity:1; }
+  .verdict[data-tip]::after { left:0; translate:0 4px; }
+  .verdict[data-tip]:hover::after, .verdict[data-tip]:focus-visible::after { translate:0 0; }
   .empty { padding:32px; border:1px dashed var(--line-strong); border-radius:10px; color:var(--muted); }
   .empty-start { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 20px; }
 
@@ -1302,11 +1321,23 @@ function renderEmpty() {
   </div>`;
 }
 
+/** One quiet line for a run's verdicts: a thin proportional bar and "2 of 5 verified"; the full breakdown shows on hover. */
+function verdictSummary(counts = {}) {
+  const parts = STATUS_ORDER.filter((s) => counts[s]).map((s) => [s, counts[s]]);
+  const total = parts.reduce((n, [, c]) => n + c, 0);
+  if (!total) return "";
+  const breakdown = parts.map(([s, c]) => `${c} ${STATUS[s].label.toLowerCase()}`).join(" · ");
+  return `<span class="verdict" role="img" tabindex="0" aria-label="${esc(breakdown)}" data-tip="${esc(breakdown)}">
+    <span class="verdict-bar" aria-hidden="true">${parts.map(([s, c]) => `<i class="v-${s}" style="flex:${c}"></i>`).join("")}</span>
+    <span aria-hidden="true">${counts.verified ?? 0} of ${total} verified</span>
+  </span>`;
+}
+
 function runRow(r, aggregate = false) {
   // Home and All reports skip the per-photo verdict counts; a listing's own run list keeps them.
-  const counts = aggregate ? "" : STATUS_ORDER.filter((s) => r.counts?.[s]).map((s) => statusTag(s, r.counts[s])).join("");
+  const verdict = aggregate || (r.error && !r.report) || !r.finishedAt ? "" : verdictSummary(r.counts);
   const statuses = [
-    r.error && !r.report ? `<span class="status s-error">${icon("x")}<span>${esc(r.error)}</span></span>` : !r.finishedAt ? `<span class="status s-unchanged">${icon("minus")}<span>In progress or interrupted</span></span>` : counts,
+    r.error && !r.report ? `<span class="status s-error">${icon("x")}<span>${esc(r.error)}</span></span>` : !r.finishedAt ? `<span class="status s-unchanged">${icon("minus")}<span>In progress or interrupted</span></span>` : "",
     r.stopped ? `<span class="status s-review">${icon("stop")}<span>Stopped early</span></span>` : "",
   ].join("");
   const meta = [
@@ -1323,6 +1354,7 @@ function runRow(r, aggregate = false) {
         <div class="run-meta">${meta}</div>
         ${statuses ? `<div class="statuses">${statuses}</div>` : ""}
       </div>
+      ${verdict ? `<div class="run-verdict">${verdict}</div>` : ""}
       ${r.images?.length ? `<a class="run-images photo-stack" href="${esc(r.reportUrl)}" tabindex="-1" aria-hidden="true">${r.images.map((img, i) => `<img src="${esc(img.src)}" alt="" loading="lazy" decoding="async" title="${esc(img.caption)}" style="${thumbTilt(img.src, i)}">`).join("")}</a>` : ""}
       ${r.reportUrl ? `<a class="btn btn-small" href="${esc(r.reportUrl)}" aria-label="Open report from ${esc(fmtDate(r.startedAt))}">Open report</a><span class="run-chevron" aria-hidden="true">${icon("chevron")}</span>` : ""}
     </li>`;
@@ -1448,13 +1480,14 @@ function renderListing() {
         </div>
       </div>
       ${l.photos.length ? `
-      <div class="collapse" data-photos-strip data-collapsed="${!photosHidden}">
-        <div class="collapse-inner"><button class="photo-stack" type="button" data-toggle="photos" aria-expanded="${!photosHidden}" aria-controls="photos-body" aria-label="Show all ${l.photos.length} listing photos">
+      <div class="photos-area" id="photos-area">
+      <div data-photos-strip ${photosHidden ? "" : "hidden"}>
+        <div><button class="photo-stack" type="button" data-toggle="photos" aria-expanded="${!photosHidden}" aria-controls="photos-body" aria-label="Show all ${l.photos.length} listing photos">
           ${(selected ? l.photos.filter((p) => p.selected) : l.photos).slice(0, 8).map((p, i) => `<img src="${esc(p.thumb.replace("w=640", "w=240"))}" alt="" loading="lazy" decoding="async" style="${thumbTilt(p.file, i)}">`).join("")}
         </button></div>
       </div>
-      <div class="collapse" id="photos-body" data-collapsed="${photosHidden}">
-        <div class="collapse-inner dropzone-quiet" id="photo-drop">
+      <div id="photos-body" ${photosHidden ? "hidden" : ""}>
+        <div class="dropzone-quiet" id="photo-drop">
           <a class="skip-inline btn btn-small" href="#run-h">Skip to redesign settings</a>
           <p class="hint" style="margin:0 0 16px">Room labels decide which part of your taste profile applies: "great room" uses living-room direction, "den" uses office and living. Drop more photos here to add them.</p>
           <div class="grid">
@@ -1477,6 +1510,7 @@ function renderListing() {
             }).join("")}
           </div>
         </div>
+      </div>
       </div>` : `
       <div class="dropzone" id="photo-drop">
         <div class="dropzone-empty">${icon("image")}<p style="margin:0">Drop the listing's photos here, or use <strong>Add photos</strong>. JPG, PNG, WebP, or TIFF.</p></div>
@@ -1577,11 +1611,56 @@ function updateSelection(files, selected) {
 function setPhotosHidden(hidden) {
   setParams({ photos: hidden ? "hidden" : null });
   for (const el of document.querySelectorAll('[data-toggle="photos"]')) el.setAttribute("aria-expanded", String(!hidden));
-  // Animated via CSS grid rows; visibility:hidden at rest keeps collapsed content out of the tab order.
-  for (const el of document.querySelectorAll("#photos-body, [data-photos-only]")) el.dataset.collapsed = String(hidden);
-  const strip = $("[data-photos-strip]");
-  if (strip) strip.dataset.collapsed = String(!hidden);
+  for (const el of document.querySelectorAll("[data-photos-only]")) el.dataset.collapsed = String(hidden);
+  swapPhotosArea(hidden);
   renderListings();
+}
+
+/**
+ * Swap the photo stack and the full photo grid with one smooth motion: the area eases between the two heights
+ * while the outgoing view fades out over the top and the incoming one fades in. Only the area's height animates,
+ * so the photo grid never relayouts mid-transition. Reduced motion swaps instantly.
+ */
+let settlePhotosSwap = null;
+function swapPhotosArea(hidden) {
+  const area = $("#photos-area");
+  const strip = $("[data-photos-strip]");
+  const body = $("#photos-body");
+  if (!area || !strip || !body) return;
+  const incoming = hidden ? strip : body;
+  const outgoing = hidden ? body : strip;
+  // A swap still in flight hands over from whatever height it has reached.
+  const from = area.getBoundingClientRect().height;
+  settlePhotosSwap?.();
+  incoming.hidden = false;
+  outgoing.hidden = true;
+  if (reducedMotion.matches) return;
+  const to = area.getBoundingClientRect().height;
+
+  // The outgoing view stays as an overlay while it fades, without taking up space.
+  outgoing.hidden = false;
+  Object.assign(outgoing.style, { position: "absolute", inset: "0 0 auto 0", pointerEvents: "none" });
+  area.style.overflow = "hidden";
+  const duration = Math.round(Math.min(520, Math.max(300, Math.abs(to - from) * 0.45)));
+  const ease = "cubic-bezier(0.22, 1, 0.36, 1)";
+  const animations = [
+    area.animate([{ height: `${from}px` }, { height: `${to}px` }], { duration, easing: ease }),
+    outgoing.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, easing: "ease-out", fill: "forwards" }),
+    incoming.animate(
+      [{ opacity: 0, transform: hidden ? "scale(0.97)" : "translateY(-6px)" }, { opacity: 1, transform: "none" }],
+      { duration: duration - 60, delay: 60, easing: ease, fill: "backwards" },
+    ),
+  ];
+  const settle = () => {
+    if (settlePhotosSwap !== settle) return;
+    settlePhotosSwap = null;
+    for (const animation of animations) animation.cancel();
+    area.style.removeProperty("overflow");
+    outgoing.removeAttribute("style");
+    outgoing.hidden = true;
+  };
+  settlePhotosSwap = settle;
+  animations[0].finished.then(settle, () => {});
 }
 
 /* ---------- Taste profile view ---------- */
