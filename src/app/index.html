@@ -127,7 +127,7 @@
   .collection-link:hover { box-shadow:var(--shadow-hover); }
   .collection-preview { width:88px; height:70px; border-radius:8px; overflow:hidden; flex:none; display:grid; place-items:center; background:var(--surface-2); color:var(--muted); }
   .collection-preview > img { width:100%; height:100%; object-fit:cover; }
-  .collection-preview .profile-preview { height:100%; }
+  .collection-preview .profile-preview { height:100%; min-height:0; }
   .collection-copy { display:grid; gap:4px; min-width:0; overflow-wrap:anywhere; }
   .collection-copy strong { font-size:16px; font-weight:600; line-height:1.3; }
   .collection-copy small { color:var(--muted); font-size:13px; }
@@ -224,8 +224,8 @@
   .redesign-settings .tiers { grid-template-columns:1fr; }
   .redesign-settings .tier { min-height:66px; align-items:center; }
   .redesign-settings .tier input { margin:0; }
-  .profile-card { position:relative; display:flex; flex-direction:column; height:var(--profile-card-height, auto); width:100%; border:1px solid var(--line-strong); border-radius:10px; background:var(--surface); overflow:hidden; }
-  .profile-preview { display:grid; grid-template-columns:2fr 1fr; grid-template-rows:1fr 1fr; gap:3px; height:154px; flex:1; min-height:0; width:100%; background:var(--surface-2); }
+  .profile-card { position:relative; display:grid; grid-template-rows:minmax(154px, 1fr) auto; height:var(--profile-card-height, auto); width:100%; border:1px solid var(--line-strong); border-radius:10px; background:var(--surface); overflow:hidden; }
+  .profile-preview { display:grid; grid-template-columns:2fr 1fr; grid-template-rows:1fr 1fr; gap:3px; min-height:154px; width:100%; background:var(--surface-2); }
   .profile-preview img { width:100%; height:100%; min-height:0; object-fit:cover; }
   .profile-preview img:first-child { grid-row:1 / -1; }
   .profile-preview[data-count="1"] { grid-template-columns:1fr; }
@@ -473,7 +473,8 @@
     .file a .icon { width:16px; height:16px; }
 
     /* Redesign settings: keep the primary action close and full width. */
-    .profile-card .profile-preview { flex:none; height:128px; }
+    .profile-card { grid-template-rows:minmax(128px, 1fr) auto; }
+    .profile-card .profile-preview { min-height:128px; }
     .profile-caption { min-height:52px; }
     .profile-edit, .profile-change { min-height:44px; }
     .profile-option { min-height:44px; }
