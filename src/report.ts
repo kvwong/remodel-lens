@@ -375,25 +375,25 @@ export function renderReport(input: {
 <title>${esc(docTitle)}</title>
 <script>
 (() => {
+  // Display follows the system setting; the sidebar toggle flips it for this tab only (sessionStorage).
   const system = matchMedia('(prefers-color-scheme: dark)');
+  const read = () => { try { return sessionStorage.getItem('remodel-lens-display'); } catch { return null; } };
   const apply = () => {
-    let mode = 'system';
-    try {
-      const saved = document.cookie.split('; ').find(value => value.startsWith('remodel-lens-display='));
-      mode = saved ? saved.split('=')[1] : localStorage.getItem('remodel-lens-display') || 'system';
-    } catch {}
-    if (!['system', 'light', 'dark'].includes(mode)) mode = 'system';
-    document.documentElement.dataset.display = mode;
-    document.documentElement.dataset.theme = mode === 'system' ? (system.matches ? 'dark' : 'light') : mode;
-    document.querySelectorAll('[data-display]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.display === mode)));
+    const base = system.matches ? 'dark' : 'light';
+    const saved = read();
+    const theme = saved === 'light' || saved === 'dark' ? saved : base;
+    document.documentElement.dataset.theme = theme;
+    const next = theme === 'dark' ? 'light' : 'dark';
+    document.querySelectorAll('[data-display-toggle]').forEach(button => {
+      button.dataset.current = theme;
+      button.setAttribute('aria-label', 'Switch to ' + next + ' mode');
+      button.dataset.tip = next === 'dark' ? 'Dark mode' : 'Light mode';
+    });
   };
+  try { localStorage.removeItem('remodel-lens-display'); document.cookie = 'remodel-lens-display=; Path=/; Max-Age=0'; } catch {}
   apply();
   system.addEventListener('change', apply);
-  addEventListener('storage', apply);
   addEventListener('display-change', apply);
-  addEventListener('focus', apply);
-  document.addEventListener('visibilitychange', apply);
-  setInterval(apply, 1000); // Cookies share the preference across local preview ports.
   document.addEventListener('DOMContentLoaded', apply);
 })();
 </script>

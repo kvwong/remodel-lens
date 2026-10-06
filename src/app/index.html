@@ -7,25 +7,25 @@
 <title>Remodel Lens</title>
 <script>
 (() => {
+  // Display follows the system setting; the sidebar toggle flips it for this tab only (sessionStorage).
   const system = matchMedia('(prefers-color-scheme: dark)');
+  const read = () => { try { return sessionStorage.getItem('remodel-lens-display'); } catch { return null; } };
   const apply = () => {
-    let mode = 'system';
-    try {
-      const saved = document.cookie.split('; ').find(value => value.startsWith('remodel-lens-display='));
-      mode = saved ? saved.split('=')[1] : localStorage.getItem('remodel-lens-display') || 'system';
-    } catch {}
-    if (!['system', 'light', 'dark'].includes(mode)) mode = 'system';
-    document.documentElement.dataset.display = mode;
-    document.documentElement.dataset.theme = mode === 'system' ? (system.matches ? 'dark' : 'light') : mode;
-    document.querySelectorAll('[data-display]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.display === mode)));
+    const base = system.matches ? 'dark' : 'light';
+    const saved = read();
+    const theme = saved === 'light' || saved === 'dark' ? saved : base;
+    document.documentElement.dataset.theme = theme;
+    const next = theme === 'dark' ? 'light' : 'dark';
+    document.querySelectorAll('[data-display-toggle]').forEach(button => {
+      button.dataset.current = theme;
+      button.setAttribute('aria-label', 'Switch to ' + next + ' mode');
+      button.dataset.tip = next === 'dark' ? 'Dark mode' : 'Light mode';
+    });
   };
+  try { localStorage.removeItem('remodel-lens-display'); document.cookie = 'remodel-lens-display=; Path=/; Max-Age=0'; } catch {}
   apply();
   system.addEventListener('change', apply);
-  addEventListener('storage', apply);
   addEventListener('display-change', apply);
-  addEventListener('focus', apply);
-  document.addEventListener('visibilitychange', apply);
-  setInterval(apply, 1000); // Cookies share the preference across local preview ports.
   document.addEventListener('DOMContentLoaded', apply);
 })();
 </script>
@@ -88,11 +88,10 @@
   /* Bottom row: Settings on the left, the display switch on the right. */
   .display-setting { margin-top:auto; padding:8px 0 0; flex:none; display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .display-setting .settings-link { margin:0; min-height:32px; }
-  .display-setting h2 { font-size:13px; font-weight:500; color:var(--muted); margin-bottom:8px; }
-  .display-options { display:flex; width:fit-content; gap:4px; }
-  .display-options button { display:grid; place-items:center; width:36px; height:32px; border:0; border-radius:6px; padding:0; background:transparent; color:var(--muted); cursor:pointer; }
-  .display-options button:hover { background:var(--surface-2); color:var(--text); }
-  .display-options button[aria-pressed="true"] { background:var(--primary-soft); color:var(--primary); }
+  .display-toggle { display:grid; place-items:center; width:36px; height:32px; border:0; border-radius:6px; padding:0; background:transparent; color:var(--muted); cursor:pointer; }
+  .display-toggle:hover { background:var(--surface-2); color:var(--text); }
+  /* Shows the mode on screen now: sun (first icon) in light, moon (second) in dark. */
+  .display-toggle[data-current="dark"] > :first-child, .display-toggle:not([data-current="dark"]) > :last-child { display:none; }
   .side .brand { display:block; padding-left:10px; font-size:17px; min-height:32px; line-height:32px; }
   @media (max-width: 860px) { .side { position:static; height:auto; } .side-content { overflow-x:hidden; overflow-y:auto; } }
   .side ul > li.muted { padding-left:10px; }
@@ -163,7 +162,6 @@
     .side-content nav { display:none; }
     .side .brand { padding-left:0; }
     .display-setting { margin:0 0 0 auto; padding:0; }
-    .display-options button { width:30px; height:32px; }
     main > .head + * { margin-top:0; }
     .collection-head { align-items:center; }
     .collection-head .btn { min-height:44px; }
@@ -516,7 +514,7 @@
   @media (max-width:860px) { .back-link { display:inline-flex; } .run-chevron { display:block; } }
   /* Touch: hover backgrounds stick after a tap, so only show them for real pointers. */
   @media (hover:none) {
-    .disclosure:hover:not(:disabled), .btn-quiet:hover, .icon-plain:hover, .display-options button:hover { background:transparent; }
+    .disclosure:hover:not(:disabled), .btn-quiet:hover, .icon-plain:hover, .display-toggle:hover { background:transparent; }
     .btn:hover:not(.btn-primary):not(.btn-quiet) { background:var(--surface); border-color:var(--line-strong); box-shadow:none; }
     .savebar .btn:hover:not(.btn-primary) { background:transparent; border-color:color-mix(in srgb, var(--ink-text) 35%, transparent); }
     .tier:hover:not(:has(input:checked)) { border-color:var(--line-strong); box-shadow:none; }
@@ -701,14 +699,9 @@
       <ul id="profiles-nav"><li class="muted">Loading…</li></ul>
     </nav>
     </div>
-    <section class="display-setting" aria-labelledby="display-label">
+    <section class="display-setting" aria-label="Settings and display">
       <a class="settings-link nav-inline" href="?view=settings" data-settings-link><span data-icon="settings"></span>Settings</a>
-      <h2 id="display-label" class="sr-only">Display</h2>
-      <div class="display-options" role="group" aria-labelledby="display-label">
-        <button type="button" data-display="system" aria-label="System" data-tip="System" aria-pressed="true"><span data-icon="monitor"></span></button>
-        <button type="button" data-display="light" aria-label="Light" data-tip="Light" aria-pressed="false"><span data-icon="sun"></span></button>
-        <button type="button" data-display="dark" aria-label="Dark" data-tip="Dark" aria-pressed="false"><span data-icon="moon"></span></button>
-      </div>
+      <button type="button" class="display-toggle" data-display-toggle aria-label="Switch to dark mode" data-tip="Dark mode"><span data-icon="sun"></span><span data-icon="moon"></span></button>
     </section>
   </div>
   <main id="content" tabindex="-1">
@@ -776,10 +769,11 @@
 </dialog>
 <script type="module">
 document.addEventListener('click', event => {
-  const button = event.target.closest('[data-display]');
+  const button = event.target.closest('[data-display-toggle]');
   if (!button) return;
-  document.cookie = `remodel-lens-display=${button.dataset.display}; Path=/; Max-Age=31536000; SameSite=Strict`;
-  try { localStorage.setItem('remodel-lens-display', button.dataset.display); } catch {}
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  const system = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  try { next === system ? sessionStorage.removeItem('remodel-lens-display') : sessionStorage.setItem('remodel-lens-display', next); } catch {}
   dispatchEvent(new Event('display-change'));
 });
 /* ---------- Vocabulary (kept in step with src/redesign/tiers.ts, src/report.ts, src/costs.ts) ---------- */
