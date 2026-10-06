@@ -70,7 +70,11 @@
   .display-toggle:hover { background:var(--surface-2); color:var(--text); }
   /* Shows the mode on screen now: sun (first icon) in light, moon (second) in dark. */
   .display-toggle[data-current="dark"] > :first-child, .display-toggle:not([data-current="dark"]) > :last-child { display:none; }
-  .side .brand { display:flex; align-items:center; width:fit-content; padding-left:10px; min-height:32px; line-height:32px; }
+  .side .brand { display:flex; align-items:center; width:fit-content; padding:0 10px; border-radius:8px; cursor:pointer; transition:background-color var(--base) var(--ease), opacity var(--base) var(--ease), box-shadow var(--base) var(--ease); min-height:32px; line-height:32px; }
+  /* The logo is the Home link: a pointer and a soft lift on hover so it reads as clickable. */
+  .side .brand * { cursor:inherit; }
+  @media (hover: hover) { .side .brand:hover { background:var(--surface); box-shadow:var(--shadow); } }
+  .side .brand:active { opacity:.8; }
   .side .whim-lockup { width:116px; height:28px; }
   @media (max-width: 860px) { .side { position:static; height:auto; } .side-content { overflow-x:hidden; overflow-y:auto; } }
   .side ul > li.muted { padding-left:10px; }
