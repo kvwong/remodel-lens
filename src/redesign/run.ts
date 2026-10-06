@@ -2,7 +2,7 @@ import type { Models } from "../config.js";
 import { isCancelled, log, mapLimit, progressAdd, progressDone, writeArtifact, writeJson, type LocalImage } from "../files.js";
 import { inventoryRoom, type BoxTuple, type RoomInventory } from "../listing/inventory.js";
 import type { TasteProfile } from "../taste/schema.js";
-import { editImage, editPrompt, supportsMask } from "./generate.js";
+import { editImage, editPrompt, imageConcurrency, supportsMask } from "./generate.js";
 import { buildMask, editableBoxes, editableShare, prepareImage, protectedBoxes } from "./mask.js";
 import { planRedesign, type ChangePlan } from "./plan.js";
 import { allowedAt, type Tier } from "./tiers.js";
@@ -53,7 +53,8 @@ export async function redesignListing(input: {
   location?: string | null;
 }): Promise<PhotoResult[]> {
   progressAdd(input.photos.length * (UNITS.inventory + input.tiers.length * TIER_UNITS));
-  const results = await mapLimit(input.photos, 3, (photo) => redesignPhoto({ ...input, photo }));
+  // Enough photos in flight to keep every image slot busy; edits queue in order for the shared slots.
+  const results = await mapLimit(input.photos, Math.max(3, imageConcurrency()), (photo) => redesignPhoto({ ...input, photo }));
   return results.filter((r): r is PhotoResult => r !== null);
 }
 
@@ -76,17 +77,20 @@ async function redesignPhoto(input: {
   await writeJson(outDir, `${photo.id}/inventory.json`, inventory);
   progressDone(UNITS.inventory, `${photo.basename}: inventoried`);
 
-  const tiers: TierResult[] = [];
-  for (const tier of input.tiers) {
-    if (isCancelled()) break;
+  // Scopes only depend on the inventory, so they plan, generate, and verify side by side.
+  const settled = await Promise.all(input.tiers.map(async (tier): Promise<TierResult | null> => {
+    if (isCancelled()) {
+      progressDone(TIER_UNITS, `${photo.basename} ${tier}: stopped`);
+      return null;
+    }
     const budget: TierBudget = { budget: TIER_UNITS, spent: 0 };
     try {
-      tiers.push(await redesignTier({ photo, prepared, inventory, profile, tier, models, outDir, location, budget }));
+      return await redesignTier({ photo, prepared, inventory, profile, tier, models, outDir, location, budget });
     } catch (error) {
       progressDone(budget.budget - budget.spent, `${photo.basename} ${tier}: error`);
       const message = error instanceof Error ? error.message : String(error);
       log(`${photo.id} ${tier}: error — ${message}`);
-      tiers.push({
+      return {
         tier,
         plan: { tier, expression: "", architecturalLanguage: "", changes: [], removedWalls: [], preserve: [], feasibilityFlags: [], beyondScope: [], rationale: "" },
         status: "error",
@@ -97,9 +101,10 @@ async function redesignPhoto(input: {
         image: null,
         edges: [],
         judgement: null,
-      });
+      };
     }
-  }
+  }));
+  const tiers = settled.filter((t): t is TierResult => t !== null);
   if (tiers.length === 0) return null;
   return { id: photo.id, basename: photo.basename, room: photo.roomHint || inventory.roomType, original, inventory, tiers };
 }

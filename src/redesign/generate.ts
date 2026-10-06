@@ -63,8 +63,16 @@ export function supportsMask(model: string): boolean {
   return !/^gpt-image-2\.5/.test(model);
 }
 
+export const DEFAULT_IMAGE_CONCURRENCY = 6;
+
+/** Image edits allowed in flight at once. Set on the Settings page or with IMAGE_CONCURRENCY; lower it if OpenAI rate-limits. */
+export function imageConcurrency(): number {
+  const value = Math.floor(Number(process.env.IMAGE_CONCURRENCY));
+  return value >= 1 ? Math.min(value, 16) : DEFAULT_IMAGE_CONCURRENCY;
+}
+
 /** Shared across every run in this process, so parallel listings don't multiply image-API load. */
-const imageSlots = createLimiter(Math.max(1, Number(process.env.IMAGE_CONCURRENCY) || 4));
+const imageSlots = createLimiter(imageConcurrency);
 
 export async function editImage(input: {
   model: string;

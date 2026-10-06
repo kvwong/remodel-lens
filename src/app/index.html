@@ -2503,6 +2503,13 @@ function renderModels() {
           <p class="control-note" data-model-note="image-model">${esc(notes(m.options.image, m.current.image))}</p>
         </div>
       </div>
+      <div class="setting-row">
+        <div class="setting-label"><label for="image-concurrency">Image edits at once</label><p>How many redesigns generate side by side. Higher is faster; lower it if OpenAI starts rate-limiting.</p></div>
+        <div class="setting-control">
+          <input class="settings-input num-input" type="number" id="image-concurrency" min="1" max="16" step="1" value="${m.imageConcurrency.current}" inputmode="numeric">
+          <p class="control-note">Default ${m.imageConcurrency.default}</p>
+        </div>
+      </div>
       <div class="panel-foot">
         <p class="error" id="models-error" role="alert" hidden></p>
         ${saved ? `<button class="btn btn-quiet" type="button" data-reset-models>Reset to defaults</button>` : ""}
@@ -2526,10 +2533,13 @@ async function saveModels(reset) {
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const reasoning = selectedModel("reasoning-model");
   const image = selectedModel("image-model");
-  const body = reset ? { reasoning: null, analysis: null, image: null } : {
+  const concurrency = Number($("#image-concurrency").value);
+  if (!reset && !(Number.isInteger(concurrency) && concurrency >= 1 && concurrency <= 16)) { err.textContent = "Image edits at once must be a whole number from 1 to 16."; err.hidden = false; return; }
+  const body = reset ? { reasoning: null, analysis: null, image: null, imageConcurrency: null } : {
     reasoning: reasoning === m.defaults.reasoning ? null : reasoning,
     analysis: same(analysis, m.defaults.analysis) ? null : analysis,
     image: image === m.defaults.image ? null : image,
+    imageConcurrency: concurrency === m.imageConcurrency.default ? null : concurrency,
   };
   try {
     const next = await api("/api/settings", { method: "PATCH", body: JSON.stringify({ models: body }) });

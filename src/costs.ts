@@ -12,11 +12,6 @@ export function estimateRunCost(photos: number, scopes: number): { low: number; 
   return { low: base + redesigns * API_COST.attempt, high: base + redesigns * API_COST.attempt * 2 };
 }
 
-/** Minutes, from observed throughput: 3 photos in flight, ~1.5 min inventory + ~1.3 min per scope. */
-export function estimateRunMinutes(photos: number, scopes: number): number {
-  return Math.ceil(photos / 3) * (1.5 + scopes * 1.3);
-}
-
 export function spentOnRun(results: Array<{ tiers: Array<{ attempts: number; plan: { changes: unknown[] } }> }>): number {
   let total = 0;
   for (const photo of results) {

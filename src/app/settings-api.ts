@@ -5,6 +5,7 @@ import { z } from "zod";
 import { DEFAULT_MODELS, requireKeys, resolveModels } from "../config.js";
 import { DEFAULT_COST_ASSUMPTIONS } from "../pricing/assumptions.js";
 import { COST_ITEM_KEYS, COST_ITEMS, REGIONS } from "../pricing/catalog.js";
+import { DEFAULT_IMAGE_CONCURRENCY, imageConcurrency } from "../redesign/generate.js";
 import { RUNS_DIR } from "../redesign/job.js";
 import { EDGE_THRESHOLD, edgeThreshold } from "../redesign/verify.js";
 import { currentSettings, environmentValue, maskKey, saveSettings, type Settings } from "../settings.js";
@@ -58,6 +59,7 @@ export function settingsView() {
       saved: settings.models,
       defaults: DEFAULT_MODELS,
       options: MODEL_OPTIONS,
+      imageConcurrency: { current: imageConcurrency(), default: DEFAULT_IMAGE_CONCURRENCY },
     },
     tuning: { edgeThreshold: edgeThreshold(), saved: settings.tuning.edgeThreshold ?? null, default: EDGE_THRESHOLD },
     costs: {
@@ -80,6 +82,7 @@ export const SettingsPatch = z.object({
       reasoning: Clearable(z.string().trim().max(100)),
       analysis: Clearable(z.array(z.string().trim().max(100)).max(4)),
       image: Clearable(z.string().trim().max(100)),
+      imageConcurrency: Clearable(z.number()),
     })
     .optional(),
   tuning: z.object({ edgeThreshold: Clearable(z.number()) }).optional(),
