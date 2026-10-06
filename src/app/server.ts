@@ -14,6 +14,7 @@ import { addListingPhoto, createListing, duplicateListing, deleteListing, restor
 import { listProfiles, listRuns, loadProfile, runListingRedesign, RUNS_DIR, type RunSummary } from "../redesign/job.js";
 import type { PhotoResult } from "../redesign/run.js";
 import { renderReport } from "../report.js";
+import { homeView } from "./home-api.js";
 import { labelAttempt, settingsView, testKey, tuningView, updateSettings } from "./settings-api.js";
 import { pdfFilename, renderReportPdf, type PdfDetail } from "../report-pdf.js";
 import { TIERS } from "../redesign/tiers.js";
@@ -476,6 +477,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       const body = z.object({ key: z.string().max(500), label: z.enum(["ok", "broken"]).nullable() }).parse(await readBody(req));
       return send(res, 200, await labelAttempt(body.key, body.label));
     }
+    if (req.method === "GET" && parts[1] === "home" && parts.length === 2) return send(res, 200, await homeView());
     if (req.method === "GET" && parts[1] === "status") {
       let keysError: string | null = null;
       try {

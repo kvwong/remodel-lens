@@ -168,7 +168,7 @@
     .collection-head .btn { min-height:44px; }
     .collection-grid { grid-template-columns:minmax(0, 1fr); }
     .collection-link { min-height:108px; }
-    .mobile-tabs { position:fixed; z-index:25; bottom:calc(12px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:4px; padding:6px; border:1px solid var(--line-strong); border-radius:24px; background:var(--surface); box-shadow:0 8px 32px rgba(0,0,0,.2), 0 2px 8px rgba(0,0,0,.08); }
+    .mobile-tabs { position:fixed; z-index:25; bottom:calc(12px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:4px; padding:6px; border:1px solid var(--line-strong); border-radius:24px; background:var(--surface); box-shadow:0 8px 32px rgba(0,0,0,.2), 0 2px 8px rgba(0,0,0,.08); }
     .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-height:56px; border-radius:18px; color:var(--muted); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; transition:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
     .mobile-tabs .icon { width:22px; height:22px; }
     .mobile-tabs a[aria-current="page"] { background:var(--primary-soft); color:var(--primary); font-weight:600; }
@@ -617,6 +617,38 @@
   .tune-pair span { position:absolute; left:4px; bottom:4px; padding:1px 6px; border-radius:4px; background:rgba(18,18,17,.6); color:#fff; font-size:11px; }
   .tune-meta { display:grid; gap:2px; font-size:13px; min-width:0; overflow-wrap:anywhere; }
   .tune-meta small { color:var(--muted); font-size:12.5px; }
+
+  /* Home: a drifting reel of redesigned photos above the latest reports. */
+  .reel { position:relative; margin:-6px 0 4px; }
+  .reel-viewport { overflow:hidden; padding:18px 0 22px; -webkit-mask-image:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask-image:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+  .reel-track { list-style:none; margin:0; padding:0 0 0 12px; display:flex; gap:var(--reel-gap, 18px); width:max-content; will-change:transform; }
+  .reel-card { --tilt:0deg; --lift:0px; flex:none; width:var(--reel-card, 260px); transform:translateY(var(--lift)) rotate(var(--tilt)); animation:reel-bob 5.2s ease-in-out infinite; animation-delay:calc(var(--i, 0) * -0.9s); }
+  .reel-card:nth-child(3n+1) { --tilt:-2.2deg; --lift:4px; }
+  .reel-card:nth-child(3n+2) { --tilt:1.6deg; --lift:-6px; }
+  .reel-card:nth-child(3n) { --tilt:-0.6deg; --lift:2px; }
+  .reel-card a { position:relative; display:block; aspect-ratio:4 / 3; border-radius:14px; overflow:hidden; background:var(--surface-2); box-shadow:var(--shadow-hover); text-decoration:none; transition:transform var(--slow) var(--ease-pop), box-shadow var(--base) var(--ease); }
+  .reel-card a:hover, .reel-card a:focus-visible { transform:scale(1.045) rotate(calc(var(--tilt) * -1)); box-shadow:0 6px 14px rgba(0,0,0,.1), 0 18px 36px rgba(0,0,0,.12); }
+  .reel-card img { width:100%; height:100%; object-fit:cover; display:block; }
+  .reel-card span { position:absolute; inset:auto 0 0; padding:28px 12px 10px; background:linear-gradient(transparent, rgba(18,18,17,.62)); color:#fff; font-size:12.5px; line-height:1.35; opacity:0; transform:translateY(6px); transition:opacity var(--base) var(--ease), transform var(--base) var(--ease); }
+  .reel-card a:hover span, .reel-card a:focus-visible span { opacity:1; transform:none; }
+  @media (hover: none) { .reel-card span { opacity:1; transform:none; } }
+  @keyframes reel-bob { 0%, 100% { translate:0 0; } 50% { translate:0 -7px; } }
+  .reel-toggle { position:absolute; right:6px; bottom:0; width:30px; height:30px; border:1px solid var(--line); background:var(--surface); color:var(--muted); box-shadow:var(--shadow); border-radius:999px; }
+  .reel-toggle:hover, .reel-toggle:focus-visible { color:var(--text); background:var(--surface); }
+  .reel-toggle .icon { width:14px; height:14px; }
+  .reel-empty .reel-card { animation:none; }
+  .reel-empty .reel-card div { aspect-ratio:4 / 3; border-radius:14px; border:1px dashed var(--line-strong); background:var(--surface-2); opacity:.7; }
+  .reel-empty p { position:absolute; inset:0; display:grid; place-items:center; margin:0; padding:0 24px; text-align:center; color:var(--muted); font-size:14px; pointer-events:none; }
+  .reel-empty p span { padding:6px 14px; border-radius:999px; background:color-mix(in srgb, var(--bg) 88%, transparent); }
+  .home-head .btn { margin-left:auto; }
+  @media (max-width:600px) { .reel { --reel-card:200px; --reel-gap:14px; } }
+  /* Still frames: no drift or bob; the reel scrolls by hand instead. */
+  .reel[data-still] .reel-viewport { overflow-x:auto; scrollbar-width:none; }
+  .reel[data-still] .reel-viewport::-webkit-scrollbar { display:none; }
+  @media (prefers-reduced-motion: reduce) {
+    .reel-card { animation:none; }
+    .reel-card a, .reel-card span { transition:none; }
+  }
 </style>
 </head>
 <body>
@@ -651,7 +683,8 @@
   </main>
 </div>
 <nav class="mobile-tabs" aria-label="Main navigation">
-  <a href="?view=listings" class="mobile-tab" data-mobile-tab="listings"><span data-icon="home"></span><span>Listings</span></a>
+  <a href="/" class="mobile-tab" data-mobile-tab="home"><span data-icon="home"></span><span>Home</span></a>
+  <a href="?view=listings" class="mobile-tab" data-mobile-tab="listings"><span data-icon="list"></span><span>Listings</span></a>
   <a href="?view=tastes" class="mobile-tab" data-mobile-tab="tastes"><span data-icon="sparkles"></span><span>Tastes</span></a>
   <a href="?view=reports" class="mobile-tab" data-mobile-tab="reports"><span data-icon="report"></span><span>Reports</span></a>
   <a href="?view=settings" class="mobile-tab" data-mobile-tab="settings"><span data-icon="settings"></span><span>Settings</span></a>
@@ -760,6 +793,9 @@ const ICONS = {
   pencil: '<path d="M21.2 6.8a1 1 0 0 0-4-4L3.8 16.2a2 2 0 0 0-.5.8L2 21.4a.5.5 0 0 0 .6.6l4.4-1.3a2 2 0 0 0 .8-.5z"/>',
   image: '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
   settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>',
+  pause: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
+  play: '<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/>',
   refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.8 9.8 0 0 1 6.7 2.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.8 9.8 0 0 1-6.7-2.7L3 16"/><path d="M8 16H3v5"/>',
 };
 const icon = (name) => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
@@ -850,7 +886,7 @@ function renderListings() {
 
 /* Collection routes work at every size; the tab bar is mobile-only. */
 function renderMobileTabs() {
-  const active = state.view === "taste" || state.view === "tastes" ? "tastes" : state.view === "reports" ? "reports" : state.view === "settings" ? "settings" : "listings";
+  const active = state.view === "home" ? "home" : state.view === "taste" || state.view === "tastes" ? "tastes" : state.view === "reports" ? "reports" : state.view === "settings" ? "settings" : "listings";
   document.querySelectorAll("[data-mobile-tab]").forEach(link => {
     if (link.dataset.mobileTab === active) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
@@ -858,7 +894,9 @@ function renderMobileTabs() {
   const settingsLink = $("[data-settings-link]");
   if (state.view === "settings") settingsLink.setAttribute("aria-current", "page");
   else settingsLink.removeAttribute("aria-current");
-  $(".side .brand").href = matchMedia("(max-width:860px)").matches ? "?view=listings" : "/";
+  const homeLink = $(".side .brand");
+  if (state.view === "home") homeLink.setAttribute("aria-current", "page");
+  else homeLink.removeAttribute("aria-current");
 }
 addEventListener("resize", renderMobileTabs);
 
@@ -1130,6 +1168,124 @@ function renderJob() {
     if (button) button.disabled = running || !!state.textEdit || state.taste.references.length < 3;
     renderJobInto($("#taste-job"), state.job, "");
   }
+}
+
+
+/* ---------- Home ---------- */
+
+async function loadHome() {
+  state.home = await api("/api/home");
+}
+
+function renderHome() {
+  const { reports, totalReports, slides } = state.home;
+  document.title = "Remodel Lens";
+  const reel = slides.length
+    ? `<section class="reel" aria-label="Recent redesigns" aria-roledescription="carousel">
+        <div class="reel-viewport"><ul class="reel-track">${slides.map((slide, i) => reelCard(slide, i)).join("")}</ul></div>
+        <button class="icon-btn reel-toggle" type="button" data-reel-toggle aria-label="Pause the photo reel" data-tip="Pause">${icon("pause")}</button>
+      </section>`
+    : `<section class="reel reel-empty" aria-label="Recent redesigns">
+        <div class="reel-viewport"><ul class="reel-track" aria-hidden="true">${Array.from({ length: 8 }, (_, i) => `<li class="reel-card" style="--i:${i}"><div></div></li>`).join("")}</ul></div>
+        <p><span>Redesigned photos from your reports will drift by here.</span></p>
+      </section>`;
+  $("#content").innerHTML = `${reel}
+    <header class="head collection-head home-head"><div><h1>Recent reports</h1><p class="subhead">${!totalReports ? "None yet" : `${totalReports > reports.length ? `Latest ${reports.length} of ${totalReports}` : `${totalReports} ${totalReports === 1 ? "report" : "reports"}`} · newest first`}</p></div>
+      ${totalReports > reports.length ? `<a class="btn btn-small nav-inline" href="?view=reports">All reports</a>` : ""}</header>
+    <section class="panel">${reports.length ? `<ul class="runs">${reports.map(run => runRow(run, true)).join("")}</ul>` : `<p class="muted" style="margin:0">No reports yet. Run a redesign from a listing to create one.</p>`}</section>`;
+  // The sidebar lines up with page titles; the reel sits above this one, so start both columns at the top.
+  document.documentElement.style.setProperty("--side-offset", "0px");
+  document.documentElement.style.setProperty("--main-offset", "0px");
+  startReel();
+}
+
+function reelCard(slide, i, copy = false) {
+  return `<li class="reel-card" style="--i:${i % 7}" ${copy ? 'aria-hidden="true"' : ""}><a href="${esc(slide.reportUrl)}" ${copy ? 'tabindex="-1"' : ""}>
+    <img src="${esc(slide.src)}" alt="${copy ? "" : esc(slide.alt)}" loading="${i < 6 ? "eager" : "lazy"}" decoding="async" draggable="false"><span>${esc(slide.caption)}</span>
+  </a></li>`;
+}
+
+/** A damped spring sampled into a CSS linear() easing: overshoots a little, wobbles once, settles. */
+const SPRING_EASE = (() => {
+  const zeta = 0.42, omega = 11, damped = omega * Math.sqrt(1 - zeta * zeta);
+  const points = Array.from({ length: 48 }, (_, i) => {
+    const t = i / 47;
+    const x = 1 - Math.exp(-zeta * omega * t) * (Math.cos(damped * t) + (zeta * omega / damped) * Math.sin(damped * t));
+    return i === 47 ? "1" : x.toFixed(4);
+  });
+  const css = `linear(${points.join(", ")})`;
+  return CSS.supports("transition-timing-function", css) ? css : "var(--ease-pop)";
+})();
+const REEL_HOP_MS = 1400;
+const REEL_REST_MS = 2200;
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+let reelTimer = 0;
+let reelListeners = null;
+
+/** Hop the reel one photo left at a time on a spring, looping through a copy of the photos. */
+function startReel() {
+  clearTimeout(reelTimer);
+  reelListeners?.abort();
+  const reel = $(".reel:not(.reel-empty)");
+  if (!reel) return;
+  const track = $(".reel-track", reel);
+  const toggle = $("[data-reel-toggle]", reel);
+  const slides = state.home.slides;
+  let index = 0, userPaused = false, hovering = false;
+  const step = () => {
+    const [a, b] = track.children;
+    return b ? b.offsetLeft - a.offsetLeft : 0; // layout positions, unaffected by the cards' tilt
+  };
+  const place = (animate) => {
+    track.style.transition = animate ? `transform ${REEL_HOP_MS}ms ${SPRING_EASE}` : "none";
+    track.style.transform = `translateX(${-index * step()}px)`;
+  };
+  // Enough copies that the strip never shows a gap while hopping through the originals.
+  const fill = () => {
+    track.querySelectorAll("[aria-hidden]").forEach((el) => el.remove());
+    if (reducedMotion.matches) return;
+    const span = step() * slides.length;
+    const copies = Math.max(1, Math.ceil(reel.clientWidth / Math.max(span, 1)) + 1);
+    track.insertAdjacentHTML("beforeend", Array.from({ length: copies }, () => slides.map((s, i) => reelCard(s, i, true)).join("")).join(""));
+  };
+  const still = () => reducedMotion.matches || userPaused;
+  const schedule = () => {
+    clearTimeout(reelTimer);
+    if (!still()) reelTimer = setTimeout(hop, REEL_REST_MS);
+  };
+  const hop = () => {
+    if (!reel.isConnected) return;
+    if (hovering || document.hidden) return schedule();
+    if (index >= slides.length) { index -= slides.length; place(false); track.getBoundingClientRect(); } // a missed transitionend
+    index++;
+    place(true);
+    schedule();
+  };
+  track.addEventListener("transitionend", (event) => {
+    if (event.target !== track || index < slides.length) return;
+    index -= slides.length; // the copy now sits exactly where the originals started
+    place(false);
+  });
+  const update = () => {
+    reel.toggleAttribute("data-still", still());
+    toggle.hidden = reducedMotion.matches;
+    toggle.innerHTML = icon(userPaused ? "play" : "pause");
+    toggle.setAttribute("aria-label", userPaused ? "Play the photo reel" : "Pause the photo reel");
+    toggle.dataset.tip = userPaused ? "Play" : "Pause";
+    if (still()) { index = 0; place(false); }
+    schedule();
+  };
+  toggle.addEventListener("click", () => { userPaused = !userPaused; update(); });
+  reel.addEventListener("pointerenter", () => (hovering = true));
+  reel.addEventListener("pointerleave", () => (hovering = false));
+  reel.addEventListener("focusin", () => (hovering = true));
+  reel.addEventListener("focusout", (event) => { if (!reel.contains(event.relatedTarget)) hovering = false; });
+  reelListeners = new AbortController();
+  const { signal } = reelListeners;
+  reducedMotion.addEventListener("change", () => { if (reel.isConnected) { fill(); update(); } }, { signal });
+  addEventListener("resize", () => { if (reel.isConnected) { fill(); place(false); } }, { signal });
+  fill();
+  update();
 }
 
 /* ---------- Listing view ---------- */
@@ -2816,6 +2972,7 @@ async function load() {
   state.textEdit = null;
   state.job = null;
   clearTimeout(pollTimer);
+  clearTimeout(reelTimer);
   try {
     const [listings, profiles, tasteProfiles, status] = await Promise.all([api("/api/listings"), loadProfiles(), api("/api/taste-profiles"), api("/api/status")]);
     Object.assign(state, { listings, profiles, tasteProfiles });
@@ -2830,10 +2987,16 @@ async function load() {
     }
     updateBanner(status.keysError);
 
-    let collection = params().get("view");
-    if (!collection && !params().get("listing") && !params().get("taste") && matchMedia("(max-width:860px)").matches) {
-      collection = "listings";
-      setParams({ view: collection });
+    const collection = params().get("view");
+    if (!collection && !params().get("listing") && !params().get("taste")) {
+      state.view = "home";
+      renderListings();
+      renderProfilesNav();
+      renderMobileTabs();
+      if (!state.home) $("#content").innerHTML = `<header class="head collection-head"><h1>Recent reports</h1></header><section class="panel"><p class="muted" role="status">Loading reports…</p></section>`;
+      await loadHome();
+      if (state.view === "home") renderHome();
+      return;
     }
     if (["listings", "tastes", "reports"].includes(collection)) {
       state.view = collection;
