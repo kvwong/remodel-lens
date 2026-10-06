@@ -316,12 +316,18 @@
   /* A listing's run rows center the verdict line between the details and the button, or tuck it under the details when narrow. */
   .run:has(> .run-verdict) { display:grid; grid-template-columns:minmax(0, 1fr) 13.5rem minmax(0, 1fr); } /* fixed middle column keeps the bars lined up row to row */
   .run:has(> .run-verdict) > .run-main { grid-column:1; }
-  .run-verdict { grid-column:2; font-size:13px; }
+  /* Wide: two sub rows like the details beside it, the bar on the date's line and the count under it on the meta's. */
+  .run-verdict { grid-column:2; align-self:start; }
+  .run-verdict .verdict { display:grid; grid-template-rows:1lh auto; row-gap:4px; align-items:center; justify-items:start; }
+  .run-verdict .verdict-bar { width:9rem; }
+  .run-verdict .verdict-text { font-size:13px; }
   .run:has(> .run-verdict) > .btn, .run:has(> .run-verdict) > .run-chevron { grid-column:3; justify-self:end; }
   @media (max-width:1000px) {
     .run:has(> .run-verdict) { grid-template-columns:minmax(0, 1fr) auto; row-gap:6px; }
     .run:has(> .run-verdict) > .run-main { grid-row:1; }
     .run-verdict { grid-column:1; grid-row:2; }
+    .run-verdict .verdict { display:inline-flex; gap:10px; }
+    .run-verdict .verdict-bar { width:88px; }
     .run:has(> .run-verdict) > .btn, .run:has(> .run-verdict) > .run-chevron { grid-column:2; grid-row:1 / span 2; align-self:center; }
   }
   .verdict { display:inline-flex; align-items:center; gap:10px; color:var(--muted); border-radius:4px; }
@@ -1329,7 +1335,7 @@ function verdictSummary(counts = {}) {
   const breakdown = parts.map(([s, c]) => `${c} ${STATUS[s].label.toLowerCase()}`).join(" · ");
   return `<span class="verdict" role="img" tabindex="0" aria-label="${esc(breakdown)}" data-tip="${esc(breakdown)}">
     <span class="verdict-bar" aria-hidden="true">${parts.map(([s, c]) => `<i class="v-${s}" style="flex:${c}"></i>`).join("")}</span>
-    <span aria-hidden="true">${counts.verified ?? 0} of ${total} verified</span>
+    <span class="verdict-text" aria-hidden="true">${counts.verified ?? 0} of ${total} verified</span>
   </span>`;
 }
 
