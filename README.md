@@ -1,6 +1,6 @@
-# Remodel Lens
+# Whim
 
-Remodel Lens creates realistic listing-photo redesigns from your interior-taste
+Whim creates realistic listing-photo redesigns from your interior-taste
 references. Each redesign is scoped to a budget tier and includes a report with
 cost bands and checks for changes to fixed architecture. See [PLAN.md](PLAN.md)
 for architecture and roadmap details.
@@ -68,6 +68,11 @@ npm run app
 
 Open <http://localhost:4310>. To use another local port, set `PORT` before
 starting the app, for example `PORT=4320 npm run app`.
+
+To open the app on another device, connect it to the same Wi-Fi network or
+Tailscale tailnet. Find the Mac's Tailscale IPv4 address in the Tailscale app,
+then open `http://<mac-address>:4310` on the other device. The app has no
+sign-in, so only use it on a network you trust.
 
 ## Create a taste profile
 
@@ -237,7 +242,7 @@ checkout. Personal listings, profiles, and runs are gitignored; only the empty
 rebuild rules or generate a redesign, the relevant reference or listing photos
 and prompts are sent to the configured model providers for processing. Do not
 use photos or details you are not comfortable sending to those providers.
-Remodel Lens does not scrape listing sites; source listing photos yourself.
+Whim does not scrape listing sites; source listing photos yourself.
 
 ## Configuration
 

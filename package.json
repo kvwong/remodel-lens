@@ -1,5 +1,5 @@
 {
-  "name": "remodel-lens",
+  "name": "whim",
   "version": "1.0.0",
   "scripts": {
     "taste": "tsx src/cli/taste.ts",

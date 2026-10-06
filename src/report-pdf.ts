@@ -4,6 +4,7 @@ import path from "node:path";
 
 import PDFDocument from "pdfkit";
 import sharp from "sharp";
+import { WHIM_PATHS } from "./branding.js";
 
 import { planCost, type CostRange } from "./redesign/plan.js";
 import type { PhotoResult, TierResult } from "./redesign/run.js";
@@ -158,7 +159,7 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Buffer> {
     bufferPages: true,
     info: {
       Title: `${input.title}: remodel ${full ? "full scope" : "summary"}`,
-      Author: "Remodel Lens",
+      Author: "Whim",
       Subject: "Remodel scopes and cost estimates",
       ...(started ? { CreationDate: started } : {}),
     },
@@ -258,8 +259,12 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Buffer> {
 
   /* ---------- Cover ---------- */
 
-  label(`Remodel Lens · ${full ? "Full scope report" : "Summary"}`, M, y);
-  y += 16;
+  doc.save().translate(M, y).scale(105 / 1405).translate(-185, -269);
+  doc.path(WHIM_PATHS.mark).fill(C.primary, "even-odd");
+  doc.path(WHIM_PATHS.wordmark).fill(C.text, "even-odd");
+  doc.restore();
+  label(full ? "Full scope report" : "Summary", M + 120, y + 8);
+  y += 36;
   y += write(input.title, M, y, W, { font: "bold", size: 26, lineGap: 0 });
   y += 4;
   const dateText = started ? new Intl.DateTimeFormat("en-US", { dateStyle: "long" }).format(started) : null;

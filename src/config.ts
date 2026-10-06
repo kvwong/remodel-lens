@@ -20,7 +20,7 @@ export function loadEnv(): void {
   try {
     applySettings(readSettings());
   } catch (error) {
-    process.stderr.write(`[remodel-lens] Ignoring saved settings: ${(error as Error).message}\n`);
+    process.stderr.write(`[whim] Ignoring saved settings: ${(error as Error).message}\n`);
   }
 }
 

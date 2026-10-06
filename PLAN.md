@@ -1,4 +1,4 @@
-# Remodel Lens: implementation plan
+# Whim: implementation plan
 
 Goal: take listing photos (Redfin, Zillow, MLS), redesign the interiors to match
 your taste, and keep every redesign realistic enough to use when deciding whether

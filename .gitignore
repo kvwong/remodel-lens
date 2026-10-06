@@ -3,6 +3,7 @@ node_modules/
 .env.local
 .runs/
 .impeccable/
+output/
 listings/*
 !listings/.gitkeep
 

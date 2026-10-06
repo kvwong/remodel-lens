@@ -4,31 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<title>Remodel Lens</title>
-<script>
-(() => {
-  // Display follows the system setting; the sidebar toggle flips it for this tab only (sessionStorage).
-  const system = matchMedia('(prefers-color-scheme: dark)');
-  const read = () => { try { return sessionStorage.getItem('remodel-lens-display'); } catch { return null; } };
-  const apply = () => {
-    const base = system.matches ? 'dark' : 'light';
-    const saved = read();
-    const theme = saved === 'light' || saved === 'dark' ? saved : base;
-    document.documentElement.dataset.theme = theme;
-    const next = theme === 'dark' ? 'light' : 'dark';
-    document.querySelectorAll('[data-display-toggle]').forEach(button => {
-      button.dataset.current = theme;
-      button.setAttribute('aria-label', 'Switch to ' + next + ' mode');
-      button.dataset.tip = next === 'dark' ? 'Dark mode' : 'Light mode';
-    });
-  };
-  try { localStorage.removeItem('remodel-lens-display'); document.cookie = 'remodel-lens-display=; Path=/; Max-Age=0'; } catch {}
-  apply();
-  system.addEventListener('change', apply);
-  addEventListener('display-change', apply);
-  document.addEventListener('DOMContentLoaded', apply);
-})();
-</script>
+<title>Whim</title>
+<!-- WHIM_HEAD -->
+<!-- WHIM_APPEARANCE -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
@@ -92,7 +70,8 @@
   .display-toggle:hover { background:var(--surface-2); color:var(--text); }
   /* Shows the mode on screen now: sun (first icon) in light, moon (second) in dark. */
   .display-toggle[data-current="dark"] > :first-child, .display-toggle:not([data-current="dark"]) > :last-child { display:none; }
-  .side .brand { display:block; padding-left:10px; font-size:17px; min-height:32px; line-height:32px; }
+  .side .brand { display:flex; align-items:center; width:fit-content; padding-left:10px; min-height:32px; line-height:32px; }
+  .side .whim-lockup { width:116px; height:28px; }
   @media (max-width: 860px) { .side { position:static; height:auto; } .side-content { overflow-x:hidden; overflow-y:auto; } }
   .side ul > li.muted { padding-left:10px; }
   .side-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; min-height:32px; padding-left:10px; }
@@ -689,7 +668,7 @@
 <div class="layout">
   <div class="side">
     <div class="side-content">
-    <a class="brand" href="/">Remodel Lens</a>
+    <a class="brand" href="/" aria-label="Whim home"><!-- WHIM_LOCKUP --></a>
     <nav aria-label="Listings" id="listings-nav" style="margin-top:var(--side-offset, 0px)">
       <div class="side-head"><h2>Listings</h2><button class="icon-btn icon-plain" type="button" data-action="new-listing" aria-label="New listing" data-tip="New listing"><span data-icon="plus"></span></button></div>
       <ul id="listings"><li class="muted">Loading…</li></ul>
@@ -932,7 +911,7 @@ function renderCollection(view) {
   const tastes = view === "tastes";
   const items = tastes ? state.tasteProfiles : state.listings;
   const label = tastes ? "Tastes" : "Listings";
-  document.title = `${label} · Remodel Lens`;
+  document.title = `${label} · Whim`;
   $("#content").innerHTML = `<header class="head collection-head">
     <div><h1>${label}</h1><p class="subhead">${items.length} ${tastes ? "taste profile" : "listing"}${items.length === 1 ? "" : "s"}</p></div>
     <button class="btn btn-small" type="button" data-action="${tastes ? "new-profile" : "new-listing"}" aria-label="${tastes ? "New taste profile" : "New listing"}">${icon("plus")}New ${tastes ? "taste" : "listing"}</button>
@@ -962,7 +941,7 @@ async function loadReports() {
 }
 
 function renderReports() {
-  document.title = "Reports · Remodel Lens";
+  document.title = "Reports · Whim";
   $("#content").innerHTML = `<header class="head collection-head"><div><h1>Reports</h1><p class="subhead">${state.reports.length ? `${plural(state.reports.length, "report")} across ${plural(new Set(state.reports.map(run => run.listingId)).size, "listing")} · newest first` : "None yet"}</p></div></header>
     ${state.reportErrors.length ? `<div class="notice" role="alert">Couldn't load reports for ${esc(state.reportErrors.join(", "))}. <button class="btn btn-small" type="button" data-action="retry-reports">Retry</button></div>` : ""}
     <section class="panel">${state.reports.length ? `<ul class="runs">${state.reports.map(run => runRow(run, true)).join("")}</ul>` : `<p class="muted" style="margin:0">${state.reportErrors.length ? "Reports couldn't be loaded. Try again." : "No reports yet. Run a redesign from a listing to create one."}</p>`}</section>`;
@@ -1217,7 +1196,7 @@ async function loadHome() {
 
 function renderHome() {
   const { reports, totalReports, slides } = state.home;
-  document.title = "Remodel Lens";
+  document.title = "Whim";
   const reel = slides.length
     ? `<section class="reel" aria-label="Recent redesigns" aria-roledescription="carousel">
         <div class="reel-viewport"><ul class="reel-track">${slides.map((slide, i) => reelCard(slide, i)).join("")}</ul></div>
@@ -1318,7 +1297,7 @@ function startReel() {
 /* ---------- Listing view ---------- */
 
 function renderEmpty() {
-  document.title = "Remodel Lens";
+  document.title = "Whim";
   $("#content").innerHTML = `<div class="empty">
     <h1 style="font-size:20px;margin-bottom:8px;color:var(--text)">No listings yet</h1>
     <p style="margin:0 0 16px">Create a listing to add photos of a home.</p>
@@ -1444,7 +1423,7 @@ function openDetailDelete(kind) {
 
 function renderListing() {
   const l = state.listing;
-  document.title = `${l.name} · Remodel Lens`;
+  document.title = `${l.name} · Whim`;
   const selected = l.photos.filter((p) => p.selected).length;
   const tiers = selectedTiers();
   const wanted = params().get("profile");
@@ -1623,7 +1602,7 @@ async function loadTaste(id) {
 
 function renderTaste() {
   const t = state.taste;
-  document.title = `${t.meta.name} · Taste profile · Remodel Lens`;
+  document.title = `${t.meta.name} · Taste profile · Whim`;
   const running = state.job?.status === "running";
   const lb = t.meta.lastBuild;
   const ruleCount = t.profile ? t.profile.categories.reduce((n, c) => n + c.rules.length, 0) : 0;
@@ -2434,7 +2413,7 @@ async function loadSettingsPage() {
 }
 
 function renderSettings() {
-  document.title = "Settings · Remodel Lens";
+  document.title = "Settings · Whim";
   $("#content").innerHTML = `<header class="head detail-head"><div><h1>Settings</h1>
       <p class="subhead">API keys, models, tuning, and cost assumptions · saved on this computer</p></div></header>
     <section class="panel settings-panel" id="settings-keys" aria-labelledby="keys-h"></section>
