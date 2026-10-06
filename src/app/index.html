@@ -682,7 +682,10 @@
   .home-head h1 { font-size:17px; line-height:32px; } /* same as the listing and taste page titles */
   @media (max-width:600px) { .reel { --reel-card:200px; } }
   /* Still frames: no drift; the reel scrolls by hand instead. */
-  .reel[data-still] .reel-viewport { overflow-x:auto; scrollbar-width:none; }
+  /* The reel can be scrolled sideways and grabbed; touch keeps vertical page scrolling. */
+  .reel-viewport { touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+  @media (pointer:fine) { .reel-viewport { cursor:grab; } .reel-viewport a { cursor:inherit; } .reel[data-dragging] .reel-viewport { cursor:grabbing; } }
+  .reel[data-still] .reel-viewport { overflow-x:auto; touch-action:auto; scrollbar-width:none; }
   .reel[data-still] .reel-viewport::-webkit-scrollbar { display:none; }
   @media (prefers-reduced-motion: reduce) {
     .reel-card, .reel-card a, .reel-card span { transition:none; }
@@ -1262,16 +1265,18 @@ const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 let reelFrame = 0;
 let reelListeners = null;
 
-/** Drift the reel left at a steady pace, looping through a copy of the photos; it eases to a stop on hover. */
+/** Drift the reel left at a steady pace, looping through a copy of the photos; it eases to a stop on hover.
+ *  A trackpad's sideways swipe scrolls it, and a mouse, finger or pen can grab it and fling it either way. */
 function startReel() {
   cancelAnimationFrame(reelFrame);
   reelListeners?.abort();
   const reel = $(".reel:not(.reel-empty)");
   if (!reel) return;
+  const viewport = $(".reel-viewport", reel);
   const track = $(".reel-track", reel);
   const toggle = $("[data-reel-toggle]", reel);
   const slides = state.home.slides;
-  let offset = 0, speed = 0, last = 0, userPaused = false, hovering = false;
+  let offset = 0, speed = 0, fling = 0, last = 0, userPaused = false, hovering = false, drag = null, dragged = false;
   const span = () => {
     const [a] = track.children;
     const next = track.children[slides.length];
@@ -1285,35 +1290,93 @@ function startReel() {
     const copies = Math.max(1, Math.ceil(reel.clientWidth / Math.max(one, 1)) + 1);
     track.insertAdjacentHTML("beforeend", Array.from({ length: copies }, () => slides.map((s, i) => reelCard(s, i, true)).join("")).join(""));
   };
-  const still = () => reducedMotion.matches || userPaused;
+  const still = () => reducedMotion.matches;
+  const place = () => {
+    const loop = span();
+    if (loop) offset = ((offset % loop) + loop) % loop; // wrap both ways: a copy always sits where the originals were
+    track.style.transform = `translateX(${-offset}px)`;
+  };
+  // Move the strip by hand; with reduced motion it is a plain scroller, so move that instead.
+  const nudge = (dx) => {
+    if (still()) viewport.scrollLeft += dx;
+    else { offset += dx; place(); }
+  };
   const tick = (now) => {
     if (!reel.isConnected || still()) return;
     const dt = last ? Math.min(now - last, 100) / 1000 : 0;
     last = now;
-    const target = hovering || document.hidden ? 0 : REEL_SPEED;
+    const target = hovering || userPaused || drag || document.hidden ? 0 : REEL_SPEED;
     speed += (target - speed) * Math.min(1, dt * 3); // ease in and out of motion rather than stopping dead
-    const loop = span();
-    offset += speed * dt;
-    if (loop && offset >= loop) offset -= loop; // the copy now sits exactly where the originals started
-    track.style.transform = `translateX(${-offset}px)`;
+    fling *= Math.exp(-dt * 4); // a flicked reel glides on and settles
+    if (Math.abs(fling) < 2) fling = 0;
+    if (!drag) offset += (speed + fling) * dt;
+    place();
     reelFrame = requestAnimationFrame(tick);
   };
   const update = () => {
     reel.toggleAttribute("data-still", still());
-    toggle.hidden = reducedMotion.matches;
+    toggle.hidden = still();
     toggle.innerHTML = icon(userPaused ? "play" : "pause");
     toggle.setAttribute("aria-label", userPaused ? "Play the photo reel" : "Pause the photo reel");
     toggle.dataset.tip = userPaused ? "Play" : "Pause";
     cancelAnimationFrame(reelFrame);
-    if (still()) { offset = 0; speed = 0; track.style.transform = ""; return; }
+    if (still()) { offset = 0; speed = 0; fling = 0; track.style.transform = ""; return; }
     last = 0;
     reelFrame = requestAnimationFrame(tick);
   };
   toggle.addEventListener("click", () => { userPaused = !userPaused; update(); });
-  reel.addEventListener("pointerenter", () => (hovering = true));
-  reel.addEventListener("pointerleave", () => (hovering = false));
+  reel.addEventListener("pointerenter", (event) => { if (event.pointerType === "mouse") hovering = true; });
+  reel.addEventListener("pointerleave", (event) => { if (event.pointerType === "mouse") hovering = false; });
   reel.addEventListener("focusin", () => (hovering = true));
   reel.addEventListener("focusout", (event) => { if (!reel.contains(event.relatedTarget)) hovering = false; });
+
+  // Trackpad: a sideways swipe (or Shift + wheel) scrolls the reel; an up-and-down swipe still scrolls the page.
+  viewport.addEventListener("wheel", (event) => {
+    const dx = event.deltaX || (event.shiftKey ? event.deltaY : 0);
+    if (!dx || Math.abs(dx) < Math.abs(event.shiftKey ? 0 : event.deltaY)) return;
+    if (still()) return; // the native scroller handles it
+    event.preventDefault();
+    fling = 0;
+    nudge(event.deltaMode === 1 ? dx * 16 : dx);
+  }, { passive: false });
+
+  // Grab and pan with a mouse, finger or pen. Touch keeps vertical page scrolling (touch-action: pan-y).
+  viewport.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 || (still() && event.pointerType !== "mouse")) return;
+    drag = { id: event.pointerId, x: event.clientX, lastX: event.clientX, lastT: event.timeStamp, v: 0, moved: false };
+    dragged = false;
+    fling = 0;
+  });
+  viewport.addEventListener("pointermove", (event) => {
+    if (!drag || event.pointerId !== drag.id) return;
+    if (!drag.moved) {
+      if (Math.abs(event.clientX - drag.x) < 6) return;
+      drag.moved = true;
+      viewport.setPointerCapture(event.pointerId);
+      reel.toggleAttribute("data-dragging", true);
+    }
+    const dx = drag.lastX - event.clientX;
+    const dt = Math.max(event.timeStamp - drag.lastT, 1) / 1000;
+    drag.v = drag.v * 0.6 + (dx / dt) * 0.4; // smoothed px/s for the release fling
+    drag.lastX = event.clientX;
+    drag.lastT = event.timeStamp;
+    nudge(dx);
+  });
+  const release = (event) => {
+    if (!drag || event.pointerId !== drag.id) return;
+    if (drag.moved) {
+      dragged = true;
+      if (!still() && event.timeStamp - drag.lastT < 80) fling = Math.max(-2400, Math.min(2400, drag.v));
+    }
+    drag = null;
+    reel.removeAttribute("data-dragging");
+  };
+  viewport.addEventListener("pointerup", release);
+  viewport.addEventListener("pointercancel", release);
+  // A drag that ends over a photo shouldn't open its report.
+  viewport.addEventListener("click", (event) => { if (dragged) { event.preventDefault(); event.stopPropagation(); dragged = false; } }, true);
+  viewport.addEventListener("dragstart", (event) => event.preventDefault());
+
   reelListeners = new AbortController();
   const { signal } = reelListeners;
   reducedMotion.addEventListener("change", () => { if (reel.isConnected) { fill(); update(); } }, { signal });
