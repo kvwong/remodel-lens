@@ -312,6 +312,15 @@
   .status .icon { width:14px; height:14px; }
   .s-verified { color:var(--ok); } .s-review { color:var(--warn); } .s-failed, .s-error { color:var(--bad); } .s-unchanged { color:var(--muted); }
   .status > span { color:var(--text); }
+  .statuses .s-unchanged > span { color:var(--muted); }
+  .verdict { display:inline-flex; align-items:center; gap:10px; color:var(--muted); border-radius:4px; }
+  .verdict-bar { display:flex; gap:2px; width:88px; height:6px; }
+  .verdict-bar i { min-width:4px; border-radius:999px; background:var(--muted); opacity:.45; }
+  .verdict-bar .v-verified { background:var(--ok); opacity:1; }
+  .verdict-bar .v-review { background:var(--warn); opacity:1; }
+  .verdict-bar .v-failed, .verdict-bar .v-error { background:var(--bad); opacity:1; }
+  .verdict[data-tip]::after { left:0; translate:0 4px; }
+  .verdict[data-tip]:hover::after, .verdict[data-tip]:focus-visible::after { translate:0 0; }
   .empty { padding:32px; border:1px dashed var(--line-strong); border-radius:10px; color:var(--muted); }
   .empty-start { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 20px; }
 
@@ -1301,9 +1310,21 @@ function renderEmpty() {
   </div>`;
 }
 
+/** One quiet line for a run's verdicts: a thin proportional bar and "2 of 5 verified"; the full breakdown shows on hover. */
+function verdictSummary(counts = {}) {
+  const parts = STATUS_ORDER.filter((s) => counts[s]).map((s) => [s, counts[s]]);
+  const total = parts.reduce((n, [, c]) => n + c, 0);
+  if (!total) return "";
+  const breakdown = parts.map(([s, c]) => `${c} ${STATUS[s].label.toLowerCase()}`).join(" · ");
+  return `<span class="verdict" role="img" tabindex="0" aria-label="${esc(breakdown)}" data-tip="${esc(breakdown)}">
+    <span class="verdict-bar" aria-hidden="true">${parts.map(([s, c]) => `<i class="v-${s}" style="flex:${c}"></i>`).join("")}</span>
+    <span aria-hidden="true">${counts.verified ?? 0} of ${total} verified</span>
+  </span>`;
+}
+
 function runRow(r, aggregate = false) {
   // Home and All reports skip the per-photo verdict counts; a listing's own run list keeps them.
-  const counts = aggregate ? "" : STATUS_ORDER.filter((s) => r.counts?.[s]).map((s) => statusTag(s, r.counts[s])).join("");
+  const counts = aggregate ? "" : verdictSummary(r.counts);
   const statuses = [
     r.error && !r.report ? `<span class="status s-error">${icon("x")}<span>${esc(r.error)}</span></span>` : !r.finishedAt ? `<span class="status s-unchanged">${icon("minus")}<span>In progress or interrupted</span></span>` : counts,
     r.stopped ? `<span class="status s-review">${icon("stop")}<span>Stopped early</span></span>` : "",
