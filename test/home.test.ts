@@ -38,8 +38,9 @@ it("lists the five newest reports across listings and reels their passing redesi
   expect(home.reports[0]).toMatchObject({ listingName: "Lakeview", reportUrl: `/files/runs/${b.id}/b-new/report.html` });
   expect(home.reports[0]!.images.map((i) => i.src)).toEqual([`/thumb/runs/${b.id}/b-new/images/k-c.png?w=240`, `/thumb/runs/${b.id}/b-new/images/b%20c.png?w=240`]);
   expect(home.reports[1]!.images).toEqual([]);
-  expect(home.slides).toEqual([
+  expect(home.slides).toHaveLength(2);
+  expect(home.slides).toEqual(expect.arrayContaining([
     { src: `/thumb/runs/${b.id}/b-new/images/k-c.png?w=720`, alt: "Cosmetic redesign of the kitchen at Lakeview", caption: "Lakeview · Kitchen · Cosmetic", reportUrl: `/files/runs/${b.id}/b-new/report.html` },
     { src: `/thumb/runs/${b.id}/b-new/images/b%20c.png?w=720`, alt: "Cosmetic redesign of the bathroom at Lakeview", caption: "Lakeview · Bathroom · Cosmetic", reportUrl: `/files/runs/${b.id}/b-new/report.html` },
-  ]);
+  ]));
 });

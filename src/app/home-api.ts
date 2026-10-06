@@ -9,8 +9,7 @@ import type { PhotoResult } from "../redesign/run.js";
 import { TIER_LABELS } from "../redesign/tiers.js";
 
 const RECENT_REPORTS = 5;
-const MAX_SLIDES = 18;
-const SLIDES_PER_RUN = 6;
+const MAX_SLIDES = 24;
 const ROW_IMAGES = 4;
 const SLIDE_STATUSES = new Set(["verified", "review"]);
 
@@ -31,12 +30,10 @@ export async function homeView(): Promise<{ reports: HomeReport[]; totalReports:
     })),
   ))).flat().sort((a, b) => b.startedAt.localeCompare(a.startedAt) || a.listingName.localeCompare(b.listingName));
 
-  const slides: HomeSlide[] = [];
-  for (const run of runs) {
-    if (slides.length >= MAX_SLIDES) break;
-    slides.push(...(await runSlides(run)).slice(0, Math.min(SLIDES_PER_RUN, MAX_SLIDES - slides.length)));
-  }
-  const reports = await Promise.all(runs.slice(0, RECENT_REPORTS).map(async (run) => ({
+  // The reel mixes images from the same recent reports listed below it, in a fresh random order each visit.
+  const recent = runs.slice(0, RECENT_REPORTS);
+  const slides = shuffle((await Promise.all(recent.map((run) => runSlides(run)))).flat()).slice(0, MAX_SLIDES);
+  const reports = await Promise.all(recent.map(async (run) => ({
     ...run,
     images: (await runSlides(run, 240)).slice(0, ROW_IMAGES),
   })));
@@ -74,3 +71,11 @@ async function runSlides(run: ReportRun, width = 720): Promise<HomeSlide[]> {
 }
 
 const sentence = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
+
+function shuffle<T>(items: T[]): T[] {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j]!, items[i]!];
+  }
+  return items;
+}
