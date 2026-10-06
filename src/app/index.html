@@ -264,10 +264,15 @@
   .profile-preview[data-count="1"] { grid-template-columns:1fr; }
   .profile-preview[data-count="2"] img:last-child { grid-row:1 / -1; }
   .profile-preview-empty { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:8px; color:var(--muted); font-size:13px; }
-  .profile-caption { width:100%; flex:none; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; font-weight:600; }
-  .profile-change { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:400; color:var(--muted); }
+  .profile-caption { width:100%; flex:none; display:flex; align-items:center; min-height:48px; padding:12px 150px 12px 12px; font-weight:600; }
+  /* Edit and Change sit over the caption's right end; Change lets clicks through to the card underneath. */
+  .profile-tools { position:absolute; right:12px; bottom:1px; height:48px; display:flex; align-items:center; gap:14px; font-size:13px; color:var(--muted); }
+  .profile-edit { display:inline-flex; align-items:center; height:100%; color:inherit; text-decoration:none; }
+  .profile-edit:hover { color:var(--text); text-decoration:underline; text-underline-offset:3px; }
+  .profile-tools::after { content:""; order:1; width:1px; height:14px; background:var(--line-strong); }
+  .profile-change { order:2; display:flex; align-items:center; gap:6px; pointer-events:none; }
+  .profile-dropdown:has(.profile-trigger:hover) .profile-change { color:var(--text); }
   .profile-description { margin:8px 0 0; color:var(--muted); font-size:13px; }
-  .profile-actions { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; font-size:13px; }
   .profile-option-thumb { width:48px; height:36px; border-radius:4px; object-fit:cover; }
   .profile-empty { display:grid; justify-items:start; gap:12px; padding:18px; border:1px dashed var(--line-strong); border-radius:10px; color:var(--muted); font-size:14px; }
   .profile-empty p { margin:0; }
@@ -280,6 +285,9 @@
   .profile-option[aria-selected="true"] .icon { opacity:1; color:var(--primary); }
   .profile-option:hover, .profile-option:focus { background:var(--surface-2); outline:none; }
   .profile-option:focus-visible { outline:2px solid var(--primary); outline-offset:-2px; }
+  .profile-menu-sep { height:1px; margin:4px 6px; background:var(--line); }
+  .profile-option-new { font-weight:500; }
+  .profile-option-new .icon { opacity:1; }
   .run-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; padding-top:4px; }
   .estimate { font-size:14px; color:var(--muted); }
   .estimate strong { color:var(--text); font-weight:500; }
@@ -309,8 +317,13 @@
   .runs .run:last-child { border-bottom:0; padding-bottom:0; }
   .run { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px 20px; padding:14px 0; border-bottom:1px solid var(--line); }
   .run-main { min-width:0; display:grid; gap:4px; }
-  .run-images { display:flex; gap:6px; margin-left:auto; }
-  .run-images img { width:96px; aspect-ratio:4 / 3; object-fit:cover; border-radius:6px; background:var(--surface-2); display:block; }
+  /* A loose, overlapping hand of photos, each at its own slight angle like the Home reel; it fans out on hover. */
+  .run-images { display:flex; margin-left:auto; padding:6px 10px 6px 4px; }
+  .run-images img { --tilt:0deg; --lift:0px; position:relative; width:96px; aspect-ratio:4 / 3; object-fit:cover; border-radius:7px; background:var(--surface-2); display:block; box-shadow:0 0 0 2px var(--surface), 0 2px 6px rgba(0,0,0,.18), 0 8px 18px rgba(0,0,0,.14); transform:translateY(var(--lift)) rotate(var(--tilt)); transition:transform var(--slow) var(--ease), margin var(--slow) var(--ease); }
+  .run-images img + img { margin-left:-26px; }
+  .run-images:hover img + img { margin-left:-12px; }
+  .run-images:hover img { transform:translateY(calc(var(--lift) * .5)) rotate(calc(var(--tilt) * .5)); }
+  @media (prefers-reduced-motion: reduce) { .run-images img { transition:none; } }
   .run-images + .btn { margin-left:0; }
   /* Rows with photos stay on one line: text, photos, then the button, however long the metadata runs. */
   .run:has(.run-images) { flex-wrap:nowrap; }
@@ -456,9 +469,8 @@
 
     /* Redesign settings: keep the primary action close and full width. */
     .profile-trigger .profile-preview { flex:none; height:128px; }
-    .profile-actions { margin-top:4px; }
-    .profile-actions > a { display:inline-flex; align-items:center; min-height:44px; }
-    .profile-actions .btn { min-height:44px; }
+    .profile-caption, .profile-tools { min-height:52px; height:52px; }
+    .profile-option { min-height:44px; }
     .tier { min-height:56px; padding:12px; }
     .tier input { width:20px; height:20px; }
     .run-row { flex-direction:column; align-items:stretch; gap:10px; }
@@ -474,6 +486,7 @@
     .run:has(a.run-title) a.run-title::after { content:""; position:absolute; inset:0; }
     .run .report-listing { position:relative; z-index:1; display:inline-flex; align-items:center; min-height:32px; margin:-6px 0 -2px; }
     .run > .btn { display:none; }
+    .run-images { padding:4px 4px 4px 2px; }
     .run-images img { width:72px; }
     .run-images img:nth-child(n+2) { display:none; }
     .run .run-chevron { display:block; flex:none; color:var(--muted); transform:rotate(-90deg); }
@@ -1323,9 +1336,19 @@ function runRow(r, aggregate = false) {
           ${r.stopped ? `<span class="status s-review">${icon("stop")}<span>Stopped early</span></span>` : ""}
         </div>
       </div>
-      ${r.images?.length ? `<a class="run-images" href="${esc(r.reportUrl)}" tabindex="-1" aria-hidden="true">${r.images.map((img) => `<img src="${esc(img.src)}" alt="" loading="lazy" decoding="async" title="${esc(img.caption)}">`).join("")}</a>` : ""}
+      ${r.images?.length ? `<a class="run-images" href="${esc(r.reportUrl)}" tabindex="-1" aria-hidden="true">${r.images.map((img, i) => `<img src="${esc(img.src)}" alt="" loading="lazy" decoding="async" title="${esc(img.caption)}" style="${thumbTilt(img.src, i)}">`).join("")}</a>` : ""}
       ${r.reportUrl ? `<a class="btn btn-small" href="${esc(r.reportUrl)}" aria-label="Open report from ${esc(fmtDate(r.startedAt))}">Open report</a><span class="run-chevron" aria-hidden="true">${icon("chevron")}</span>` : ""}
     </li>`;
+}
+
+/** A slight, stable tilt and lift for a row photo, seeded by its URL so it holds still across renders; neighbors lean opposite ways. */
+function thumbTilt(seed, i) {
+  let h = 2166136261;
+  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  const rand = (shift) => ((h >>> shift) & 255) / 255;
+  const tilt = (1 + rand(0) * 3) * (i % 2 ? 1 : -1);
+  const lift = (rand(8) - 0.5) * 6;
+  return `--tilt:${tilt.toFixed(1)}deg;--lift:${lift.toFixed(1)}px;z-index:${i}`;
 }
 
 function profilePreview(profile) {
@@ -1485,13 +1508,13 @@ function renderListing() {
             ${state.profiles.length
               ? `<div class="profile-dropdown"><button id="profile" name="profile" type="button" class="profile-trigger" value="${esc(profile.id)}" aria-haspopup="listbox" aria-expanded="false" aria-controls="profile-options" aria-labelledby="profile-label profile-value">
                    ${profilePreview(profile)}
-                   <span class="profile-caption"><span id="profile-value">${esc(profile.name)}</span><span class="profile-change">Change ${icon("chevron")}</span></span>
+                   <span class="profile-caption"><span id="profile-value">${esc(profile.name)}</span></span>
                  </button>
-                 <div id="profile-options" class="profile-menu" role="listbox" aria-labelledby="profile-label" hidden>${state.profiles.map((p) => `<div class="profile-option" role="option" tabindex="-1" aria-selected="${p.id === profile.id}" data-profile-choice="${esc(p.id)}">${icon("check")}${p.previews?.[0] ? `<img class="profile-option-thumb" src="${esc(p.previews[0])}" alt="">` : ""}<span>${esc(p.name)}${p.stale ? " (rules out of date)" : ""}</span></div>`).join("")}</div>
+                 <div class="profile-tools"><a href="?taste=${encodeURIComponent(profile.id)}" class="profile-edit" aria-label="Edit ${esc(profile.name)} profile">Edit</a><span class="profile-change" aria-hidden="true">Change ${icon("chevron")}</span></div>
+                 <div id="profile-options" class="profile-menu" role="listbox" aria-labelledby="profile-label" hidden>${state.profiles.map((p) => `<div class="profile-option" role="option" tabindex="-1" aria-selected="${p.id === profile.id}" data-profile-choice="${esc(p.id)}">${icon("check")}${p.previews?.[0] ? `<img class="profile-option-thumb" src="${esc(p.previews[0])}" alt="">` : ""}<span>${esc(p.name)}${p.stale ? " (rules out of date)" : ""}</span></div>`).join("")}<div class="profile-menu-sep" role="separator"></div><div class="profile-option profile-option-new" role="option" tabindex="-1" aria-selected="false" data-profile-new>${icon("plus")}<span>New profile</span></div></div>
                 </div>
                 ${profile.description ? `<p class="profile-description">${esc(profile.description)}</p>` : ""}
-                ${profile.stale ? `<p class="hint" style="color:var(--warn);margin:8px 0">Rules out of date. Edit the profile to rebuild them.</p>` : ""}
-                <div class="profile-actions"><a href="?taste=${encodeURIComponent(profile.id)}" class="nav-inline">Edit profile</a><button class="btn btn-quiet btn-small" type="button" data-action="new-profile">${icon("plus")}New profile</button></div>`
+                ${profile.stale ? `<p class="hint" style="color:var(--warn);margin:8px 0">Rules out of date. Edit the profile to rebuild them.</p>` : ""}`
               : `<div class="profile-empty">${icon("image")}<p>Add reference photos to define your visual direction.</p><button class="btn btn-small" type="button" data-action="new-profile">${icon("plus")}New profile</button>${state.tasteProfiles.length ? `<a href="?taste=${encodeURIComponent(state.tasteProfiles[0].id)}" class="nav-inline">Build an existing profile</a>` : ""}</div>`}
           </section>
           <fieldset class="scope-setting">
@@ -1973,6 +1996,7 @@ document.addEventListener("click", (event) => {
   }
   const option = event.target.closest?.("[data-profile-choice]");
   if (option) return chooseProfile(option.dataset.profileChoice);
+  if (event.target.closest?.("[data-profile-new]")) { closeProfileDropdown(); return openNewProfile(); }
   if (!event.target.closest?.(".profile-dropdown")) closeProfileDropdown();
 });
 document.addEventListener("keydown", (event) => {
@@ -1981,12 +2005,16 @@ document.addEventListener("keydown", (event) => {
     openProfileDropdown();
     return;
   }
-  const option = event.target.closest?.("[data-profile-choice]");
+  const option = event.target.closest?.("#profile-options [role=option]");
   if (!option) return;
   const options = [...$("#profile-options").querySelectorAll('[role="option"]')];
   const index = options.indexOf(option);
   if (event.key === "Escape") { event.preventDefault(); closeProfileDropdown(true); }
-  else if (["Enter", " "].includes(event.key)) { event.preventDefault(); chooseProfile(option.dataset.profileChoice); }
+  else if (["Enter", " "].includes(event.key)) {
+    event.preventDefault();
+    if (option.hasAttribute("data-profile-new")) { closeProfileDropdown(); openNewProfile(); }
+    else chooseProfile(option.dataset.profileChoice);
+  }
   else if (event.key === "Tab") closeProfileDropdown();
   else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
     event.preventDefault();
