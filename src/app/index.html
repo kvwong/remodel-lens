@@ -70,11 +70,9 @@
   .display-toggle:hover { background:var(--surface-2); color:var(--text); }
   /* Shows the mode on screen now: sun (first icon) in light, moon (second) in dark. */
   .display-toggle[data-current="dark"] > :first-child, .display-toggle:not([data-current="dark"]) > :last-child { display:none; }
-  .side .brand { display:flex; align-items:center; width:fit-content; padding-left:10px; cursor:pointer; transition:opacity var(--base) var(--ease); min-height:32px; line-height:32px; }
-  /* The logo is the Home link: a pointer and a gentle fade on hover so it reads as clickable. */
+  .side .brand { display:flex; align-items:center; width:fit-content; padding-left:10px; cursor:pointer; min-height:32px; line-height:32px; }
+  /* The logo is the Home link: a pointer on hover, and the same press scale as buttons (below). */
   .side .brand * { cursor:inherit; }
-  @media (hover: hover) { .side .brand:hover { opacity:.7; } }
-  .side .brand:active { opacity:.55; }
   .side .whim-lockup { width:116px; height:28px; }
   @media (max-width: 860px) { .side { position:static; height:auto; } .side-content { overflow-x:hidden; overflow-y:auto; } }
   .side ul > li.muted { padding-left:10px; }
@@ -436,8 +434,8 @@
     --shadow:0 1px 2px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(255,255,255,0.18);
     --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.24); }
   /* Every clickable element presses to 98% on the fast duration. */
-  button, .btn, a.nav-link, .tier, .pick, .zoom, summary, [role="tab"] { transition:transform var(--fast) var(--ease), box-shadow var(--base) var(--ease), background-color var(--base) var(--ease), border-color var(--base) var(--ease), color var(--base) var(--ease), opacity var(--base) var(--ease); }
-  button:active:not(:disabled), .btn:active, a.nav-link:active, .tier:active, .pick:active, .zoom:active, summary:active, [role="tab"]:active { transform:scale(0.98); }
+  button, .btn, a.nav-link, .side .brand, .tier, .pick, .zoom, summary, [role="tab"] { transition:transform var(--fast) var(--ease), box-shadow var(--base) var(--ease), background-color var(--base) var(--ease), border-color var(--base) var(--ease), color var(--base) var(--ease), opacity var(--base) var(--ease); }
+  button:active:not(:disabled), .btn:active, a.nav-link:active, .side .brand:active, .tier:active, .pick:active, .zoom:active, summary:active, [role="tab"]:active { transform:scale(0.98); }
   /* Tooltips: fade, lift 4px, clear a 2px blur. First one waits; never instant. */
   [data-tip] { position:relative; }
   [data-tip]::after { content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 6px); translate:-50% 4px; filter:blur(2px); opacity:0; pointer-events:none; white-space:nowrap; font-size:12px; font-weight:500; padding:4px 8px; border-radius:6px; background:var(--ink, #1b1a19); color:var(--ink-text, #fafaf9); box-shadow:var(--shadow); transition:opacity var(--base) var(--ease), translate var(--base) var(--ease), filter var(--base) var(--ease); transition-delay:0s; z-index:40; }
