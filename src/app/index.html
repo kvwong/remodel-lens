@@ -313,6 +313,17 @@
   .s-verified { color:var(--ok); } .s-review { color:var(--warn); } .s-failed, .s-error { color:var(--bad); } .s-unchanged { color:var(--muted); }
   .status > span { color:var(--text); }
   .statuses .s-unchanged > span { color:var(--muted); }
+  /* A listing's run rows center the verdict line between the details and the button, or tuck it under the details when narrow. */
+  .run:has(> .run-verdict) { display:grid; grid-template-columns:minmax(0, 1fr) 13.5rem minmax(0, 1fr); } /* fixed middle column keeps the bars lined up row to row */
+  .run:has(> .run-verdict) > .run-main { grid-column:1; }
+  .run-verdict { grid-column:2; font-size:13px; }
+  .run:has(> .run-verdict) > .btn, .run:has(> .run-verdict) > .run-chevron { grid-column:3; justify-self:end; }
+  @media (max-width:1000px) {
+    .run:has(> .run-verdict) { grid-template-columns:minmax(0, 1fr) auto; row-gap:6px; }
+    .run:has(> .run-verdict) > .run-main { grid-row:1; }
+    .run-verdict { grid-column:1; grid-row:2; }
+    .run:has(> .run-verdict) > .btn, .run:has(> .run-verdict) > .run-chevron { grid-column:2; grid-row:1 / span 2; align-self:center; }
+  }
   .verdict { display:inline-flex; align-items:center; gap:10px; color:var(--muted); border-radius:4px; }
   .verdict-bar { display:flex; gap:2px; width:88px; height:6px; }
   .verdict-bar i { min-width:4px; border-radius:999px; background:var(--muted); opacity:.45; }
@@ -1324,9 +1335,9 @@ function verdictSummary(counts = {}) {
 
 function runRow(r, aggregate = false) {
   // Home and All reports skip the per-photo verdict counts; a listing's own run list keeps them.
-  const counts = aggregate ? "" : verdictSummary(r.counts);
+  const verdict = aggregate || (r.error && !r.report) || !r.finishedAt ? "" : verdictSummary(r.counts);
   const statuses = [
-    r.error && !r.report ? `<span class="status s-error">${icon("x")}<span>${esc(r.error)}</span></span>` : !r.finishedAt ? `<span class="status s-unchanged">${icon("minus")}<span>In progress or interrupted</span></span>` : counts,
+    r.error && !r.report ? `<span class="status s-error">${icon("x")}<span>${esc(r.error)}</span></span>` : !r.finishedAt ? `<span class="status s-unchanged">${icon("minus")}<span>In progress or interrupted</span></span>` : "",
     r.stopped ? `<span class="status s-review">${icon("stop")}<span>Stopped early</span></span>` : "",
   ].join("");
   const meta = [
@@ -1343,6 +1354,7 @@ function runRow(r, aggregate = false) {
         <div class="run-meta">${meta}</div>
         ${statuses ? `<div class="statuses">${statuses}</div>` : ""}
       </div>
+      ${verdict ? `<div class="run-verdict">${verdict}</div>` : ""}
       ${r.images?.length ? `<a class="run-images photo-stack" href="${esc(r.reportUrl)}" tabindex="-1" aria-hidden="true">${r.images.map((img, i) => `<img src="${esc(img.src)}" alt="" loading="lazy" decoding="async" title="${esc(img.caption)}" style="${thumbTilt(img.src, i)}">`).join("")}</a>` : ""}
       ${r.reportUrl ? `<a class="btn btn-small" href="${esc(r.reportUrl)}" aria-label="Open report from ${esc(fmtDate(r.startedAt))}">Open report</a><span class="run-chevron" aria-hidden="true">${icon("chevron")}</span>` : ""}
     </li>`;
