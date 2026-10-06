@@ -654,15 +654,15 @@
   .reel-track { list-style:none; margin:0; padding:0 0 0 12px; display:flex; align-items:center; width:max-content; will-change:transform; }
   /* Each photo gets its own size, tilt and lift (set per card), so the strip reads as a loose, uneven pile. */
   /* Neighbours overlap (negative gap) and stack in a set but shuffled order (--z). */
-  .reel-card { --size:1; --tilt:0deg; --lift:0px; position:relative; z-index:var(--z, 1); flex:none; margin-right:var(--reel-overlap, -28px); width:calc(var(--reel-card, 250px) * var(--size)); transform:translateY(var(--lift)) rotate(var(--tilt)); transition:transform var(--slow) var(--ease), filter var(--slow) var(--ease), opacity var(--slow) var(--ease); }
+  .reel-card { --size:1; --tilt:0deg; --lift:0px; position:relative; z-index:var(--z, 1); flex:none; margin-right:-2px; width:calc(var(--reel-card, 250px) * var(--size)); transform:translateY(var(--lift)) rotate(var(--tilt)); transition:transform var(--slow) var(--ease), filter var(--slow) var(--ease), opacity var(--slow) var(--ease); }
   .reel-card a { position:relative; display:block; aspect-ratio:4 / 3; border-radius:14px; overflow:hidden; background:var(--surface-2); box-shadow:0 2px 6px rgba(0,0,0,.08), 0 10px 24px rgba(0,0,0,.12), 0 0 0 .5px rgba(0,0,0,.08); text-decoration:none; transition:box-shadow var(--base) var(--ease); }
   /* Hovering a photo brings it forward, straight and a little larger; the rest sink back, soft as bokeh. */
   @media (hover: hover) {
-    .reel-card:has(a:hover) { z-index:20; transform:translateY(0) rotate(0deg) scale(1.1); }
+    .reel-card:has(a:hover) { z-index:20; transform:translateY(0) rotate(0deg) scale(1.06); }
     .reel-card:has(a:hover) a { box-shadow:0 10px 20px rgba(0,0,0,.14), 0 28px 56px rgba(0,0,0,.2); }
-    .reel-track:has(a:hover) .reel-card:not(:has(a:hover)) { transform:translateY(var(--lift)) rotate(var(--tilt)) scale(.94); filter:blur(3px) saturate(.85); opacity:.85; }
+    .reel-track:has(a:hover) .reel-card:not(:has(a:hover)) { transform:translateY(var(--lift)) rotate(var(--tilt)) scale(.98); filter:blur(3px) saturate(.85); opacity:.85; }
   }
-  .reel-card:has(a:focus-visible) { z-index:20; transform:translateY(0) rotate(0deg) scale(1.1); }
+  .reel-card:has(a:focus-visible) { z-index:20; transform:translateY(0) rotate(0deg) scale(1.06); }
   .reel-card img { width:100%; height:100%; object-fit:cover; display:block; }
   .reel-card span { position:absolute; inset:auto 0 0; padding:28px 12px 10px; background:linear-gradient(transparent, rgba(18,18,17,.62)); color:#fff; font-size:12.5px; line-height:1.35; opacity:0; transform:translateY(6px); transition:opacity var(--base) var(--ease), transform var(--base) var(--ease); }
   .reel-card a:hover span, .reel-card a:focus-visible span { opacity:1; transform:none; }
@@ -675,7 +675,7 @@
   .reel-empty p span { padding:6px 14px; border-radius:999px; background:color-mix(in srgb, var(--bg) 88%, transparent); }
   .home-head .btn { margin-left:auto; }
   .home-head h1 { font-size:17px; line-height:32px; } /* same as the listing and taste page titles */
-  @media (max-width:600px) { .reel { --reel-card:200px; --reel-overlap:-22px; } }
+  @media (max-width:600px) { .reel { --reel-card:200px; } }
   /* Still frames: no drift; the reel scrolls by hand instead. */
   .reel[data-still] .reel-viewport { overflow-x:auto; scrollbar-width:none; }
   .reel[data-still] .reel-viewport::-webkit-scrollbar { display:none; }
@@ -1246,7 +1246,7 @@ function renderHome() {
 /** A card's size, tilt, lift and stacking, fixed by its position so each photo and its loop copy always match. */
 function reelLook(i) {
   const r = (n) => { const x = Math.sin((i + 1) * n) * 43758.5453; return x - Math.floor(x); }; // 0–1, stable per index
-  const tilt = (1.2 + r(78.233) * 4.8) * (i % 2 ? 1 : -1); // 1.2–6deg, leaning alternately like a fanned hand
+  const tilt = i % 2 ? 1 : -1; // a 1deg lean, alternating like a loosely stacked hand
   return `--size:${(0.84 + r(12.9898) * 0.32).toFixed(3)};--tilt:${tilt.toFixed(2)}deg;--lift:${Math.round(r(37.719) * 14 - 7)}px;--z:${1 + Math.floor(r(93.989) * 6)}`;
 }
 
@@ -1256,7 +1256,7 @@ function reelCard(slide, i, copy = false) {
   </a></li>`;
 }
 
-const REEL_SPEED = 22; // px per second: a slow, steady drift
+const REEL_SPEED = 6; // px per second: a very slow, steady drift
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 let reelFrame = 0;
 let reelListeners = null;
