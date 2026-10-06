@@ -311,6 +311,10 @@
   .run-images { display:flex; gap:6px; margin-left:auto; }
   .run-images img { width:96px; aspect-ratio:4 / 3; object-fit:cover; border-radius:6px; background:var(--surface-2); display:block; }
   .run-images + .btn { margin-left:0; }
+  /* Rows with photos stay on one line: text, photos, then the button, however long the metadata runs. */
+  .run:has(.run-images) { flex-wrap:nowrap; }
+  .run:has(.run-images) .run-main { flex:1 1 0; }
+  .run-images { flex:none; }
   @media (max-width:1100px) { .run-images img:nth-child(n+3) { display:none; } }
   .run-title { font-weight:500; text-decoration:none; justify-self:start; }
   a.run-title:hover { text-decoration:underline; }
@@ -1038,11 +1042,13 @@ function alignSidebar() {
   const target = $("#content .head .subhead, #content .head .stats");
   if (!nav || !label) return;
   if (state.view === "home" && !matchMedia("(max-width: 860px)").matches) {
-    // Home has no title beside the sidebar to line up with, so sit Listings as close under the brand as the other pages do.
-    const current = parseFloat(getComputedStyle(nav).marginTop) || 0;
-    const gap = label.getBoundingClientRect().top - $(".side .brand").getBoundingClientRect().bottom;
-    root.style.setProperty("--side-offset", `${Math.round(current + 8 - gap)}px`);
+    // Home has no title beside the sidebar to line up with. Keep Listings where the last page put it, so going Home never
+    // nudges the sidebar; on a first visit, sit it as close under the brand as the other pages do.
     root.style.setProperty("--main-offset", "0px");
+    const current = parseFloat(getComputedStyle(nav).marginTop) || 0;
+    if (current) return;
+    const gap = label.getBoundingClientRect().top - $(".side .brand").getBoundingClientRect().bottom;
+    root.style.setProperty("--side-offset", `${Math.round(8 - gap)}px`);
     return;
   }
   if (!target || matchMedia("(max-width: 860px)").matches) {
