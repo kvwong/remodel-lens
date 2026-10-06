@@ -224,14 +224,16 @@
   .redesign-settings .tiers { grid-template-columns:1fr; }
   .redesign-settings .tier { min-height:66px; align-items:center; }
   .redesign-settings .tier input { margin:0; }
-  .profile-card { position:relative; display:grid; grid-template-rows:minmax(154px, 1fr) auto; height:var(--profile-card-height, auto); width:100%; border:1px solid var(--line-strong); border-radius:10px; background:var(--surface); overflow:hidden; }
-  .profile-preview { display:grid; grid-template-columns:2fr 1fr; grid-template-rows:1fr 1fr; gap:3px; min-height:154px; width:100%; background:var(--surface-2); }
+  .profile-card { position:relative; display:grid; grid-template-rows:minmax(154px, 1fr) auto; height:var(--profile-card-height, auto); min-height:calc(154px + 50px); width:100%; border:1px solid var(--line-strong); border-radius:10px; background:var(--surface); overflow:hidden; }
+  .profile-preview { display:grid; grid-template-columns:2fr 1fr; grid-template-rows:minmax(0, 1fr) minmax(0, 1fr); gap:3px; min-height:154px; width:100%; background:var(--surface-2); }
+  /* In the card the photos fill the space the row gives them and never grow it from their own size, so they can't run under Edit and Change. */
+  .profile-card > .profile-preview { min-height:0; contain:size; overflow:hidden; }
   .profile-preview img { width:100%; height:100%; min-height:0; object-fit:cover; }
   .profile-preview img:first-child { grid-row:1 / -1; }
   .profile-preview[data-count="1"] { grid-template-columns:1fr; }
   .profile-preview[data-count="2"] img:last-child { grid-row:1 / -1; }
   .profile-preview-empty { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:8px; color:var(--muted); font-size:13px; }
-  .profile-caption { width:100%; flex:none; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:48px; padding:0 4px 0 12px; font-weight:600; }
+  .profile-caption { position:relative; z-index:1; width:100%; flex:none; display:flex; background:var(--surface); align-items:center; justify-content:space-between; gap:12px; min-height:48px; padding:0 4px 0 12px; font-weight:600; }
   .profile-caption > span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   /* Edit and Change sit at the caption's right end; Change is the only way to open the profile menu. */
   .profile-tools { flex:none; display:flex; align-items:center; gap:2px; font-size:13px; font-weight:400; color:var(--muted); }
@@ -477,8 +479,7 @@
     .file a .icon { width:16px; height:16px; }
 
     /* Redesign settings: keep the primary action close and full width. */
-    .profile-card { grid-template-rows:minmax(128px, 1fr) auto; }
-    .profile-card .profile-preview { min-height:128px; }
+    .profile-card { grid-template-rows:minmax(128px, 1fr) auto; min-height:calc(128px + 54px); }
     .profile-caption { min-height:52px; }
     .profile-edit, .profile-change { min-height:44px; }
     .profile-option { min-height:44px; }
