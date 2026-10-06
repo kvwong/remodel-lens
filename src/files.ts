@@ -139,20 +139,23 @@ export function progressDone(units: number, label?: string): void {
   if (label) p.label = label;
 }
 
-/** A counting semaphore: at most `limit` callers inside `run` at once. */
-export function createLimiter(limit: number) {
+/** A counting semaphore: at most `limit` callers inside `run` at once. A function limit is read on every entry and release. */
+export function createLimiter(limit: number | (() => number)) {
+  const max = typeof limit === "function" ? limit : () => limit;
   let active = 0;
   const queue: Array<() => void> = [];
   return async function run<T>(fn: () => Promise<T>): Promise<T> {
-    // A released slot is handed straight to the next waiter, so newcomers can't jump the queue.
-    if (active >= limit) await new Promise<void>((resolve) => queue.push(resolve));
-    else active += 1;
+    // Waiters are served in order, so newcomers can't jump the queue.
+    if (active < max() && queue.length === 0) active += 1;
+    else await new Promise<void>((resolve) => queue.push(resolve));
     try {
       return await fn();
     } finally {
-      const next = queue.shift();
-      if (next) next();
-      else active -= 1;
+      active -= 1;
+      while (active < max() && queue.length > 0) {
+        active += 1;
+        queue.shift()!();
+      }
     }
   };
 }

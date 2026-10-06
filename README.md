@@ -256,7 +256,7 @@ root. `.env.example` lists the defaults:
 | `ANALYSIS_MODELS` | `openai/gpt-6.1-sol,anthropic/claude-sonnet-5-5` | Models that analyze each taste reference. |
 | `REASONING_MODEL` | `openai/gpt-6.1-sol` | Planning, rule extraction, and verification. |
 | `IMAGE_MODEL` | `gpt-image-2.5-sunburst` | Image-edit model. |
-| `IMAGE_CONCURRENCY` | `4` | Maximum image edits in flight across listings. |
+| `IMAGE_CONCURRENCY` | `6` | Maximum image edits in flight across listings (also on the Settings page). Lower it if OpenAI rate-limits. |
 | `EDGE_THRESHOLD` | `0.45` | Minimum edge correlation for a fixed element to pass. See [Tune verification](#tune-verification). |
 | `PORT` | `4310` | Local app port. |
 

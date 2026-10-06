@@ -24,6 +24,7 @@ export const Settings = z.object({
       reasoning: ModelId.optional(),
       analysis: z.array(ModelId).min(1).max(4).optional(),
       image: z.string().trim().regex(/^[\w.:-]+$/).max(100).optional(),
+      imageConcurrency: z.number().int().min(1).max(16).optional(),
     })
     .default({}),
   tuning: z.object({ edgeThreshold: z.number().gt(0).lt(1).optional() }).default({}),
@@ -45,6 +46,7 @@ const ENV = {
   REASONING_MODEL: (s: Settings) => s.models.reasoning,
   ANALYSIS_MODELS: (s: Settings) => s.models.analysis?.join(","),
   IMAGE_MODEL: (s: Settings) => s.models.image,
+  IMAGE_CONCURRENCY: (s: Settings) => (s.models.imageConcurrency === undefined ? undefined : String(s.models.imageConcurrency)),
   EDGE_THRESHOLD: (s: Settings) => (s.tuning.edgeThreshold === undefined ? undefined : String(s.tuning.edgeThreshold)),
 } as const;
 export type EnvName = keyof typeof ENV;
