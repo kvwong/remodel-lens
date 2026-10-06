@@ -313,22 +313,26 @@
   .s-verified { color:var(--ok); } .s-review { color:var(--warn); } .s-failed, .s-error { color:var(--bad); } .s-unchanged { color:var(--muted); }
   .status > span { color:var(--text); }
   .statuses .s-unchanged > span { color:var(--muted); }
-  /* A listing's run rows center the verdict line between the details and the button, or tuck it under the details when narrow. */
-  .run:has(> .run-verdict) { display:grid; grid-template-columns:minmax(0, 1fr) 13.5rem minmax(0, 1fr); } /* fixed middle column keeps the bars lined up row to row */
-  .run:has(> .run-verdict) > .run-main { grid-column:1; }
+  /* A listing's run rows share one grid: the verdict column sits as far from the widest details as from the buttons and lines up row to row. */
+  .runs:has(.run-verdict) { display:grid; grid-template-columns:minmax(0, max-content) minmax(24px, 1fr) max-content minmax(24px, 1fr) auto; }
+  .runs:has(.run-verdict) > .run { grid-column:1 / -1; display:grid; grid-template-columns:subgrid; column-gap:0; }
+  .runs:has(.run-verdict) > .run > .run-main { grid-column:1; }
+  .runs:has(.run-verdict) > .run > .btn, .runs:has(.run-verdict) > .run > .run-chevron { grid-column:5; justify-self:end; }
   /* Wide: two sub rows like the details beside it, the bar on the date's line and the count under it on the meta's. */
-  .run-verdict { grid-column:2; align-self:start; }
+  .run-verdict { grid-column:3; align-self:start; }
   .run-verdict .verdict { display:grid; grid-template-rows:1lh auto; row-gap:4px; align-items:center; justify-items:start; }
   .run-verdict .verdict-bar { width:9rem; }
   .run-verdict .verdict-text { font-size:13px; }
-  .run:has(> .run-verdict) > .btn, .run:has(> .run-verdict) > .run-chevron { grid-column:3; justify-self:end; }
+  /* Narrow: one continuous line tucked under the details. */
   @media (max-width:1000px) {
-    .run:has(> .run-verdict) { grid-template-columns:minmax(0, 1fr) auto; row-gap:6px; }
-    .run:has(> .run-verdict) > .run-main { grid-row:1; }
-    .run-verdict { grid-column:1; grid-row:2; }
+    .runs:has(.run-verdict) { display:block; }
+    .runs:has(.run-verdict) > .run { display:flex; column-gap:20px; }
+    .runs:has(.run-verdict) > .run:has(> .run-verdict) { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:6px 20px; }
+    .runs:has(.run-verdict) > .run > .run-main { grid-row:1; }
+    .runs:has(.run-verdict) .run-verdict { grid-column:1; grid-row:2; }
+    .runs:has(.run-verdict) > .run > .btn, .runs:has(.run-verdict) > .run > .run-chevron { grid-column:2; grid-row:1 / span 2; align-self:center; }
     .run-verdict .verdict { display:inline-flex; gap:10px; }
     .run-verdict .verdict-bar { width:88px; }
-    .run:has(> .run-verdict) > .btn, .run:has(> .run-verdict) > .run-chevron { grid-column:2; grid-row:1 / span 2; align-self:center; }
   }
   .verdict { display:inline-flex; align-items:center; gap:10px; color:var(--muted); border-radius:4px; }
   .verdict-bar { display:flex; gap:2px; width:88px; height:6px; }
