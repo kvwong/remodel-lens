@@ -11,12 +11,14 @@ import { TIER_LABELS } from "../redesign/tiers.js";
 const RECENT_REPORTS = 5;
 const MAX_SLIDES = 18;
 const SLIDES_PER_RUN = 6;
+const ROW_IMAGES = 4;
 const SLIDE_STATUSES = new Set(["verified", "review"]);
 
 const urlPath = (...segments: string[]) => segments.map(encodeURIComponent).join("/");
 
-export type HomeReport = RunSummary & { reportUrl: string; listingId: string; listingName: string };
+type ReportRun = RunSummary & { reportUrl: string; listingId: string; listingName: string };
 export type HomeSlide = { src: string; alt: string; caption: string; reportUrl: string };
+export type HomeReport = ReportRun & { images: HomeSlide[] };
 
 export async function homeView(): Promise<{ reports: HomeReport[]; totalReports: number; slides: HomeSlide[] }> {
   const listings = await listListings();
@@ -34,11 +36,15 @@ export async function homeView(): Promise<{ reports: HomeReport[]; totalReports:
     if (slides.length >= MAX_SLIDES) break;
     slides.push(...(await runSlides(run)).slice(0, Math.min(SLIDES_PER_RUN, MAX_SLIDES - slides.length)));
   }
-  return { reports: runs.slice(0, RECENT_REPORTS), totalReports: runs.length, slides };
+  const reports = await Promise.all(runs.slice(0, RECENT_REPORTS).map(async (run) => ({
+    ...run,
+    images: (await runSlides(run, 240)).slice(0, ROW_IMAGES),
+  })));
+  return { reports, totalReports: runs.length, slides };
 }
 
 /** Redesigned images worth showing off from one run: ones that passed or only need a second look. */
-async function runSlides(run: HomeReport): Promise<HomeSlide[]> {
+async function runSlides(run: ReportRun, width = 720): Promise<HomeSlide[]> {
   const resultsPath = path.join(RUNS_DIR, run.listingId, run.id, "results.json");
   if (!existsSync(resultsPath)) return [];
   let photos: PhotoResult[];
@@ -53,7 +59,7 @@ async function runSlides(run: HomeReport): Promise<HomeSlide[]> {
       const room = photo.room || photo.inventory?.roomType || "Room";
       const tier = TIER_LABELS[t.tier]?.name ?? t.tier;
       return {
-        src: `/thumb/runs/${urlPath(run.listingId, run.id, ...t.image!.split("/"))}?w=720`,
+        src: `/thumb/runs/${urlPath(run.listingId, run.id, ...t.image!.split("/"))}?w=${width}`,
         alt: `${tier} redesign of the ${room.toLowerCase()} at ${run.listingName}`,
         caption: `${run.listingName} · ${sentence(room)} · ${tier}`,
         reportUrl: run.reportUrl,
