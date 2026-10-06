@@ -648,11 +648,9 @@
   .reel { position:relative; margin:-12px 0 -22px; }
   /* Room above and below for the tilt and the hover lift's shadow, without pushing the reports down. */
   .reel-viewport { overflow:hidden; padding:24px 0 56px; -webkit-mask-image:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask-image:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
-  .reel-track { list-style:none; margin:0; padding:0 0 0 12px; display:flex; gap:var(--reel-gap, 18px); width:max-content; will-change:transform; }
-  .reel-card { --tilt:0deg; --lift:0px; flex:none; width:var(--reel-card, 260px); transform:translateY(var(--lift)) rotate(var(--tilt)); }
-  .reel-card:nth-child(3n+1) { --tilt:-2.2deg; --lift:4px; }
-  .reel-card:nth-child(3n+2) { --tilt:1.6deg; --lift:-6px; }
-  .reel-card:nth-child(3n) { --tilt:-0.6deg; --lift:2px; }
+  .reel-track { list-style:none; margin:0; padding:0 0 0 12px; display:flex; align-items:center; gap:var(--reel-gap, 18px); width:max-content; will-change:transform; }
+  /* Each photo gets its own size, tilt and lift (set per card), so the strip reads as a loose, uneven pile. */
+  .reel-card { --size:1; --tilt:0deg; --lift:0px; flex:none; width:calc(var(--reel-card, 250px) * var(--size)); transform:translateY(var(--lift)) rotate(var(--tilt)); }
   .reel-card a { position:relative; display:block; aspect-ratio:4 / 3; border-radius:14px; overflow:hidden; background:var(--surface-2); box-shadow:var(--shadow-hover); text-decoration:none; transition:transform var(--slow) var(--ease), box-shadow var(--base) var(--ease); }
   .reel-card a:hover, .reel-card a:focus-visible { transform:scale(1.045) rotate(calc(var(--tilt) * -1)); box-shadow:0 6px 14px rgba(0,0,0,.1), 0 18px 36px rgba(0,0,0,.12); }
   .reel-card img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -1222,7 +1220,7 @@ function renderHome() {
         <button class="icon-btn reel-toggle" type="button" data-reel-toggle aria-label="Pause the photo reel" data-tip="Pause">${icon("pause")}</button>
       </section>`
     : `<section class="reel reel-empty" aria-label="Recent redesigns">
-        <div class="reel-viewport"><ul class="reel-track" aria-hidden="true">${Array.from({ length: 8 }, (_, i) => `<li class="reel-card" style="--i:${i}"><div></div></li>`).join("")}</ul></div>
+        <div class="reel-viewport"><ul class="reel-track" aria-hidden="true">${Array.from({ length: 8 }, (_, i) => `<li class="reel-card" style="${reelLook(i)}"><div></div></li>`).join("")}</ul></div>
         <p><span>Redesigned photos from your reports will drift by here.</span></p>
       </section>`;
   $("#content").innerHTML = `${reel}
@@ -1235,8 +1233,14 @@ function renderHome() {
   startReel();
 }
 
+/** A card's size, tilt and lift, fixed by its position so each photo and its loop copy always match. */
+function reelLook(i) {
+  const r = (n) => { const x = Math.sin((i + 1) * n) * 43758.5453; return x - Math.floor(x); }; // 0–1, stable per index
+  return `--size:${(0.84 + r(12.9898) * 0.32).toFixed(3)};--tilt:${(r(78.233) * 4.4 - 2.2).toFixed(2)}deg;--lift:${Math.round(r(37.719) * 12 - 6)}px`;
+}
+
 function reelCard(slide, i, copy = false) {
-  return `<li class="reel-card" style="--i:${i % 7}" ${copy ? 'aria-hidden="true"' : ""}><a href="${esc(slide.reportUrl)}" ${copy ? 'tabindex="-1"' : ""}>
+  return `<li class="reel-card" style="${reelLook(i)}" ${copy ? 'aria-hidden="true"' : ""}><a href="${esc(slide.reportUrl)}" ${copy ? 'tabindex="-1"' : ""}>
     <img src="${esc(slide.src)}" alt="${copy ? "" : esc(slide.alt)}" loading="${i < 6 ? "eager" : "lazy"}" decoding="async" draggable="false"><span>${esc(slide.caption)}</span>
   </a></li>`;
 }
