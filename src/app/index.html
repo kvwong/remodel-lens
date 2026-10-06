@@ -648,6 +648,7 @@
   .reel-empty p { position:absolute; inset:0; display:grid; place-items:center; margin:0; padding:0 24px; text-align:center; color:var(--muted); font-size:14px; pointer-events:none; }
   .reel-empty p span { padding:6px 14px; border-radius:999px; background:color-mix(in srgb, var(--bg) 88%, transparent); }
   .home-head .btn { margin-left:auto; }
+  .home-head h1 { font-size:17px; line-height:32px; } /* same as the listing and taste page titles */
   @media (max-width:600px) { .reel { --reel-card:200px; --reel-gap:14px; } }
   /* Still frames: no drift; the reel scrolls by hand instead. */
   .reel[data-still] .reel-viewport { overflow-x:auto; scrollbar-width:none; }
@@ -2988,7 +2989,7 @@ async function load() {
       renderListings();
       renderProfilesNav();
       renderMobileTabs();
-      if (!state.home) $("#content").innerHTML = `<header class="head collection-head"><h1>Recent reports</h1></header><section class="panel"><p class="muted" role="status">Loading reports…</p></section>`;
+      if (!state.home) $("#content").innerHTML = `<header class="head collection-head home-head"><h1>Recent reports</h1></header><section class="panel"><p class="muted" role="status">Loading reports…</p></section>`;
       await loadHome();
       if (state.view === "home") renderHome();
       return;
