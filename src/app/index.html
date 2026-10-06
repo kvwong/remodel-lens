@@ -566,10 +566,10 @@
   .cost-name a { color:inherit; }
   .cost-slider { position:relative; height:40px; touch-action:none; user-select:none; -webkit-user-select:none; cursor:pointer; }
   .cost-rail { position:absolute; left:0; right:0; top:18px; height:4px; border-radius:2px; background:var(--line); }
-  .cost-band { position:absolute; top:11px; height:18px; border-radius:4px; background:repeating-linear-gradient(135deg, color-mix(in srgb, var(--primary) 9%, transparent) 0 5px, transparent 5px 8px), var(--primary-soft); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--primary) 45%, transparent); }
+  .cost-band { position:absolute; top:11px; height:18px; border-radius:4px; background:repeating-linear-gradient(135deg, color-mix(in srgb, var(--primary) 9%, transparent) 0 5px, transparent 5px 8px), var(--primary-soft); }
   /* Default ticks stay hidden until the row is in use. */
   .cost-tick { position:absolute; top:6px; width:2px; height:28px; margin-left:-1px; border-radius:1px; background:color-mix(in srgb, var(--primary) 55%, transparent); opacity:0; transition:opacity .15s, background .15s; pointer-events:none; }
-  .cost-row:hover .cost-tick, .cost-row:focus-within .cost-tick, .cost-row.dragging .cost-tick { opacity:1; }
+  .cost-row:hover .cost-tick, .cost-row:has(:focus-visible) .cost-tick, .cost-row.dragging .cost-tick { opacity:1; }
   .cost-tick.hit { background:var(--primary); }
   .cost-fill { position:absolute; top:18px; height:4px; border-radius:2px; background:var(--primary); }
   .cost-row.changed .cost-fill { background:var(--warn); }
@@ -579,7 +579,7 @@
   .cost-thumb.dragging { cursor:grabbing; transform:scale(1.12); }
   .cost-thumb:focus-visible { border-radius:50%; outline-offset:3px; }
   .cost-scale { position:absolute; top:31px; left:0; right:0; display:flex; justify-content:space-between; font-size:11px; color:var(--muted); pointer-events:none; opacity:0; transition:opacity .15s; }
-  .cost-row:hover .cost-scale, .cost-row:focus-within .cost-scale { opacity:1; }
+  .cost-row:hover .cost-scale, .cost-row:has(:focus-visible) .cost-scale, .cost-row.dragging .cost-scale { opacity:1; }
   .cost-vals { display:grid; gap:4px; justify-items:end; }
   .cost-pair { display:flex; align-items:center; gap:6px; color:var(--muted); }
   .cost-pair .affix-input { height:34px; width:96px; }
@@ -2645,6 +2645,7 @@ function dragCost(row, bound, event) {
   const end = () => {
     thumb.classList.remove("dragging");
     row.classList.remove("dragging");
+    thumb.blur(); // A mouse or touch drag lets go of the handle; keyboard focus only comes from Tab.
     slider.removeEventListener("pointermove", move);
     slider.removeEventListener("pointerup", end);
     slider.removeEventListener("pointercancel", end);
