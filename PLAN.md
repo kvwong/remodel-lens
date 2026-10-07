@@ -117,6 +117,16 @@ bands, verification results, and feasibility flags.
    appliances, wall removal) keep the model's estimate and are labeled as such.
    Next: calibrate against real local quotes when there are some.
 5. **Web UI:** upload a listing, view tiers side by side, tweak the taste profile.
+6. **Spot changes:** change one photo at one scope from the report instead of
+   re-running the listing. The buyer describes a change, pins notes to spots on
+   the image, and can add context and reference photos. Only the plan, pricing,
+   image edit, and checks re-run; the inventory is reused. The edit starts from
+   the version on screen (a delta prompt plus a copy with numbered pin markers,
+   no mask), and verification still compares against the listing photo, with
+   the judge also checking each pin. Versions live in the run folder
+   (`versions.json`, `<photo>/<scope>/versions/vN/`), `results.json` is never
+   rewritten, and the version picked for each room drives totals and PDFs
+   (`src/redesign/change.ts`, `versions.ts`, `npm run change`).
 
 ## Out of scope / notes
 - No scraping. Zillow and Redfin terms prohibit it and listing photos are

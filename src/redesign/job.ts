@@ -11,6 +11,7 @@ import { TasteProfile } from "../taste/schema.js";
 import { listTasteProfiles, profileJsonPath } from "../taste/store.js";
 import { redesignListing, type PhotoResult } from "./run.js";
 import type { Tier } from "./tiers.js";
+import { changesCost, readVersions } from "./versions.js";
 
 export const RUNS_DIR = path.join(ROOT, ".runs", "redesign");
 
@@ -33,6 +34,8 @@ export type RunSummary = {
   imageModel?: string;
   /** Filled in by listRuns from the profile's metadata. */
   profileName?: string | null;
+  /** Filled in by listRuns: spot changes made on this run's report. */
+  changes?: number;
 };
 
 /** Paths from before profiles became folders, as recorded in older run.json files. */
@@ -124,7 +127,12 @@ export async function listRuns(listingId: string): Promise<RunSummary[]> {
     (await readdir(dir)).map(async (run) => {
       const file = path.join(dir, run, "run.json");
       // Trust the folder name over the stored id, so renamed or custom-named run folders still link correctly.
-      return existsSync(file) ? ({ ...(JSON.parse(await readFile(file, "utf8")) as RunSummary), id: run }) : null;
+      if (!existsSync(file)) return null;
+      const summary = { ...(JSON.parse(await readFile(file, "utf8")) as RunSummary), id: run };
+      const versions = await readVersions(path.join(dir, run)).catch(() => null);
+      if (!versions?.versions.length) return summary;
+      // Spot changes add to the run's spend.
+      return { ...summary, changes: versions.versions.length, apiCost: Math.round(((summary.apiCost ?? 0) + changesCost(versions)) * 100) / 100 };
     }),
   );
   const names = new Map((await listTasteProfiles()).map((p) => [profileJsonPath(p.id), p.name]));
