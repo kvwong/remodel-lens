@@ -4,6 +4,8 @@
 //   npm run tune -- labels               Add every scored image to .runs/tuning/labels.json for you to mark ok/broken
 //   npm run tune -- compare <listing-dir> --models gpt-image-2,gpt-image-2.5-sunburst [--profile path] [--tiers ...] [--max n]
 //                                        Redesign one listing once per image model (costs API spend), then score those runs
+//   npm run tune -- compare <listing-dir> --planners openai/gpt-6.1-sol,openai/gpt-6.1-sol:low [...]
+//                                        Same, once per inventory/planning model (judge and image model stay fixed); compare run times in the report
 import path from "node:path";
 import { parseArgs } from "node:util";
 
@@ -31,6 +33,7 @@ async function main() {
     allowPositionals: true,
     options: {
       models: { type: "string" },
+      planners: { type: "string" },
       profile: { type: "string", default: "profiles/example/profile.json" },
       tiers: { type: "string" },
       max: { type: "string", default: "24" },
@@ -48,18 +51,29 @@ async function main() {
   }
 
   if (command === "compare") {
-    const models = (values.models ?? "").split(",").map((m) => m.trim()).filter(Boolean);
-    if (!listingArg || models.length < 2) throw new Error("Usage: npm run tune -- compare <listing-dir> --models model-a,model-b");
+    const list = (value: string | undefined) => (value ?? "").split(",").map((m) => m.trim()).filter(Boolean);
+    const planners = list(values.planners);
+    const models = list(values.models);
+    const variants = planners.length > 0 ? planners : models;
+    if (!listingArg || variants.length < 2 || (planners.length > 0 && models.length > 0)) {
+      throw new Error("Usage: npm run tune -- compare <listing-dir> --models image-a,image-b  (or --planners model-a,model-b)");
+    }
     const listingDir = path.resolve(listingArg);
     const tiers = parseTiers(values.tiers);
     const max = Number(values.max);
     const photos = Math.min(max, (await readListing(listingDir)).photos.filter((p) => p.selected).length);
     const cost = estimateRunCost(photos, tiers.length);
-    log(`${models.length} runs × ${photos} photos × ${tiers.length} tiers: about $${(cost.low * models.length).toFixed(2)}–$${(cost.high * models.length).toFixed(2)}`);
+    log(`${variants.length} runs × ${photos} photos × ${tiers.length} tiers: about $${(cost.low * variants.length).toFixed(2)}–$${(cost.high * variants.length).toFixed(2)}`);
     const runs = new Set<string>();
-    for (const imageModel of models) {
-      log(`Image model ${imageModel}`);
-      const run = await runListingRedesign({ listingDir, profilePath: path.resolve(values.profile), tiers, max, imageModel });
+    for (const variant of variants) {
+      log(planners.length > 0 ? `Planner ${variant}` : `Image model ${variant}`);
+      const run = await runListingRedesign({
+        listingDir,
+        profilePath: path.resolve(values.profile),
+        tiers,
+        max,
+        ...(planners.length > 0 ? { plannerModel: variant } : { imageModel: variant }),
+      });
       runs.add(`${run.listing}/${run.id}`);
     }
     return report(runs);

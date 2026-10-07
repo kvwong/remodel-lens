@@ -13,6 +13,10 @@ export type AttemptRecord = {
   tier: string;
   attempt: number;
   imageModel: string;
+  /** Inventory and planning model when a comparison overrode the reasoning model; null for normal runs. */
+  planner?: string | null;
+  /** Wall-clock minutes for the whole run this attempt came from. Null when the run didn't finish. */
+  runMinutes?: number | null;
   /** Verdict the pipeline gave this attempt when it ran. */
   verdict: Verdict;
   /** True for the attempt the run kept (the last one for its tier). */
@@ -119,6 +123,10 @@ export function kindStats(records: AttemptRecord[]): KindStats[] {
 
 export type ModelStats = {
   imageModel: string;
+  /** Planner override shared by these runs; null for the default reasoning model. */
+  planner: string | null;
+  /** Median wall-clock minutes per run. Only comparable between runs of the same listing, photos and scopes. */
+  medianRunMinutes: number | null;
   /** Tiers that produced an image (one per photo × tier). */
   tiers: number;
   verified: number;
@@ -134,14 +142,22 @@ export type ModelStats = {
 
 export function modelStats(records: AttemptRecord[]): ModelStats[] {
   const byModel = new Map<string, AttemptRecord[]>();
-  for (const record of records) byModel.set(record.imageModel, [...(byModel.get(record.imageModel) ?? []), record]);
-  return [...byModel.entries()]
-    .map(([imageModel, attempts]) => {
+  for (const record of records) {
+    const key = `${record.imageModel}\u0000${record.planner ?? ""}`;
+    byModel.set(key, [...(byModel.get(key) ?? []), record]);
+  }
+  return [...byModel.values()]
+    .map((attempts) => {
+      const { imageModel, planner = null } = attempts[0]!;
+      const runMinutes = new Map(attempts.map((r) => [`${r.listing}/${r.run}`, r.runMinutes ?? null]));
+      const minutes = [...runMinutes.values()].filter((n): n is number => n !== null).sort((a, b) => a - b);
       const finals = attempts.filter((r) => r.final);
       const adherence = attempts.map((r) => r.planAdherence).filter((n): n is number => n !== null);
       const count = (v: Verdict) => finals.filter((r) => r.verdict === v).length;
       return {
         imageModel,
+        planner,
+        medianRunMinutes: quantile(minutes, 0.5),
         tiers: finals.length,
         verified: count("verified"),
         review: count("review"),
@@ -152,7 +168,7 @@ export function modelStats(records: AttemptRecord[]): ModelStats[] {
         brokenRate: attempts.filter((r) => truth(r) === "broken").length / attempts.length,
       };
     })
-    .sort((a, b) => a.imageModel.localeCompare(b.imageModel));
+    .sort((a, b) => a.imageModel.localeCompare(b.imageModel) || (a.planner ?? "").localeCompare(b.planner ?? ""));
 }
 
 const pct = (n: number | null) => (n === null ? "–" : `${Math.round(n * 100)}%`);
@@ -191,15 +207,15 @@ export function renderTuningReport(records: AttemptRecord[], current: number): s
     "|---|---|---|---|---|---|",
     ...kindStats(records).map((k) => `| ${k.kind} | ${k.label} | ${k.n} | ${num(k.p10)} | ${num(k.median)} | ${num(k.p90)} |`),
     "",
-    "## Image models",
+    "## Models",
     "",
-    "Verdicts are for the image each run kept. Runs from before the image model was recorded show as `unknown`.",
+    "Verdicts are for the image each run kept. Runs from before the image model was recorded show as `unknown`. Planner is the inventory and planning model when `compare --planners` overrode the reasoning model. Run time only compares fairly between runs of the same listing, photos and scopes.",
     "",
-    "| Model | Tiers | Verified | Review | Failed | Verified first try | Mean attempts | Plan adherence | Broken (all attempts) |",
-    "|---|---|---|---|---|---|---|---|---|",
+    "| Image model | Planner | Run time | Tiers | Verified | Review | Failed | Verified first try | Mean attempts | Plan adherence | Broken (all attempts) |",
+    "|---|---|---|---|---|---|---|---|---|---|---|",
     ...modelStats(records).map(
       (m) =>
-        `| ${m.imageModel} | ${m.tiers} | ${pct(m.tiers ? m.verified / m.tiers : null)} | ${pct(m.tiers ? m.review / m.tiers : null)} | ${pct(m.tiers ? m.failed / m.tiers : null)} | ${pct(m.tiers ? m.firstTry / m.tiers : null)} | ${num(m.meanAttempts, 1)} | ${num(m.meanPlanAdherence, 1)}/10 | ${pct(m.brokenRate)} |`,
+        `| ${m.imageModel} | ${m.planner ?? "default"} | ${m.medianRunMinutes === null ? "–" : `${m.medianRunMinutes.toFixed(1)} min`} | ${m.tiers} | ${pct(m.tiers ? m.verified / m.tiers : null)} | ${pct(m.tiers ? m.review / m.tiers : null)} | ${pct(m.tiers ? m.failed / m.tiers : null)} | ${pct(m.tiers ? m.firstTry / m.tiers : null)} | ${num(m.meanAttempts, 1)} | ${num(m.meanPlanAdherence, 1)}/10 | ${pct(m.brokenRate)} |`,
     ),
     "",
   ];

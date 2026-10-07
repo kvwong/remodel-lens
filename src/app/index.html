@@ -2678,7 +2678,7 @@ function renderModels() {
   $("#settings-models").innerHTML = `<div class="panel-head"><h2 id="models-h">Models</h2></div>
     <form id="models-form" novalidate>
       <div class="setting-row">
-        <div class="setting-label"><label for="reasoning-model">Reasoning model</label><p>Writes taste rules, inventories each room, plans the changes, and judges every redesign.</p></div>
+        <div class="setting-label"><label for="reasoning-model">Reasoning model</label><p>Writes taste rules, inventories each room, plans the changes, and judges every redesign. Runs at low reasoning effort, which tested faster with no loss in quality.</p></div>
         <div class="setting-control model-control">
           ${modelSelect("reasoning-model", m.options.reasoning, m.current.reasoning, m.defaults.reasoning)}
           <p class="control-note" data-model-note="reasoning-model">${esc(notes(m.options.reasoning, m.current.reasoning))}</p>
@@ -2798,7 +2798,7 @@ function tuningResults() {
     <div class="data-table-wrap"><table class="data-table">
       <caption class="sr-only">Image model comparison</caption>
       <thead><tr><th scope="col">Model</th><th scope="col">Images kept</th><th scope="col">Verified</th><th scope="col">Verified first try</th><th scope="col">Mean attempts</th><th scope="col">Broken</th></tr></thead>
-      <tbody>${t.models.map((m) => `<tr><td>${esc(m.imageModel)}</td><td>${m.tiers}</td><td>${pct(m.tiers ? m.verified / m.tiers : null)}</td><td>${pct(m.tiers ? m.firstTry / m.tiers : null)}</td><td>${m.meanAttempts.toFixed(1)}</td><td>${pct(m.brokenRate)}</td></tr>`).join("")}</tbody>
+      <tbody>${t.models.map((m) => `<tr><td>${esc(m.imageModel)}${m.planner ? ` · ${esc(m.planner)}` : ""}</td><td>${m.tiers}</td><td>${pct(m.tiers ? m.verified / m.tiers : null)}</td><td>${pct(m.tiers ? m.firstTry / m.tiers : null)}</td><td>${m.meanAttempts.toFixed(1)}</td><td>${pct(m.brokenRate)}</td></tr>`).join("")}</tbody>
     </table></div>
     <div class="section-head" style="margin:4px 0 0"><div><h3>Label images</h3><p class="hint">Your call beats the judge's. Mark the images you'd judge differently and the suggestion above updates. "Worth a look" shows images where the edge check and the judge disagree.</p></div>
       <div class="seg" role="group" aria-label="Show">${Object.entries(filters).map(([id, [label, list]]) => `<button type="button" data-tune-filter="${id}" aria-pressed="${(state.tuningFilter ?? "worth") === id}">${label} <span class="num">${list.length}</span></button>`).join("")}</div></div>

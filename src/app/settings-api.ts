@@ -3,6 +3,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { DEFAULT_MODELS, requireKeys, resolveModels } from "../config.js";
+import { splitEffort } from "../providers.js";
 import { DEFAULT_COST_ASSUMPTIONS } from "../pricing/assumptions.js";
 import { COST_ITEM_KEYS, COST_ITEMS, REGIONS } from "../pricing/catalog.js";
 import { DEFAULT_IMAGE_CONCURRENCY, imageConcurrency } from "../redesign/generate.js";
@@ -55,7 +56,7 @@ export function settingsView() {
     keys: { openai: keyView("openai", settings), anthropic: keyView("anthropic", settings) },
     keysError,
     models: {
-      current: models,
+      current: { ...models, reasoning: splitEffort(models.reasoning).model }, // the picker lists ids without the effort suffix
       saved: settings.models,
       defaults: DEFAULT_MODELS,
       options: MODEL_OPTIONS,

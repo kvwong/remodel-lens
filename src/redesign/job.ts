@@ -32,6 +32,8 @@ export type RunSummary = {
   stopped?: boolean;
   /** Image edit model used for the run. Missing on runs from before it was recorded. */
   imageModel?: string;
+  /** Inventory and planning model, when a tuning comparison overrode the reasoning model. */
+  plannerModel?: string;
   /** Filled in by listRuns from the profile's metadata. */
   profileName?: string | null;
   /** Filled in by listRuns: spot changes made on this run's report. */
@@ -65,8 +67,14 @@ export async function runListingRedesign(input: {
   max?: number | undefined;
   /** Overrides IMAGE_MODEL for this run, e.g. to compare image models on the same listing. */
   imageModel?: string | undefined;
+  /** Overrides the reasoning model for inventory and planning, e.g. to compare a lighter model on the same listing. */
+  plannerModel?: string | undefined;
 }): Promise<RunSummary & { outDir: string }> {
-  const models = { ...resolveModels(), ...(input.imageModel ? { image: input.imageModel } : {}) };
+  const models = {
+    ...resolveModels(),
+    ...(input.imageModel ? { image: input.imageModel } : {}),
+    ...(input.plannerModel ? { planner: input.plannerModel } : {}),
+  };
   requireKeys(models);
   const profile = await loadProfile(input.profilePath);
   const listing = await readListing(input.listingDir);
@@ -87,6 +95,7 @@ export async function runListingRedesign(input: {
     profile: path.relative(ROOT, path.resolve(ROOT, input.profilePath)),
     tiers: input.tiers,
     imageModel: models.image,
+    ...(models.planner ? { plannerModel: models.planner } : {}),
     photos: photos.map((p) => p.basename),
     startedAt: new Date().toISOString(),
     finishedAt: null,

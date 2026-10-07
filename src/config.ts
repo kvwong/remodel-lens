@@ -27,8 +27,13 @@ export function loadEnv(): void {
 export type Models = {
   /** Vision models that independently analyze each reference image. */
   analysis: string[];
-  /** Fusion, rule extraction, inventory, planning, judging. */
+  /**
+   * Fusion, rule extraction, inventory, planning, judging. Runs at low effort unless the id ends in :medium or :high:
+   * on a Talus test (2026-10-07) low effort planning was 18% faster with no loss in verified redesigns.
+   */
   reasoning: string;
+  /** Overrides reasoning for room inventory and redesign planning only (PLANNER_MODEL, or `npm run tune -- compare --planners`). */
+  planner?: string;
   /** OpenAI image edit model. */
   image: string;
 };
@@ -39,20 +44,27 @@ export const DEFAULT_MODELS: Models = {
   image: "gpt-image-2.5-sunburst",
 };
 
+/** Appends :low unless the model id already names an effort. */
+export function atLowEffort(model: string): string {
+  return /:(low|medium|high)$/.test(model) ? model : `${model}:low`;
+}
+
 export function resolveModels(): Models {
+  const reasoning = atLowEffort(process.env.REASONING_MODEL ?? DEFAULT_MODELS.reasoning);
   return {
     analysis: (process.env.ANALYSIS_MODELS ?? DEFAULT_MODELS.analysis.join(","))
       .split(",")
       .map((m) => m.trim())
       .filter(Boolean),
-    reasoning: process.env.REASONING_MODEL ?? DEFAULT_MODELS.reasoning,
+    reasoning,
+    ...(process.env.PLANNER_MODEL ? { planner: process.env.PLANNER_MODEL } : {}),
     image: process.env.IMAGE_MODEL ?? DEFAULT_MODELS.image,
   };
 }
 
 export function requireKeys(models: Models): void {
   const needed = new Set<string>(["OPENAI_API_KEY"]); // image edits always go through OpenAI
-  for (const model of [...models.analysis, models.reasoning]) {
+  for (const model of [...models.analysis, models.reasoning, ...(models.planner ? [models.planner] : [])]) {
     if (model.startsWith("anthropic/")) needed.add("ANTHROPIC_API_KEY");
     if (model.startsWith("openai/")) needed.add("OPENAI_API_KEY");
   }
