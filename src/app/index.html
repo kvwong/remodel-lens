@@ -869,7 +869,7 @@ function setParams(updates, push = false) {
 }
 function selectedTiers() {
   const raw = params().get("tiers");
-  return (raw ? raw.split(",") : ["cosmetic", "moderate"]).filter((t) => TIERS.some((x) => x.id === t));
+  return (raw ? raw.split(",") : []).filter((t) => TIERS.some((x) => x.id === t));
 }
 
 async function loadProfiles() {
@@ -1218,7 +1218,7 @@ function renderJob() {
   if (state.view === "listing") {
     const button = $('#run-form button[type="submit"]:not([data-confirmed])');
     if (button) {
-      button.disabled = running;
+      button.disabled = running || !selectedTiers().length;
       button.innerHTML = `${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Run redesign`;
     }
     renderJobInto($("#job"), state.job, state.job?.reportUrl ? `<p style="margin:4px 0 0"><a class="btn" href="${esc(state.job.reportUrl)}">Open report</a></p>` : "");
@@ -1641,10 +1641,10 @@ function renderListing() {
               <button class="btn btn-primary" type="submit" data-confirmed="1">Start run</button>
             </div>`
           : `<div class="run-row">
-              <button class="btn btn-primary" type="submit" ${running ? "disabled" : ""} aria-describedby="run-help">${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Run redesign</button>
+              <button class="btn btn-primary" type="submit" ${running || !tiers.length ? "disabled" : ""} aria-describedby="run-help">${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Run redesign</button>
               <span id="run-help" class="estimate num">${est.n
                 ? `<strong>${nf.format(selected)} photos × ${tiers.length} ${tiers.length === 1 ? "scope" : "scopes"}</strong> = ${nf.format(est.n)} redesigns · about ${money(est.low)}–${money(est.high)} · ${fmtMinutes(est.minutes)}`
-                : l.photos.length ? "Select photos and at least one scope." : "Add photos to get started."}</span>
+                : !l.photos.length ? "Add photos to get started." : !tiers.length ? "Choose at least one scope to run." : "Select at least one photo."}</span>
             </div>`}
         <p id="run-error" class="error" role="alert" ${state.runError ? "" : "hidden"}>${esc(state.runError)}</p>
       </form>
@@ -2188,7 +2188,7 @@ document.addEventListener("change", (event) => {
   if (t.matches("input[data-file]")) updateSelection([t.dataset.file], t.checked);
   if (t.matches('input[name="tier"]')) {
     const tiers = [...document.querySelectorAll('input[name="tier"]:checked')].map((i) => i.value);
-    setParams({ tiers: tiers.join(",") || "none" });
+    setParams({ tiers: tiers.join(",") || null });
     state.runError = null;
     state.confirming = null;
     renderListing();
