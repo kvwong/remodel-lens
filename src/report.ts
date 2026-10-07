@@ -467,11 +467,12 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
   }
   poll();
 
-  /* Show or hide the panel; it stays that way while the page is open. */
+  /* Show or hide the panel. It starts hidden each time the viewer opens. */
   function setPanel(open) {
     dialog.classList.toggle("iter-closed", !open);
     dialog.querySelectorAll('.viewer-iter').forEach((b) => b.setAttribute("aria-pressed", String(open)));
     if (!open) setPinMode(false);
+    else requestAnimationFrame(() => { log.scrollTop = log.scrollHeight; });
   }
   dialog.addEventListener("click", (e) => {
     const t = e.target.closest('[data-viewer="changes"]');
@@ -483,9 +484,8 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-open-change]");
     if (!b) return;
-    setPanel(true);
     b.closest(".shot")?.querySelector(".zoom")?.click();
-    requestAnimationFrame(() => askEl.focus({ preventScroll: true }));
+    setPanel(true);
   });
   dialog.addEventListener("keydown", (e) => {
     if ((e.key === "c" || e.key === "C") && !dialog.classList.contains("iter-none") && !e.metaKey && !e.ctrlKey && !e.altKey && !e.target.closest?.("input, textarea, select")) {
@@ -1236,12 +1236,12 @@ ${appearanceScript}
 
 <button class="to-top" type="button" aria-label="Back to top" tabindex="-1">${icon("arrowUp")}</button>
 
-<dialog class="viewer" aria-labelledby="viewer-title" tabindex="-1">
+<dialog class="viewer iter-closed" aria-labelledby="viewer-title" tabindex="-1">
   <div class="viewer-bar">
     <div class="viewer-title"><strong id="viewer-title"></strong><span id="viewer-status"></span></div>
     <div class="seg viewer-tabs" role="group" aria-label="Compare versions"></div>
     <div class="viewer-actions">${ch ? `
-      <button class="vbtn viewer-iter" type="button" data-viewer="changes" aria-pressed="true" aria-controls="iter-panel" aria-label="Changes" title="Show or hide changes (C)">${icon("pencil")}</button>` : ""}
+      <button class="vbtn viewer-iter" type="button" data-viewer="changes" aria-pressed="false" aria-controls="iter-panel" aria-label="Changes" title="Show or hide changes (C)">${icon("pencil")}</button>` : ""}
       <div class="seg viewer-zoom" role="group" aria-label="Image size">
         <button type="button" data-viewer="fit" aria-pressed="true" title="Fit (Z)">Fit</button>
         <button type="button" data-viewer="actual" aria-pressed="false" title="Actual size (Z)">100%</button>
@@ -1404,6 +1404,9 @@ ${appearanceScript}
       tabsEl.innerHTML = items.map((it, n) => '<button type="button" data-index="' + n + '" aria-pressed="false">' + it.dataset.label.split(" · ").pop().replace("Listing photo", "Listing") + "</button>").join("");
       show(items.indexOf(z), wasOpen && stage.classList.contains("actual"));
       if (!wasOpen) {
+        /* The Changes panel starts hidden each time the viewer opens. */
+        dialog.classList.add("iter-closed");
+        dialog.querySelector(".viewer-iter")?.setAttribute("aria-pressed", "false");
         dialog.showModal();
         dialog.focus({ preventScroll: true });
       } else if (focusVersion) tabsEl.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
