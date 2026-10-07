@@ -847,8 +847,6 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const fmtDate = (iso) => new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 const nf = new Intl.NumberFormat();
 const pf = new Intl.NumberFormat(undefined, { style: "percent", maximumFractionDigits: 0 });
-const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-const money = (n) => (n < 1 ? "under $1" : usd.format(Math.round(n)));
 const plural = (n, word) => `${nf.format(n)} ${word}${n === 1 ? "" : "s"}`;
 const sentence = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const statusTag = (s, count) => `<span class="status s-${s}">${icon(STATUS[s].icon)}<span>${count != null ? `${count} ` : ""}${STATUS[s].label}</span></span>`;
@@ -1635,7 +1633,7 @@ function renderListing() {
         </div>
         ${state.confirming === "run"
           ? `<div class="confirm" role="group" aria-labelledby="confirm-text">
-              <p id="confirm-text">This starts <strong>${nf.format(est.n)} redesigns</strong> and uses about <strong>${money(est.low)}–${money(est.high)}</strong> in API credits over ${fmtMinutes(est.minutes)}.${tiers.includes("major") ? " Structural images are speculative." : ""}</p>
+              <p id="confirm-text">This starts <strong>${nf.format(est.n)} redesigns</strong> and takes ${fmtMinutes(est.minutes)}.${tiers.includes("major") ? " Structural images are speculative." : ""}</p>
               <button class="btn" type="button" data-action="cancel-confirm">Cancel</button>
               <button class="btn btn-primary" type="submit" data-confirmed="1">Start run</button>
             </div>`
