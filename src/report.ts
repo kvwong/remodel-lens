@@ -79,11 +79,9 @@ const ICON_PATHS = {
   arrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   arrowUp: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
   download: '<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>',
-  expand: '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>',
   pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   pin: '<path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11Z"/><circle cx="12" cy="10" r="2.2"/>',
   image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 9"/>',
-  note: '<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/>',
 } as const;
 type IconName = keyof typeof ICON_PATHS;
 
@@ -132,13 +130,13 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
   const panel = dialog.querySelector(".iter");
   const log = panel.querySelector(".iter-log"), form = panel.querySelector(".iter-compose"), sub = panel.querySelector(".iter-sub");
   const pinsEl = form.querySelector(".iter-pins"), refsEl = form.querySelector(".iter-refs"), baseEl = form.querySelector(".iter-base"), statusLine = form.querySelector(".iter-status");
-  const askEl = form.elements.ask, notesEl = form.elements.notes, fileEl = form.querySelector('input[type="file"]');
-  const pinTool = form.querySelector('[data-iter="pin"]'), ctxTool = form.querySelector('[data-iter="context"]'), sendBtn = form.querySelector(".isend");
+  const askEl = form.elements.ask, fileEl = form.querySelector('input[type="file"]');
+  const pinTool = form.querySelector('[data-iter="pin"]'), sendBtn = form.querySelector(".isend");
   const vpins = stage.querySelector(".vpins");
   let file = ITER.file, ctx = null, viewed = "v1", pinMode = false, dirty = false, busy = false, polling = false;
   const drafts = {};
   const key = () => ctx.room + ":" + ctx.tier;
-  const draft = () => (drafts[key()] ||= { pins: [], refs: [], ask: "", notes: "", showNotes: false });
+  const draft = () => (drafts[key()] ||= { pins: [], refs: [], ask: "" });
   const escHtml = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
   const num = (id) => Number(String(id).slice(1)) || 0;
@@ -223,16 +221,11 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
   /* ---- Composer ---- */
   function renderBase() {
     if (!ctx) return;
-    baseEl.textContent = pinMode
-      ? "Click the image to pin a note. Esc when done."
-      : "Starts from " + (base() === "v1" ? "the original" : label(base()).toLowerCase()) + " on screen.";
+    baseEl.textContent = pinMode ? "Click the image to pin a note. Esc when done." : "";
   }
   function renderDraft() {
     const d = draft();
     askEl.value = d.ask;
-    notesEl.value = d.notes;
-    notesEl.hidden = !d.showNotes && !d.notes;
-    ctxTool.setAttribute("aria-pressed", String(!notesEl.hidden));
     pinsEl.replaceChildren(...d.pins.map((pin, i) => {
       const li = document.createElement("li");
       li.innerHTML = '<span class="pin-n" aria-hidden="true"></span><span class="ipin-item"></span><input type="text" maxlength="500" placeholder="What should change here?"><button type="button" class="ibtn quiet" aria-label="Remove pin">✕</button>';
@@ -363,14 +356,6 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
     const show = e.target.closest("[data-show]");
     if (show) return showOnStage(show.dataset.show);
     if (e.target.closest('[data-iter="pin"]')) { setPinMode(!pinMode); return; }
-    if (e.target.closest('[data-iter="context"]')) {
-      const d = draft();
-      d.showNotes = notesEl.hidden;
-      if (!d.showNotes) d.notes = notesEl.value = "";
-      renderDraft();
-      if (d.showNotes) notesEl.focus();
-      return;
-    }
     const use = e.target.closest("[data-use]");
     if (use) {
       use.disabled = true;
@@ -391,7 +376,6 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
     }
   });
   askEl.addEventListener("input", () => { if (ctx) draft().ask = askEl.value; });
-  notesEl.addEventListener("input", () => { if (ctx) draft().notes = notesEl.value; });
   askEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); form.requestSubmit(); }
   });
@@ -427,10 +411,10 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
     sendBtn.disabled = true;
     statusLine.textContent = "";
     try {
-      const res = await call("POST", "/versions", { photo: ctx.room, tier: ctx.tier, from: base(), ask, notes: notesEl.hidden ? "" : notesEl.value.trim(), pins, references: d.refs });
+      const res = await call("POST", "/versions", { photo: ctx.room, tier: ctx.tier, from: base(), ask, pins, references: d.refs });
       file = res.versions;
       dirty = true;
-      drafts[key()] = { pins: [], refs: [], ask: "", notes: "", showNotes: false };
+      drafts[key()] = { pins: [], refs: [], ask: "" };
       setPinMode(false);
       renderLog(true);
       renderDraft();
@@ -467,11 +451,12 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
   }
   poll();
 
-  /* Show or hide the panel; it stays that way while the page is open. */
+  /* Show or hide the panel. It starts hidden each time the viewer opens. */
   function setPanel(open) {
     dialog.classList.toggle("iter-closed", !open);
     dialog.querySelectorAll('.viewer-iter').forEach((b) => b.setAttribute("aria-pressed", String(open)));
     if (!open) setPinMode(false);
+    else requestAnimationFrame(() => { log.scrollTop = log.scrollHeight; });
   }
   dialog.addEventListener("click", (e) => {
     const t = e.target.closest('[data-viewer="changes"]');
@@ -483,9 +468,8 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-open-change]");
     if (!b) return;
-    setPanel(true);
     b.closest(".shot")?.querySelector(".zoom")?.click();
-    requestAnimationFrame(() => askEl.focus({ preventScroll: true }));
+    setPanel(true);
   });
   dialog.addEventListener("keydown", (e) => {
     if ((e.key === "c" || e.key === "C") && !dialog.classList.contains("iter-none") && !e.metaKey && !e.ctrlKey && !e.altKey && !e.target.closest?.("input, textarea, select")) {
@@ -535,7 +519,6 @@ function zoomable(input: { src: string; alt: string; group: string; label: strin
   const iter = input.room && input.tier ? ` data-room="${esc(input.room)}" data-tier="${input.tier}" data-version="${esc(input.version ?? ORIGINAL)}"` : "";
   return `<button class="zoom" type="button" data-group="${esc(input.group)}" data-src="${esc(input.src)}" data-label="${esc(input.label)}"${input.status ? ` data-status="${input.status}"` : ""}${iter} aria-label="${input.edit ? "Open and change" : "Enlarge"} ${esc(input.label)}">
       <img src="${esc(input.src)}" alt="${esc(input.alt)}" loading="${input.eager ? "eager" : "lazy"}" decoding="async">
-      <span class="zoom-hint${input.edit ? " top" : ""}" aria-hidden="true">${icon("expand")}</span>
     </button>`;
 }
 
@@ -938,9 +921,6 @@ ${appearanceScript}
   .zoom { position:relative; display:block; width:100%; padding:0; border:0; background:var(--surface-2); border-radius:3px; overflow:hidden; cursor:zoom-in; aspect-ratio:3 / 2; }
   .zoom img { width:100%; height:100%; object-fit:cover; display:block; --motion:transform .5s var(--ease); }
   .zoom:hover img { transform:scale(1.015); }
-  .zoom-hint { position:absolute; right:10px; bottom:10px; width:32px; height:32px; display:grid; place-items:center; border-radius:50%; background:rgba(18,18,17,.55); color:#fff; opacity:0; --motion:opacity .2s; }
-  .zoom:hover .zoom-hint, .zoom:focus-visible .zoom-hint { opacity:1; }
-  .zoom-hint.top { top:10px; bottom:auto; }
   .no-image { aspect-ratio:3 / 2; display:grid; place-items:center; border-radius:3px; border:1px dashed var(--line-strong); color:var(--muted); font-size:13px; text-align:center; padding:16px; }
 
   /* By room */
@@ -985,6 +965,10 @@ ${appearanceScript}
   .shot-btn .icon { width:16px; height:16px; }
   .shot-btn:hover { background:rgba(18,18,17,.78); }
   .shot-btn:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+  @media (hover:hover) {
+    .shot-btn { opacity:0; transition:opacity .15s ease; }
+    .shot:hover .shot-btn, .shot:focus-within .shot-btn { opacity:1; }
+  }
 
   .ver-select select, .viewer-ver { appearance:none; font:inherit; font-size:13px; font-weight:500; line-height:20px; color:#fff; background:rgba(18,18,17,.62) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center / 14px; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border:0; border-radius:8px; padding:5px 30px 5px 11px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.25); }
   .ver-select select:hover, .viewer-ver:hover { background-color:rgba(18,18,17,.78); }
@@ -1102,9 +1086,10 @@ ${appearanceScript}
     }
   /* Change panel: a conversation beside the image, where each reply is a new version. */
   .iter { flex:none; width:380px; display:flex; flex-direction:column; min-height:0; border-left:1px solid rgba(255,255,255,.1); background:#161615; font-size:14px; }
-  .iter-head { display:flex; align-items:baseline; gap:10px; padding:14px 16px 10px; }
-  .iter-head h2 { font-size:15px; font-weight:600; margin:0; }
-  .iter-close { margin-left:auto; align-self:center; min-height:28px; padding:2px 6px; }
+  .iter-head { display:flex; align-items:center; gap:10px; min-height:52px; padding:10px 10px 6px 16px; }
+  .iter-head h2 { font-size:15px; font-weight:600; line-height:20px; margin:0; }
+  .iter-head .iter-sub { line-height:20px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .iter-close { flex:none; margin-left:auto; width:32px; height:32px; min-height:0; padding:0; display:grid; place-items:center; }
   .iter-close .icon { width:16px; height:16px; display:block; }
   .viewer.iter-closed .iter, .viewer.iter-none .iter, .viewer.iter-none .viewer-iter { display:none; }
   .viewer-iter { display:grid; place-items:center; width:36px; padding:0; }
@@ -1116,10 +1101,10 @@ ${appearanceScript}
   .msg.user > :first-child { margin-top:0; }
   .msg-from { font-size:12px; color:rgba(239,237,233,.55); }
   .msg.bot p { color:rgba(239,237,233,.78); }
-  .msg-shot { display:block; width:100%; aspect-ratio:3 / 2; padding:0; border:2px solid transparent; border-radius:10px; overflow:hidden; background:#232322; cursor:pointer; }
+  .msg-shot { display:block; width:100%; aspect-ratio:3 / 2; padding:0; border:0; border-radius:10px; overflow:hidden; background:#232322; cursor:pointer; }
   .msg-shot img { width:100%; height:100%; object-fit:cover; display:block; }
-  .msg-shot:hover { border-color:rgba(255,255,255,.3); }
-  .msg-shot[aria-pressed="true"] { border-color:#efede9; }
+  .msg-shot:hover img { opacity:.9; }
+  .msg-shot:focus-visible { outline:2px solid #efede9; outline-offset:2px; }
   .msg-meta { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; }
   .msg-meta strong { font-weight:600; }
   .msg .status { font-size:12.5px; gap:5px; }
@@ -1145,14 +1130,18 @@ ${appearanceScript}
   .msg-step { font-size:13px; color:rgba(239,237,233,.75); }
   .msg-bar { height:4px; border-radius:2px; background:rgba(255,255,255,.12); overflow:hidden; }
   .msg-bar i { display:block; height:100%; width:4%; background:#efede9; transition:width .5s linear; }
-  .iter-compose { flex:none; display:grid; gap:8px; padding:12px 16px max(12px, env(safe-area-inset-bottom)); border-top:1px solid rgba(255,255,255,.1); }
+  .iter-compose { flex:none; display:grid; gap:8px; padding:4px 16px max(12px, env(safe-area-inset-bottom)); }
   .iter-base, .iter-status { margin:0; }
+  .iter-base:empty { display:none; }
   .iter-status:empty { display:none; }
   .iter-status.error { color:#ee9d90; }
-  .iter-compose textarea, .iter-notes { width:100%; font:inherit; font-size:14px; color:#efede9; background:#232322; border:1px solid rgba(255,255,255,.16); border-radius:12px; padding:10px 12px; resize:none; }
-  .iter-notes { border-radius:8px; padding:8px 10px; font-size:13px; }
-  .iter-compose textarea:focus, .iter-notes:focus, .iter-pins input:focus { outline:2px solid #efede9; outline-offset:-1px; }
-  .iter-compose textarea::placeholder, .iter-notes::placeholder, .iter-pins input::placeholder { color:rgba(239,237,233,.45); }
+  /* One rounded composer box: photos on top, the prompt, then tools and send inside it. */
+  .iter-box { display:grid; gap:6px; padding:10px 8px 8px; border:1px solid rgba(255,255,255,.12); border-radius:18px; background:#232322; }
+  .iter-box:focus-within { border-color:rgba(255,255,255,.3); }
+  .iter-box .iter-refs { padding:0 4px; }
+  .iter-compose textarea { width:100%; font:inherit; font-size:14px; line-height:1.45; color:#efede9; background:transparent; border:0; padding:2px 6px; resize:none; outline:none; }
+  .iter-pins input:focus { outline:2px solid #efede9; outline-offset:-1px; }
+  .iter-compose textarea::placeholder, .iter-pins input::placeholder { color:rgba(239,237,233,.45); }
   .iter-pins { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
   .iter-pins:empty, .iter-refs:empty { display:none; }
   .iter-pins li { display:grid; grid-template-columns:auto minmax(0, 1fr) auto; gap:2px 8px; align-items:center; }
@@ -1236,12 +1225,12 @@ ${appearanceScript}
 
 <button class="to-top" type="button" aria-label="Back to top" tabindex="-1">${icon("arrowUp")}</button>
 
-<dialog class="viewer" aria-labelledby="viewer-title" tabindex="-1">
+<dialog class="viewer iter-closed" aria-labelledby="viewer-title" tabindex="-1">
   <div class="viewer-bar">
     <div class="viewer-title"><strong id="viewer-title"></strong><span id="viewer-status"></span></div>
     <div class="seg viewer-tabs" role="group" aria-label="Compare versions"></div>
     <div class="viewer-actions">${ch ? `
-      <button class="vbtn viewer-iter" type="button" data-viewer="changes" aria-pressed="true" aria-controls="iter-panel" aria-label="Changes" title="Show or hide changes (C)">${icon("pencil")}</button>` : ""}
+      <button class="vbtn viewer-iter" type="button" data-viewer="changes" aria-pressed="false" aria-controls="iter-panel" aria-label="Changes" title="Show or hide changes (C)">${icon("pencil")}</button>` : ""}
       <div class="seg viewer-zoom" role="group" aria-label="Image size">
         <button type="button" data-viewer="fit" aria-pressed="true" title="Fit (Z)">Fit</button>
         <button type="button" data-viewer="actual" aria-pressed="false" title="Actual size (Z)">100%</button>
@@ -1258,14 +1247,14 @@ ${appearanceScript}
       <form class="iter-compose">
         <p class="iter-base"></p>
         <ol class="iter-pins"></ol>
-        <div class="iter-refs"></div>
-        <input class="iter-notes" name="notes" type="text" maxlength="2000" placeholder="Context, like “we're keeping the range”" aria-label="Context" hidden>
-        <textarea name="ask" rows="2" maxlength="2000" placeholder="Describe a change, or pin a spot on the image" aria-label="Describe a change"></textarea>
-        <div class="iter-tools">
-          <button type="button" class="itool" data-iter="pin" aria-pressed="false" title="Pin a note to a spot on the image">${icon("pin")}<span>Pin</span></button>
-          <label class="itool" title="Add up to 3 reference photos">${icon("image")}<span>Photo</span><input type="file" accept="image/*" multiple hidden></label>
-          <button type="button" class="itool" data-iter="context" aria-pressed="false" title="Add context the plan should know">${icon("note")}<span>Context</span></button>
-          <button type="submit" class="isend" aria-label="Make this change">${icon("arrowUp")}</button>
+        <div class="iter-box">
+          <div class="iter-refs"></div>
+          <textarea name="ask" rows="2" maxlength="2000" placeholder="Describe a change, or pin a spot on the image" aria-label="Describe a change"></textarea>
+          <div class="iter-tools">
+            <button type="button" class="itool" data-iter="pin" aria-pressed="false" title="Pin a note to a spot on the image">${icon("pin")}<span>Pin</span></button>
+            <label class="itool" title="Add up to 3 reference photos">${icon("image")}<span>Photo</span><input type="file" accept="image/*" multiple hidden></label>
+            <button type="submit" class="isend" aria-label="Make this change">${icon("arrowUp")}</button>
+          </div>
         </div>
         <p class="iter-status" role="status" aria-live="polite"></p>
       </form>
@@ -1404,6 +1393,9 @@ ${appearanceScript}
       tabsEl.innerHTML = items.map((it, n) => '<button type="button" data-index="' + n + '" aria-pressed="false">' + it.dataset.label.split(" · ").pop().replace("Listing photo", "Listing") + "</button>").join("");
       show(items.indexOf(z), wasOpen && stage.classList.contains("actual"));
       if (!wasOpen) {
+        /* The Changes panel starts hidden each time the viewer opens. */
+        dialog.classList.add("iter-closed");
+        dialog.querySelector(".viewer-iter")?.setAttribute("aria-pressed", "false");
         dialog.showModal();
         dialog.focus({ preventScroll: true });
       } else if (focusVersion) tabsEl.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
