@@ -224,14 +224,16 @@ reference photos.
 ## Spot changes
 
 To change one room without re-running the whole listing, open its report in the
-app, pick the scope tab, and choose **Change this room**. Describe the change
-for the whole room, tap the redesign to pin notes to spots (each pin is matched
-to the item under it), and optionally add context and up to three reference
-photos. The change starts from the version you're looking at: it revises that
-plan, redraws that image, and checks the result against the listing photo and
-each pin. New versions are added to the room's **Versions** strip; **Use this
-one** picks the version the report totals and PDFs use. Versions are saved in
-the run folder as `versions.json` plus one folder per version, and the run's
+app and click a redesign image. The inspector opens with a **Changes** panel
+beside the image that works like a chat: type a change, use **Pin** to click
+spots on the image and add a note to each (each pin is matched to the item
+under it), and optionally add **Context** and up to three reference
+**Photos**. Enter sends it. A change starts from the version on screen, so
+click any earlier version in the conversation to branch from it. It revises
+that plan, redraws that image, and checks the result against the listing photo
+and each pin; the reply shows the new version when it's done. **Use in report**
+picks the version the report, totals, and PDFs use. Versions are saved in the
+run folder as `versions.json` plus one folder per version, and the run's
 original results are never changed. Each change costs about $0.15 of API use.
 
 From the CLI (pins are 0–1000 from the image's top-left):
