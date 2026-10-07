@@ -27,13 +27,12 @@ export function loadEnv(): void {
 export type Models = {
   /** Vision models that independently analyze each reference image. */
   analysis: string[];
-  /** Fusion, rule extraction, inventory, planning, judging. */
-  reasoning: string;
   /**
-   * Room inventory and redesign planning. Defaults to the reasoning model at low effort, which ran a Talus test 18% faster
-   * with no loss in verified redesigns (2026-10-07); the judge keeps the reasoning model's effort. PLANNER_MODEL or
-   * `npm run tune -- compare --planners` overrides it.
+   * Fusion, rule extraction, inventory, planning, judging. Runs at low effort unless the id ends in :medium or :high:
+   * on a Talus test (2026-10-07) low effort planning was 18% faster with no loss in verified redesigns.
    */
+  reasoning: string;
+  /** Overrides reasoning for room inventory and redesign planning only (PLANNER_MODEL, or `npm run tune -- compare --planners`). */
   planner?: string;
   /** OpenAI image edit model. */
   image: string;
@@ -45,15 +44,20 @@ export const DEFAULT_MODELS: Models = {
   image: "gpt-image-2.5-sunburst",
 };
 
+/** Appends :low unless the model id already names an effort. */
+export function atLowEffort(model: string): string {
+  return /:(low|medium|high)$/.test(model) ? model : `${model}:low`;
+}
+
 export function resolveModels(): Models {
-  const reasoning = process.env.REASONING_MODEL ?? DEFAULT_MODELS.reasoning;
+  const reasoning = atLowEffort(process.env.REASONING_MODEL ?? DEFAULT_MODELS.reasoning);
   return {
     analysis: (process.env.ANALYSIS_MODELS ?? DEFAULT_MODELS.analysis.join(","))
       .split(",")
       .map((m) => m.trim())
       .filter(Boolean),
     reasoning,
-    planner: process.env.PLANNER_MODEL ?? (/:(low|medium|high)$/.test(reasoning) ? reasoning : `${reasoning}:low`),
+    ...(process.env.PLANNER_MODEL ? { planner: process.env.PLANNER_MODEL } : {}),
     image: process.env.IMAGE_MODEL ?? DEFAULT_MODELS.image,
   };
 }

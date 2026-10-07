@@ -2678,7 +2678,7 @@ function renderModels() {
   $("#settings-models").innerHTML = `<div class="panel-head"><h2 id="models-h">Models</h2></div>
     <form id="models-form" novalidate>
       <div class="setting-row">
-        <div class="setting-label"><label for="reasoning-model">Reasoning model</label><p>Writes taste rules, inventories each room, plans the changes, and judges every redesign.</p></div>
+        <div class="setting-label"><label for="reasoning-model">Reasoning model</label><p>Writes taste rules, inventories each room, plans the changes, and judges every redesign. Runs at low reasoning effort, which tested faster with no loss in quality.</p></div>
         <div class="setting-control model-control">
           ${modelSelect("reasoning-model", m.options.reasoning, m.current.reasoning, m.defaults.reasoning)}
           <p class="control-note" data-model-note="reasoning-model">${esc(notes(m.options.reasoning, m.current.reasoning))}</p>

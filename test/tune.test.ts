@@ -142,18 +142,10 @@ describe("model effort suffix", () => {
   });
 });
 
-describe("planner default", () => {
-  it("runs inventory and planning at low effort unless the reasoning model sets one", async () => {
-    const { resolveModels } = await import("../src/config.js");
-    const saved = { reasoning: process.env.REASONING_MODEL, planner: process.env.PLANNER_MODEL };
-    delete process.env.PLANNER_MODEL;
-    process.env.REASONING_MODEL = "openai/gpt-6.1-sol";
-    expect(resolveModels().planner).toBe("openai/gpt-6.1-sol:low");
-    process.env.REASONING_MODEL = "openai/gpt-6.1-sol:high";
-    expect(resolveModels().planner).toBe("openai/gpt-6.1-sol:high");
-    for (const [key, value] of [["REASONING_MODEL", saved.reasoning], ["PLANNER_MODEL", saved.planner]] as const) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
+describe("reasoning effort default", () => {
+  it("runs the reasoning model at low effort unless its id names one", async () => {
+    const { atLowEffort } = await import("../src/config.js");
+    expect(atLowEffort("openai/gpt-6.1-sol")).toBe("openai/gpt-6.1-sol:low");
+    expect(atLowEffort("openai/gpt-6.1-sol:high")).toBe("openai/gpt-6.1-sol:high");
   });
 });

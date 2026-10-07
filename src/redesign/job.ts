@@ -32,7 +32,7 @@ export type RunSummary = {
   stopped?: boolean;
   /** Image edit model used for the run. Missing on runs from before it was recorded. */
   imageModel?: string;
-  /** Inventory and planning model. Missing on runs from before it was recorded, which used the reasoning model. */
+  /** Inventory and planning model, when a tuning comparison overrode the reasoning model. */
   plannerModel?: string;
   /** Filled in by listRuns from the profile's metadata. */
   profileName?: string | null;
