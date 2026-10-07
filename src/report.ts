@@ -1130,7 +1130,7 @@ ${appearanceScript}
   .msg-step { font-size:13px; color:rgba(239,237,233,.75); }
   .msg-bar { height:4px; border-radius:2px; background:rgba(255,255,255,.12); overflow:hidden; }
   .msg-bar i { display:block; height:100%; width:4%; background:#efede9; transition:width .5s linear; }
-  .iter-compose { flex:none; display:grid; gap:8px; padding:12px 16px max(12px, env(safe-area-inset-bottom)); border-top:1px solid rgba(255,255,255,.1); }
+  .iter-compose { flex:none; display:grid; gap:8px; padding:4px 16px max(12px, env(safe-area-inset-bottom)); }
   .iter-base, .iter-status { margin:0; }
   .iter-base:empty { display:none; }
   .iter-status:empty { display:none; }
