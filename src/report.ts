@@ -79,7 +79,6 @@ const ICON_PATHS = {
   arrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   arrowUp: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
   download: '<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>',
-  expand: '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>',
   pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   pin: '<path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11Z"/><circle cx="12" cy="10" r="2.2"/>',
   image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 9"/>',
@@ -535,7 +534,6 @@ function zoomable(input: { src: string; alt: string; group: string; label: strin
   const iter = input.room && input.tier ? ` data-room="${esc(input.room)}" data-tier="${input.tier}" data-version="${esc(input.version ?? ORIGINAL)}"` : "";
   return `<button class="zoom" type="button" data-group="${esc(input.group)}" data-src="${esc(input.src)}" data-label="${esc(input.label)}"${input.status ? ` data-status="${input.status}"` : ""}${iter} aria-label="${input.edit ? "Open and change" : "Enlarge"} ${esc(input.label)}">
       <img src="${esc(input.src)}" alt="${esc(input.alt)}" loading="${input.eager ? "eager" : "lazy"}" decoding="async">
-      <span class="zoom-hint${input.edit ? " top" : ""}" aria-hidden="true">${icon("expand")}</span>
     </button>`;
 }
 
@@ -938,9 +936,6 @@ ${appearanceScript}
   .zoom { position:relative; display:block; width:100%; padding:0; border:0; background:var(--surface-2); border-radius:3px; overflow:hidden; cursor:zoom-in; aspect-ratio:3 / 2; }
   .zoom img { width:100%; height:100%; object-fit:cover; display:block; --motion:transform .5s var(--ease); }
   .zoom:hover img { transform:scale(1.015); }
-  .zoom-hint { position:absolute; right:10px; bottom:10px; width:32px; height:32px; display:grid; place-items:center; border-radius:50%; background:rgba(18,18,17,.55); color:#fff; opacity:0; --motion:opacity .2s; }
-  .zoom:hover .zoom-hint, .zoom:focus-visible .zoom-hint { opacity:1; }
-  .zoom-hint.top { top:10px; bottom:auto; }
   .no-image { aspect-ratio:3 / 2; display:grid; place-items:center; border-radius:3px; border:1px dashed var(--line-strong); color:var(--muted); font-size:13px; text-align:center; padding:16px; }
 
   /* By room */
