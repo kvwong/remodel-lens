@@ -1085,7 +1085,7 @@ ${appearanceScript}
     }
   /* Change panel: a conversation beside the image, where each reply is a new version. */
   .iter { flex:none; width:380px; display:flex; flex-direction:column; min-height:0; border-left:1px solid rgba(255,255,255,.1); background:#161615; font-size:14px; }
-  .iter-head { display:flex; align-items:center; gap:10px; min-height:52px; padding:10px 10px 6px 16px; }
+  .iter-head { display:flex; align-items:center; gap:10px; min-height:52px; padding:10px 16px 6px; }
   .iter-head h2 { font-size:15px; font-weight:600; line-height:20px; margin:0; }
   .iter-head .iter-sub { line-height:20px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .iter-close { flex:none; margin-left:auto; width:32px; height:32px; min-height:0; padding:0; display:grid; place-items:center; }
