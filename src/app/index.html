@@ -199,11 +199,11 @@
   .meta { padding-top:10px; display:grid; gap:6px; }
   .room { width:100%; min-height:36px; padding:6px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); font-size:16px; }
   .room:focus { outline:2px solid var(--text); outline-offset:1px; }
-  .file { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12px; color:var(--muted); min-height:24px; }
-  .file-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
-  .file a { display:inline-flex; align-items:center; gap:4px; color:var(--muted); min-height:24px; }
-  .file a:hover { color:var(--text); }
-  .file .icon { width:13px; height:13px; }
+  /* The file name is the link to the full-size photo. */
+  .file { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--muted); min-height:24px; }
+  .file > span { flex:none; }
+  .file-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; color:inherit; text-decoration:none; line-height:24px; }
+  .file-name:hover { color:var(--text); text-decoration:underline; text-underline-offset:2px; }
 
   /* Listing: run */
   .run-form { display:grid; gap:20px; }
@@ -472,9 +472,7 @@
     .meta { padding-top:6px; gap:4px; }
     .room { min-height:40px; padding:6px 8px; }
     .file { font-size:11px; }
-    .file a { min-width:32px; min-height:32px; justify-content:flex-end; }
-    .file a .view-text { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
-    .file a .icon { width:16px; height:16px; }
+    .file-name { line-height:32px; }
 
     /* Redesign settings: keep the primary action close and full width. */
     .profile-card { grid-template-rows:minmax(128px, 1fr) auto; min-height:calc(128px + 54px); }
@@ -1591,7 +1589,7 @@ function renderListing() {
                 <div class="meta">
                   <label for="room-${i}" class="sr-only">Room</label>
                   <input class="room" id="room-${i}" name="room-${esc(p.file)}" data-room="${esc(p.file)}" value="${esc(p.room)}" placeholder="Room" autocomplete="off" spellcheck="false" maxlength="80">
-                  <div class="file"><span class="file-name">${p.selected ? "" : "Skipped · "}${esc(p.file)}</span><a href="${esc(p.full)}" target="_blank" rel="noopener" aria-label="View ${esc(label)} full size (opens in a new tab)">${icon("expand")}<span class="view-text">View</span></a></div>
+                  <div class="file">${p.selected ? "" : `<span>Skipped ·</span>`}<a class="file-name" href="${esc(p.full)}" target="_blank" rel="noopener" title="Open full size in a new tab">${esc(p.file)}</a></div>
                 </div>
               </div>`;
             }).join("")}
