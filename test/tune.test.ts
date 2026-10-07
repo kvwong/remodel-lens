@@ -136,16 +136,30 @@ describe("collecting past runs", () => {
 });
 
 describe("model effort suffix", () => {
-  it("reads :low/:medium/:high off a model id", () => {
+  it("reads every effort level off a model id", () => {
     expect(splitEffort("openai/gpt-6.1-sol:low")).toEqual({ model: "openai/gpt-6.1-sol", effort: "low" });
+    expect(splitEffort("anthropic/claude-opus-5-5:xhigh")).toEqual({ model: "anthropic/claude-opus-5-5", effort: "xhigh" });
+    expect(splitEffort("openai/gpt-6.1-sol:max")).toEqual({ model: "openai/gpt-6.1-sol", effort: "max" });
     expect(splitEffort("anthropic/claude-sonnet-5-5")).toEqual({ model: "anthropic/claude-sonnet-5-5", effort: "medium" });
   });
 });
 
-describe("reasoning effort default", () => {
-  it("runs the reasoning model at low effort unless its id names one", async () => {
-    const { atLowEffort } = await import("../src/config.js");
-    expect(atLowEffort("openai/gpt-6.1-sol")).toBe("openai/gpt-6.1-sol:low");
-    expect(atLowEffort("openai/gpt-6.1-sol:high")).toBe("openai/gpt-6.1-sol:high");
+describe("reasoning effort", () => {
+  it("defaults reasoning to low and analysis to medium, and a suffix on the id wins", async () => {
+    const { resolveModels } = await import("../src/config.js");
+    const keys = ["REASONING_MODEL", "REASONING_EFFORT", "ANALYSIS_MODELS", "ANALYSIS_EFFORT"] as const;
+    const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+    for (const k of keys) delete process.env[k];
+    process.env.REASONING_MODEL = "openai/gpt-6.1-sol";
+    process.env.ANALYSIS_MODELS = "openai/gpt-6.1-sol,anthropic/claude-sonnet-5-5:high";
+    expect(resolveModels()).toMatchObject({ reasoning: "openai/gpt-6.1-sol:low", analysis: ["openai/gpt-6.1-sol:medium", "anthropic/claude-sonnet-5-5:high"] });
+    process.env.REASONING_EFFORT = "high";
+    expect(resolveModels().reasoning).toBe("openai/gpt-6.1-sol:high");
+    process.env.REASONING_EFFORT = "max";
+    expect(resolveModels().reasoning).toBe("openai/gpt-6.1-sol:max");
+    for (const k of keys) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    }
   });
 });

@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { parseEffort, withEffort, type Effort } from "./effort.js";
 import { applySettings, readSettings } from "./settings.js";
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -27,10 +28,7 @@ export function loadEnv(): void {
 export type Models = {
   /** Vision models that independently analyze each reference image. */
   analysis: string[];
-  /**
-   * Fusion, rule extraction, inventory, planning, judging. Runs at low effort unless the id ends in :medium or :high:
-   * on a Talus test (2026-10-07) low effort planning was 18% faster with no loss in verified redesigns.
-   */
+  /** Fusion, rule extraction, inventory, planning, judging. Resolved ids carry their effort, e.g. openai/gpt-6.1-sol:low. */
   reasoning: string;
   /** Overrides reasoning for room inventory and redesign planning only (PLANNER_MODEL, or `npm run tune -- compare --planners`). */
   planner?: string;
@@ -44,18 +42,22 @@ export const DEFAULT_MODELS: Models = {
   image: "gpt-image-2.5-sunburst",
 };
 
-/** Appends :low unless the model id already names an effort. */
-export function atLowEffort(model: string): string {
-  return /:(low|medium|high)$/.test(model) ? model : `${model}:low`;
-}
+/**
+ * Reasoning effort when Settings (REASONING_EFFORT, ANALYSIS_EFFORT) and the model id don't name one. Low for reasoning:
+ * on a Talus test (2026-10-07) it planned 18% faster with no loss in verified redesigns.
+ */
+export const DEFAULT_EFFORT: { reasoning: Effort; analysis: Effort } = { reasoning: "low", analysis: "medium" };
 
 export function resolveModels(): Models {
-  const reasoning = atLowEffort(process.env.REASONING_MODEL ?? DEFAULT_MODELS.reasoning);
+  const reasoningEffort = parseEffort(process.env.REASONING_EFFORT) ?? DEFAULT_EFFORT.reasoning;
+  const analysisEffort = parseEffort(process.env.ANALYSIS_EFFORT) ?? DEFAULT_EFFORT.analysis;
+  const reasoning = withEffort(process.env.REASONING_MODEL ?? DEFAULT_MODELS.reasoning, reasoningEffort);
   return {
     analysis: (process.env.ANALYSIS_MODELS ?? DEFAULT_MODELS.analysis.join(","))
       .split(",")
       .map((m) => m.trim())
-      .filter(Boolean),
+      .filter(Boolean)
+      .map((m) => withEffort(m, analysisEffort)),
     reasoning,
     ...(process.env.PLANNER_MODEL ? { planner: process.env.PLANNER_MODEL } : {}),
     image: process.env.IMAGE_MODEL ?? DEFAULT_MODELS.image,

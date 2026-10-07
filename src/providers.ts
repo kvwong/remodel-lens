@@ -5,20 +5,13 @@ import type { z } from "zod";
 
 export type ImageInput = { bytes: Uint8Array; mediaType: string };
 
-type Effort = "low" | "medium" | "high";
+import { splitEffort, supportsEffort } from "./effort.js";
 
-/** A model id may end in :low, :medium or :high to set its reasoning effort, e.g. openai/gpt-6.1-sol:low. Medium otherwise. */
-export function splitEffort(model: string): { model: string; effort: Effort } {
-  const match = /^(.*):(low|medium|high)$/.exec(model);
-  return match ? { model: match[1]!, effort: match[2] as Effort } : { model, effort: "medium" };
-}
-
-/** Anthropic models that reject the effort parameter. */
-const NO_EFFORT = /^anthropic\/claude-haiku-4/;
+export { splitEffort } from "./effort.js";
 
 function providerOptions(model: string) {
-  const { model: id, effort } = splitEffort(model);
-  return { openai: { reasoningEffort: effort }, anthropic: NO_EFFORT.test(id) ? {} : { effort } };
+  const { effort } = splitEffort(model);
+  return { openai: { reasoningEffort: effort }, anthropic: supportsEffort(model) ? { effort } : {} };
 }
 
 function languageModel(model: string): LanguageModel {

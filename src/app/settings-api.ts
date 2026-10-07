@@ -2,8 +2,8 @@
 import path from "node:path";
 import { z } from "zod";
 
-import { DEFAULT_MODELS, requireKeys, resolveModels } from "../config.js";
-import { splitEffort } from "../providers.js";
+import { DEFAULT_EFFORT, DEFAULT_MODELS, requireKeys, resolveModels } from "../config.js";
+import { EFFORTS, NO_EFFORT, splitEffort } from "../effort.js";
 import { DEFAULT_COST_ASSUMPTIONS } from "../pricing/assumptions.js";
 import { COST_ITEM_KEYS, COST_ITEMS, REGIONS } from "../pricing/catalog.js";
 import { DEFAULT_IMAGE_CONCURRENCY, imageConcurrency } from "../redesign/generate.js";
@@ -56,7 +56,13 @@ export function settingsView() {
     keys: { openai: keyView("openai", settings), anthropic: keyView("anthropic", settings) },
     keysError,
     models: {
-      current: { ...models, reasoning: splitEffort(models.reasoning).model }, // the picker lists ids without the effort suffix
+      // The pickers list ids without the effort suffix; effort has its own control.
+      current: { ...models, reasoning: splitEffort(models.reasoning).model, analysis: models.analysis.map((m) => splitEffort(m).model) },
+      effort: {
+        current: { reasoning: splitEffort(models.reasoning).effort, analysis: splitEffort(models.analysis[0] ?? "").effort },
+        defaults: DEFAULT_EFFORT,
+        noEffort: NO_EFFORT.source,
+      },
       saved: settings.models,
       defaults: DEFAULT_MODELS,
       options: MODEL_OPTIONS,
@@ -84,6 +90,8 @@ export const SettingsPatch = z.object({
       analysis: Clearable(z.array(z.string().trim().max(100)).max(4)),
       image: Clearable(z.string().trim().max(100)),
       imageConcurrency: Clearable(z.number()),
+      reasoningEffort: Clearable(z.enum(EFFORTS)),
+      analysisEffort: Clearable(z.enum(EFFORTS)),
     })
     .optional(),
   tuning: z.object({ edgeThreshold: Clearable(z.number()) }).optional(),
