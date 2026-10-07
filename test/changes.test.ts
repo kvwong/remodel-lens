@@ -153,22 +153,23 @@ describe("a spot change", () => {
     await expect(startChange({ runDir, photoId: "photo_01", tier: "moderate", from: "v1", request: { ask: "x", notes: "", pins: [] }, models })).rejects.toThrow(/aren't in this report/);
   });
 
-  it("shows the picked version in the report, totals, and composer", async () => {
+  it("shows the picked version in the report and puts the change panel in the inspector", async () => {
     const file = await readVersions(runDir);
     file.picks["photo_01:cosmetic"] = "v2";
     const photos = applyPicks([photo], file);
     expect(photos[0]!.tiers[0]!.image).toBe("photo_01/cosmetic/versions/v2/redesign-1.png");
 
     const html = renderReport({ title: "12 Maple St", photos, profileSummary: "", changes: { api: "/api/runs/l/r", originals: [photo], versions: file } });
-    expect(html).toContain('data-picked="v2"');
-    expect(html).toContain("Version 3");
-    expect(html).toContain('class="composer"');
-    expect(html).toContain("Your change");
-    expect(html).toContain("3 versions of the Cosmetic kitchen");
+    expect(html).toContain('data-room="photo_01" data-tier="cosmetic" data-version="v2"');
+    expect(html).toContain("Version 2 of 3");
+    expect(html).toContain("Version 2 · Your change");
+    expect(html).toContain('class="iter"');
+    expect(html).toContain("const ITER = ");
+    expect(html).not.toContain("Change this room");
     expect(html).toContain("2 changes");
 
     const plain = renderReport({ title: "12 Maple St", photos: [photo], profileSummary: "" });
-    expect(plain).not.toContain('class="composer"');
-    expect(plain).not.toContain("CHANGES_API");
+    expect(plain).not.toContain('class="iter"');
+    expect(plain).not.toContain("const ITER");
   });
 });
