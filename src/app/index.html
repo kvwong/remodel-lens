@@ -1433,7 +1433,6 @@ function runRow(r, aggregate = false) {
     esc(r.tiers.map(tierName).join(", ")),
     `${r.photos.length} photos`,
     r.changes ? `${r.changes} ${r.changes === 1 ? "change" : "changes"}` : null,
-    r.apiCost != null ? `≈ ${money(r.apiCost)} API` : null,
   ].filter(Boolean).map((m) => `<span>${m}</span>`).join("");
   return `
     <li class="run">
@@ -1643,7 +1642,7 @@ function renderListing() {
           : `<div class="run-row">
               <button class="btn btn-primary" type="submit" ${running || !tiers.length ? "disabled" : ""} aria-describedby="run-help">${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Run redesign</button>
               <span id="run-help" class="estimate num">${est.n
-                ? `<strong>${nf.format(selected)} photos × ${tiers.length} ${tiers.length === 1 ? "scope" : "scopes"}</strong> = ${nf.format(est.n)} redesigns · about ${money(est.low)}–${money(est.high)} · ${fmtMinutes(est.minutes)}`
+                ? `<strong>${nf.format(est.n)} ${est.n === 1 ? "redesign" : "redesigns"}</strong> · ${fmtMinutes(est.minutes)}`
                 : !l.photos.length ? "Add photos to get started." : !tiers.length ? "Choose at least one scope to run." : "Select at least one photo."}</span>
             </div>`}
         <p id="run-error" class="error" role="alert" ${state.runError ? "" : "hidden"}>${esc(state.runError)}</p>
