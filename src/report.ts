@@ -3,6 +3,7 @@ import { planCost, type ChangePlan, type CostRange } from "./redesign/plan.js";
 import { appearanceScript, brandHead, brandLockup } from "./branding.js";
 import type { PhotoResult, TierResult } from "./redesign/run.js";
 import { TIER_LABELS, TIER_RANK, type Tier } from "./redesign/tiers.js";
+import { asTierResult, ORIGINAL, pickKey, versionsFor, type Pin, type Version, type VersionsFile } from "./redesign/versions.js";
 
 /* ---------- Formatting ---------- */
 
@@ -79,6 +80,7 @@ const ICON_PATHS = {
   arrowUp: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
   download: '<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>',
   expand: '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>',
+  pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   keyboard: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 15h10"/>',
 } as const;
 type IconName = keyof typeof ICON_PATHS;
@@ -122,6 +124,291 @@ export function plainReason(reason: string): string {
   return reason;
 }
 
+
+/** Report-page code for spot changes; only included when the app serves the report. */
+const CHANGES_SCRIPT = String.raw`/* Spot changes: switch between versions, pin notes on the redesign, and follow a change while it's made. */
+  const viewing = {}; // "room:tier" → version id on screen
+  document.querySelectorAll(".versions[data-room]").forEach((el) => { viewing[el.dataset.room + ":" + el.dataset.tier] = el.dataset.picked; });
+  const drafts = {}; // room → { pins, refs }
+  const draftFor = (room) => (drafts[room] ||= { pins: [], refs: [] });
+  const q = (sel, root) => (root || document).querySelector(sel);
+  const qa = (sel, root) => [...(root || document).querySelectorAll(sel)];
+  const sel = (v) => CSS.escape(v);
+  const tierOf = (room) => q('[role="tab"][data-room="' + sel(room) + '"][aria-selected="true"]')?.dataset.tier;
+  const tierLabel = (room, tier) => q('[role="tab"][data-room="' + sel(room) + '"][data-tier="' + sel(tier) + '"]')?.childNodes[0]?.textContent.trim() || tier;
+  const versionLabel = (id) => (id === "v1" ? "the original" : "version " + id.slice(1));
+  const composerFor = (room) => q('.composer[data-room="' + sel(room) + '"]');
+  const visibleLayer = (room, tier) => q("#" + sel(room + "-img-" + tier) + " > .ver-shot:not([hidden]) .pin-layer");
+
+  /** Where the image sits in its 3:2 box: cover-fit scales and crops it. */
+  function fit(layer) {
+    const img = layer.parentElement.querySelector(".zoom img");
+    const W = layer.clientWidth, H = layer.clientHeight;
+    const iw = img?.naturalWidth || W, ih = img?.naturalHeight || H;
+    const s = Math.max(W / iw, H / ih);
+    return { w: iw * s, h: ih * s, dx: (W - iw * s) / 2, dy: (H - ih * s) / 2 };
+  }
+
+  function placePins(layer) {
+    const draft = layer._draft;
+    const pins = draft || JSON.parse(layer.dataset.pins || "[]");
+    qa(".pin, .pin-hint", layer).forEach((n) => n.remove());
+    if (!pins.length && !draft) return;
+    const box = fit(layer);
+    pins.forEach((pin, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "pin" + (draft ? "" : " saved") + (pin.result ? " r-" + pin.result : "");
+      b.textContent = String(i + 1);
+      b.dataset.pin = String(i);
+      b.style.left = box.dx + (pin.x / 1000) * box.w + "px";
+      b.style.top = box.dy + (pin.y / 1000) * box.h + "px";
+      b.title = (pin.item ? pin.item + ": " : "") + (pin.note || "No note yet");
+      b.setAttribute("aria-label", "Pin " + (i + 1) + ", " + b.title);
+      if (!draft) b.tabIndex = -1;
+      layer.append(b);
+    });
+    if (draft && !pins.length) {
+      const hint = document.createElement("span");
+      hint.className = "pin-hint";
+      hint.textContent = "Tap a spot to pin a note";
+      layer.append(hint);
+    }
+  }
+
+  /** Names what a pin landed on from the photo's inventory boxes, the way the server will. */
+  function snap(composer, x, y) {
+    const boxes = JSON.parse(composer.dataset.boxes || "[]");
+    const hit = boxes
+      .filter((b) => x >= Math.min(b.box[0], b.box[2]) && x <= Math.max(b.box[0], b.box[2]) && y >= Math.min(b.box[1], b.box[3]) && y <= Math.max(b.box[1], b.box[3]))
+      .sort((a, b) => Math.abs((a.box[2] - a.box[0]) * (a.box[3] - a.box[1])) - Math.abs((b.box[2] - b.box[0]) * (b.box[3] - b.box[1])))[0];
+    if (hit) return { item: hit.item, fixed: hit.fixed };
+    const row = y < 333 ? "Upper" : y < 667 ? "Middle" : "Lower", col = x < 333 ? "left" : x < 667 ? "center" : "right";
+    return { item: row + " " + col + " of the image", fixed: false };
+  }
+
+  function renderPinList(room) {
+    const composer = composerFor(room), draft = draftFor(room);
+    q(".pin-empty", composer).hidden = draft.pins.length > 0;
+    const list = q(".pin-list", composer);
+    list.replaceChildren(...draft.pins.map((pin, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = '<span class="pin-n" aria-hidden="true"></span><span class="pin-item"></span><input type="text" maxlength="500" placeholder="What should change here?"><button type="button" class="cbtn quiet" aria-label="Remove pin">✕</button>';
+      li.querySelector(".pin-n").textContent = String(i + 1);
+      li.querySelector(".pin-item").textContent = pin.item + (pin.fixed ? " · stays as is at this scope, so only its finish can change" : "");
+      const input = li.querySelector("input");
+      input.id = room + "-pin-" + i;
+      input.value = pin.note;
+      input.setAttribute("aria-label", "Note for pin " + (i + 1) + ", " + pin.item);
+      input.addEventListener("input", () => { pin.note = input.value; });
+      li.querySelector("button").addEventListener("click", () => { draft.pins.splice(i, 1); renderPinList(room); sync(room); });
+      return li;
+    }));
+  }
+
+  /** Points the open composer at the version on screen and keeps every pin layer in this room current. */
+  function sync(room) {
+    const composer = composerFor(room);
+    if (!composer) return;
+    const open = !composer.hidden, tier = tierOf(room);
+    // A change starts from an image; on a version that has none, go back to the one in use.
+    const strip = q('.versions[data-room="' + sel(room) + '"][data-tier="' + sel(tier) + '"]');
+    const shown = q("#" + sel(room + "-img-" + tier) + " > .ver-shot:not([hidden])");
+    if (open && strip && shown && !q(".zoom", shown) && shown.dataset.version !== strip.dataset.picked) return showVersion(room, tier, strip.dataset.picked);
+    qa('[data-compose="' + sel(room) + '"]').forEach((b) => b.setAttribute("aria-expanded", String(open)));
+    const active = open ? visibleLayer(room, tier) : null;
+    qa("#" + sel(room) + " .pin-layer").forEach((layer) => {
+      layer._draft = layer === active ? draftFor(room).pins : null;
+      layer.classList.toggle("pinning", layer === active);
+      placePins(layer);
+    });
+    if (open) q(".composer-from", composer).textContent = "Starts from " + versionLabel(viewing[room + ":" + tier] || "v1") + " of the " + tierLabel(room, tier) + " scope.";
+  }
+  const syncAll = () => qa(".composer[data-room]").forEach((c) => sync(c.dataset.room));
+
+  function showVersion(room, tier, id) {
+    viewing[room + ":" + tier] = id;
+    ["img", "info"].forEach((k) => qa("#" + sel(room + "-" + k + "-" + tier) + " > [data-version]").forEach((el) => { el.hidden = el.dataset.version !== id; }));
+    qa('.ver-tile[data-room="' + sel(room) + '"][data-tier="' + sel(tier) + '"]').forEach((t) => t.setAttribute("aria-pressed", String(t.dataset.version === id)));
+    sync(room);
+  }
+
+  const STATE_KEY = "whim-report-state";
+  function reloadKeepingPlace(extraView) {
+    const tabs = {};
+    qa('.room [role="tab"][aria-selected="true"]').forEach((t) => { tabs[t.dataset.room] = t.dataset.tier; });
+    try { sessionStorage.setItem(STATE_KEY, JSON.stringify({ path: location.pathname, y: scrollY, tabs, view: Object.assign({}, viewing, extraView || {}) })); } catch {}
+    location.reload();
+  }
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(STATE_KEY) || "null");
+    sessionStorage.removeItem(STATE_KEY);
+    if (saved && saved.path === location.pathname) {
+      Object.entries(saved.tabs || {}).forEach(([room, tier]) => selectTier(room, tier, false));
+      Object.entries(saved.view || {}).forEach(([key, id]) => {
+        const [room, tier] = key.split(":");
+        if (q('.ver-tile[data-room="' + sel(room) + '"][data-tier="' + sel(tier) + '"][data-version="' + sel(id) + '"]:not([disabled])')) showVersion(room, tier, id);
+      });
+      syncScopeControls();
+      requestAnimationFrame(() => scrollTo(0, saved.y || 0));
+    }
+  } catch {}
+
+  async function call(method, path, body) {
+    const res = await fetch(CHANGES_API + path, { method, headers: body ? { "content-type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Something went wrong (" + res.status + ").");
+    return data;
+  }
+
+  /** Downscales a reference photo before upload; the server shrinks it again. */
+  async function shrink(file) {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+    const canvas = Object.assign(document.createElement("canvas"), { width: Math.round(bitmap.width * scale), height: Math.round(bitmap.height * scale) });
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.86);
+  }
+  function renderRefs(room) {
+    const composer = composerFor(room), draft = draftFor(room);
+    q(".ref-picked", composer).replaceChildren(...draft.refs.map((src, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "ref-thumb";
+      b.title = "Remove this reference photo";
+      b.setAttribute("aria-label", "Remove reference photo " + (i + 1));
+      b.innerHTML = '<img alt="">';
+      b.querySelector("img").src = src;
+      b.addEventListener("click", () => { draft.refs.splice(i, 1); renderRefs(room); });
+      return b;
+    }));
+    q(".ref-add", composer).hidden = draft.refs.length >= 3;
+  }
+
+  document.addEventListener("click", async (e) => {
+    const tile = e.target.closest(".ver-tile");
+    if (tile && !tile.disabled) return showVersion(tile.dataset.room, tile.dataset.tier, tile.dataset.version);
+
+    const compose = e.target.closest("[data-compose]");
+    if (compose) {
+      const composer = composerFor(compose.dataset.compose);
+      composer.hidden = !composer.hidden;
+      sync(compose.dataset.compose);
+      if (!composer.hidden) q("textarea", composer).focus({ preventScroll: true });
+      return;
+    }
+    if (e.target.closest("[data-cancel]")) {
+      const composer = e.target.closest(".composer");
+      composer.hidden = true;
+      drafts[composer.dataset.room] = { pins: [], refs: [] };
+      renderPinList(composer.dataset.room);
+      renderRefs(composer.dataset.room);
+      return sync(composer.dataset.room);
+    }
+
+    const layer = e.target.closest(".pin-layer.pinning");
+    if (layer) {
+      const room = layer.closest(".room").id, draft = draftFor(room);
+      const pinBtn = e.target.closest(".pin");
+      if (pinBtn) return document.getElementById(room + "-pin-" + pinBtn.dataset.pin)?.focus({ preventScroll: true });
+      if (draft.pins.length >= 8) return;
+      const rect = layer.getBoundingClientRect(), box = fit(layer);
+      const clamp = (n) => Math.max(0, Math.min(1000, Math.round(n)));
+      const x = clamp(((e.clientX - rect.left - box.dx) / box.w) * 1000), y = clamp(((e.clientY - rect.top - box.dy) / box.h) * 1000);
+      draft.pins.push(Object.assign({ x, y, note: "" }, snap(composerFor(room), x, y)));
+      renderPinList(room);
+      sync(room);
+      document.getElementById(room + "-pin-" + (draft.pins.length - 1))?.focus({ preventScroll: true });
+      return;
+    }
+
+    const use = e.target.closest("[data-use]");
+    if (use) {
+      use.disabled = true;
+      try {
+        await call("PUT", "/picks", { photo: use.dataset.room, tier: use.dataset.tier, version: use.dataset.use });
+        reloadKeepingPlace();
+      } catch (err) { use.disabled = false; alert(err.message); }
+      return;
+    }
+    const del = e.target.closest("[data-delete]");
+    if (del) {
+      if (!confirm("Delete " + versionLabel(del.dataset.delete) + "? Its image and notes are removed from this report.")) return;
+      del.disabled = true;
+      try {
+        await call("DELETE", "/versions/" + encodeURIComponent(del.dataset.room) + "/" + encodeURIComponent(del.dataset.tier) + "/" + encodeURIComponent(del.dataset.delete));
+        delete viewing[del.dataset.room + ":" + del.dataset.tier];
+        reloadKeepingPlace();
+      } catch (err) { del.disabled = false; alert(err.message); }
+    }
+  });
+  // Tabs and "Show in every room" change the scope on screen; follow them.
+  document.addEventListener("click", (e) => { if (e.target.closest('[role="tab"], [data-all-tier]')) requestAnimationFrame(syncAll); });
+  document.addEventListener("keyup", (e) => { if (e.target.closest?.('[role="tab"]')) requestAnimationFrame(syncAll); });
+
+  qa(".composer[data-room]").forEach((composer) => {
+    const room = composer.dataset.room;
+    q('input[type="file"]', composer).addEventListener("change", async (e) => {
+      const draft = draftFor(room);
+      for (const file of [...e.target.files].slice(0, 3 - draft.refs.length)) {
+        try { draft.refs.push(await shrink(file)); } catch {}
+      }
+      e.target.value = "";
+      renderRefs(room);
+    });
+    composer.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const status = q(".composer-status", composer), button = q('button[type="submit"]', composer);
+      const tier = tierOf(room), draft = draftFor(room);
+      const ask = composer.elements.ask.value.trim();
+      const pins = draft.pins.filter((p) => p.note.trim()).map((p) => ({ x: p.x, y: p.y, note: p.note.trim() }));
+      status.classList.remove("error");
+      if (!ask && !pins.length) {
+        status.classList.add("error");
+        status.textContent = "Describe a change, or tap the redesign and add a note to a pin.";
+        return;
+      }
+      button.disabled = true;
+      status.textContent = "Starting the change…";
+      try {
+        await call("POST", "/versions", { photo: room, tier, from: viewing[room + ":" + tier] || "v1", ask, notes: composer.elements.notes.value.trim(), pins, references: draft.refs });
+        reloadKeepingPlace();
+      } catch (err) {
+        button.disabled = false;
+        status.classList.add("error");
+        status.textContent = "Couldn't start the change: " + err.message;
+      }
+    });
+  });
+
+  qa(".pin-layer").forEach((layer) => {
+    const img = layer.parentElement.querySelector(".zoom img");
+    if (img && !img.complete) img.addEventListener("load", () => placePins(layer), { once: true });
+    placePins(layer);
+  });
+  addEventListener("resize", () => qa(".pin-layer").forEach(placePins));
+
+  /* While a change is being made, show its step and open it when it's done. */
+  const runningTiles = qa(".ver-tile[data-running]");
+  if (runningTiles.length) {
+    const poll = async () => {
+      try {
+        const file = await call("GET", "/versions");
+        for (const tile of runningTiles) {
+          const v = file.versions.find((x) => x.photoId === tile.dataset.room && x.tier === tile.dataset.tier && x.id === tile.dataset.version);
+          if (!v || v.status !== "running") {
+            return reloadKeepingPlace(v && v.image ? { [tile.dataset.room + ":" + tile.dataset.tier]: v.id } : {});
+          }
+          const label = (v.progress?.label || "Working…").replace(/^.*?:\s*/, "");
+          q(".ver-label", tile).textContent = label.charAt(0).toUpperCase() + label.slice(1);
+          if (v.progress?.total) q(".ver-bar i", tile).style.width = Math.max(4, Math.round((v.progress.done / v.progress.total) * 100)) + "%";
+        }
+      } catch {}
+      setTimeout(poll, 2500);
+    };
+    poll();
+  }`;
+
 /* ---------- Pieces ---------- */
 
 /** Clickable image that opens the viewer; every image of one room shares a group for ←/→ comparison. */
@@ -148,7 +435,7 @@ export function fixedSummary(photo: PhotoResult): string {
   return [...counts].map(([k, n]) => (n > 1 ? `${n} ${k.endsWith("s") ? k : `${k}s`}` : k)).join(", ");
 }
 
-function tierInfo(t: TierResult): string {
+function tierInfo(t: TierResult, changed?: Set<string>): string {
   const total = planCost(t.plan);
   const changes = t.plan.changes;
   const reasons = t.reasons.map(plainReason);
@@ -167,14 +454,14 @@ function tierInfo(t: TierResult): string {
         </details>`
       : ""}
     ${changes.length
-      ? `<details class="fold">
+      ? `<details class="fold"${changed?.size ? " open" : ""}>
           <summary>Planned changes <span class="count">${changes.length}</span></summary>
           ${t.plan.expression || t.plan.architecturalLanguage
             ? `<p class="direction">${[t.plan.expression && sentence(t.plan.expression), t.plan.architecturalLanguage].filter(Boolean).map((x) => esc(x!)).join(" · ")}</p>`
             : ""}
           <ul class="changes">${changes.map((c) => `
             <li>
-              <div class="change-head"><strong>${esc(sentence(c.element))}</strong><span class="num">${changeCost(c)}</span></div>
+              <div class="change-head"><strong>${esc(sentence(c.element))}${changed?.has(c.element.toLowerCase()) ? '<span class="changed-tag">Changed</span>' : ""}</strong><span class="num">${changeCost(c)}</span></div>
               <p>${esc(c.proposed)}</p>
               <p class="was">Now: ${esc(c.current)}</p>
               ${c.costBasis ? `<p class="basis">${c.costSource === "estimate" ? "Model estimate, not from the cost table: " : ""}${esc(c.costBasis)}</p>` : ""}
@@ -219,6 +506,8 @@ export function renderReport(input: {
   run?: { startedAt: string; profileName?: string | null; stopped?: boolean };
   /** PDF download links; only the app can build PDFs, so static reports omit them. */
   pdf?: { summary: string; full: string } | null;
+  /** Spot changes; only the app can make them, so static reports omit this. `photos` already has each room's pick applied. */
+  changes?: { api: string; originals: PhotoResult[]; versions: VersionsFile } | null;
 }): string {
   const photos = input.photos;
   const tiers = [...new Set(photos.flatMap((p) => p.tiers.map((t) => t.tier)))].sort((a, b) => TIER_RANK[a] - TIER_RANK[b]);
@@ -231,6 +520,7 @@ export function renderReport(input: {
     input.run?.profileName ? `${input.run.profileName} profile` : null,
     input.location?.replace(/\s*\(.*\)$/, ""),
     `${photos.length} ${photos.length === 1 ? "photo" : "photos"}`,
+    input.changes?.versions.versions.length ? `${input.changes.versions.versions.length} ${input.changes.versions.versions.length === 1 ? "change" : "changes"}` : null,
   ].filter(Boolean) as string[];
   const back = input.backHref ? { href: esc(input.backHref), label: `Back to ${esc(input.title)}` } : null;
   const docTitle = `${input.title}${started ? ` · ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(started)}` : ""} · Whim`;
@@ -308,8 +598,44 @@ export function renderReport(input: {
     </details>
   </section>`;
 
+  const ch = input.changes ?? null;
+  const thumbBase = ch ? ch.api.replace(/^\/api\/runs\//, "/thumb/runs/") : "";
+  /** Every version of one room at one scope: the run's own result first, then spot changes. */
+  const versionList = (p: PhotoResult, tier: Tier) => {
+    const original = ch!.originals.find((o) => o.id === p.id)?.tiers.find((t) => t.tier === tier);
+    const list: Array<{ id: string; label: string; result: TierResult; version: Version | null }> = original ? [{ id: ORIGINAL, label: "Original", result: original, version: null }] : [];
+    for (const v of versionsFor(ch!.versions, p.id, tier)) list.push({ id: v.id, label: `Version ${v.id.slice(1)}`, result: asTierResult(v), version: v });
+    const want = ch!.versions.picks[pickKey(p.id, tier)];
+    const picked = list.find((x) => x.id === want && x.version?.status !== "running" && x.result.image)?.id ?? ORIGINAL;
+    return { list, picked };
+  };
+  const changedSince = (x: { version: Version | null; result: TierResult }, list: Array<{ id: string; result: TierResult }>) => {
+    if (!x.version) return undefined;
+    const parent = list.find((y) => y.id === x.version!.parent)?.result.plan;
+    const before = new Map((parent?.changes ?? []).map((c) => [c.element.toLowerCase(), c.proposed]));
+    return new Set(x.result.plan.changes.filter((c) => before.get(c.element.toLowerCase()) !== c.proposed).map((c) => c.element.toLowerCase()));
+  };
+  const pinsJson = (pins: Pin[]) => esc(JSON.stringify(pins.map(({ x, y, note, item, result }) => ({ x, y, note, item, result }))));
+  const yourChange = (v: Version) => `
+    <div class="your-change">
+      <p class="your-change-head">Your change</p>
+      ${v.request.ask ? `<p>${esc(v.request.ask)}</p>` : ""}
+      ${v.request.pins.length ? `<ol class="pin-notes">${v.request.pins.map((pin, i) => `<li><span class="pin-n" aria-hidden="true">${i + 1}</span><span><strong>${esc(sentence(pin.item ?? "Pinned spot"))}:</strong> ${esc(pin.note)}</span>${pin.result ? `<span class="pin-result r-${pin.result}">${pin.result === "done" ? "Done" : pin.result === "partial" ? "Partly done" : "Missed"}</span>` : ""}</li>`).join("")}</ol>` : ""}
+      ${v.request.notes ? `<p class="fine">Context: ${esc(v.request.notes)}</p>` : ""}
+      ${v.request.references.length ? `<div class="ref-row">${v.request.references.map((r) => `<img src="${esc(r)}" alt="Reference photo" loading="lazy">`).join("")}</div>` : ""}
+    </div>`;
+  const versionActions = (p: PhotoResult, tier: Tier, x: { id: string; result: TierResult; version: Version | null }, picked: string) => {
+    if (x.version?.status === "running") return "";
+    const use = x.id === picked
+      ? `<span class="in-use">${icon("check")}Used in totals and PDFs</span>`
+      : x.result.image ? `<button type="button" class="cbtn primary" data-use="${x.id}" data-room="${p.id}" data-tier="${tier}">Use this one</button>` : "";
+    const del = x.version ? `<button type="button" class="cbtn quiet" data-delete="${x.id}" data-room="${p.id}" data-tier="${tier}">Delete version</button>` : "";
+    return use || del ? `<div class="ver-actions">${use}${del}</div>` : "";
+  };
+
   const rooms = photos.map((p) => {
     const room = roomName(p);
+    const sets = ch ? new Map(p.tiers.map((t) => [t.tier, versionList(p, t.tier)])) : null;
     return `
   <section class="room card" id="${p.id}" aria-labelledby="${p.id}-h">
     <div class="room-head">
@@ -326,7 +652,19 @@ export function renderReport(input: {
       <div class="frame">
         ${p.tiers.map((t, i) => `
         <div role="tabpanel" id="${p.id}-img-${t.tier}" aria-labelledby="${p.id}-tab-${t.tier}" data-panel="${p.id}:${t.tier}"${i === 0 ? "" : " hidden"}>
-          ${t.image
+          ${sets ? (() => {
+            const { list, picked } = sets.get(t.tier)!;
+            return list.map((x) => `
+          <div class="ver-shot" data-version="${x.id}"${x.id === picked ? "" : " hidden"}>
+            ${x.version?.status === "running"
+              ? `<div class="no-image">Making this change…</div>`
+              : x.result.image
+                ? zoomable({ src: x.result.image, alt: `${tierName(t.tier)} redesign of the ${room.toLowerCase()}, ${x.label.toLowerCase()}`, group: x.id === picked ? p.id : `${p.id}-${t.tier}-${x.id}`, label: `${room} · ${tierName(t.tier)}${list.length > 1 ? ` · ${x.label}` : ""}`, status: x.result.status })
+                : `<div class="no-image">${STATUS[x.result.status].label}. ${STATUS[x.result.status].meaning}.</div>`}
+            <div class="pin-layer" data-pins="${pinsJson(x.version?.request.pins ?? [])}"></div>
+            ${list.length > 1 ? `<span class="ver-tag">${x.label}</span>` : ""}
+          </div>`).join("");
+          })() : t.image
             ? zoomable({ src: t.image, alt: `${tierName(t.tier)} redesign of the ${room.toLowerCase()}`, group: p.id, label: `${room} · ${tierName(t.tier)}`, status: t.status })
             : `<div class="no-image">${STATUS[t.status].label}. ${STATUS[t.status].meaning}.</div>`}
           <p class="figcap">${tierName(t.tier)} · ${TIER_LABELS[t.tier].blurb}</p>
@@ -335,7 +673,12 @@ export function renderReport(input: {
     </div>
     <div class="info">
       <div class="info-tier">
-        ${p.tiers.map((t, i) => `<div role="tabpanel" id="${p.id}-info-${t.tier}" aria-labelledby="${p.id}-tab-${t.tier}" data-panel="${p.id}:${t.tier}"${i === 0 ? "" : " hidden"}>${tierInfo(t)}</div>`).join("")}
+        ${p.tiers.map((t, i) => `<div role="tabpanel" id="${p.id}-info-${t.tier}" aria-labelledby="${p.id}-tab-${t.tier}" data-panel="${p.id}:${t.tier}"${i === 0 ? "" : " hidden"}>${sets
+          ? (() => {
+            const { list, picked } = sets.get(t.tier)!;
+            return list.map((x) => `<div data-version="${x.id}"${x.id === picked ? "" : " hidden"}>${x.version?.status === "running" ? "" : tierInfo(x.result, changedSince(x, list))}${x.version ? yourChange(x.version) : ""}${versionActions(p, t.tier, x, picked)}</div>`).join("");
+          })()
+          : tierInfo(t)}</div>`).join("")}
       </div>
       <details class="fold info-listing">
         <summary>About the listing photo</summary>
@@ -344,6 +687,57 @@ export function renderReport(input: {
         ${p.inventory.uncertainties.length ? `<h3 class="sub">Can't tell from this photo</h3><ul class="plain">${p.inventory.uncertainties.map((u) => `<li>${esc(u)}</li>`).join("")}</ul>` : ""}
       </details>
     </div>
+    ${sets ? `${p.tiers.map((t, i) => {
+      const { list, picked } = sets.get(t.tier)!;
+      return `
+    <div class="versions" data-panel="${p.id}:${t.tier}" data-room="${p.id}" data-tier="${t.tier}" data-picked="${picked}"${i === 0 ? "" : " hidden"}>
+      <div class="versions-head">
+        <div>
+          <h3>${list.length > 1 ? "Versions" : "Make a change"}</h3>
+          <p class="fine">${list.length > 1 ? `${list.length} versions of the ${tierName(t.tier)} ${esc(room.toLowerCase())}. The report uses the one marked In use.` : `Ask for one change in this room, or pin notes to spots on the redesign. The rest of the report stays as it is.`}</p>
+        </div>
+        <button type="button" class="cbtn" data-compose="${p.id}" data-tier="${t.tier}" aria-expanded="false">${icon("pencil")}Change this room</button>
+      </div>
+      ${list.length > 1 ? `<div class="ver-strip" role="group" aria-label="Versions">${list.map((x) => {
+        const running = x.version?.status === "running";
+        const caption = x.version ? [x.version.request.ask, ...x.version.request.pins.map((pin, k) => `${k + 1}. ${pin.note}`)].filter(Boolean).join(" · ") : "From the full run";
+        return `<button type="button" class="ver-tile" data-version="${x.id}" data-room="${p.id}" data-tier="${t.tier}" aria-pressed="${x.id === picked}"${running ? ` data-running="true" disabled` : ""}>
+          <span class="ver-thumb">${x.result.image && !running ? `<img src="${esc(`${thumbBase}/${x.result.image}?w=360`)}" alt="" loading="lazy">` : `<span class="ver-working"><span class="ver-label">${running ? "Starting…" : STATUS[x.result.status].label}</span>${running ? '<span class="ver-bar"><i></i></span>' : ""}</span>`}</span>
+          ${x.id === picked ? '<span class="ver-pick">In use</span>' : ""}
+          <span class="ver-row"><span>${x.label}</span>${running ? "" : `<span class="tab-mark s-${x.result.status}">${icon(STATUS[x.result.status].icon)}<span class="sr-only">, ${STATUS[x.result.status].label}</span></span>`}</span>
+          <span class="ver-cap">${esc(caption)}</span>
+        </button>`;
+      }).join("")}</div>` : ""}
+    </div>`;
+    }).join("")}
+    <form class="composer" data-room="${p.id}" data-boxes="${esc(JSON.stringify([...p.inventory.changeable.map((c) => ({ item: sentence(c.element), box: c.box, fixed: false })), ...p.inventory.fixed.map((f) => ({ item: KIND[f.kind] ?? sentence(f.kind.replace(/_/g, " ")), box: f.box, fixed: true }))]))}" hidden>
+      <p class="fine composer-from" aria-live="polite"></p>
+      <div>
+        <label for="${p.id}-ask">What should change in the whole room?</label>
+        <textarea id="${p.id}-ask" name="ask" rows="2" maxlength="2000" placeholder="Keep everything else, but make the cabinets a warmer white oak"></textarea>
+      </div>
+      <div>
+        <label>Pinned notes</label>
+        <p class="fine pin-empty">Tap the redesign above to pin a note to one spot, like a pendant or a run of cabinets.</p>
+        <ol class="pin-list"></ol>
+      </div>
+      <div>
+        <label for="${p.id}-notes">Add context <span class="fine">(optional)</span></label>
+        <input type="text" id="${p.id}-notes" name="notes" maxlength="2000" placeholder="We're keeping the range. Budget under $15K for this room.">
+      </div>
+      <div class="ref-field">
+        <span class="fine">Reference photos</span>
+        <span class="ref-row ref-picked"></span>
+        <label class="cbtn quiet ref-add">Add photo<input type="file" accept="image/*" multiple hidden></label>
+      </div>
+      <div class="composer-foot">
+        <p class="fine composer-status" role="status" aria-live="polite">Re-plans, redraws, and re-checks this photo at this scope only. About $0.15 of API use.</p>
+        <div class="ver-actions">
+          <button type="button" class="cbtn quiet" data-cancel>Cancel</button>
+          <button type="submit" class="cbtn primary">Make change</button>
+        </div>
+      </div>
+    </form>` : ""}
   </section>`;
   }).join("");
 
@@ -509,6 +903,73 @@ ${appearanceScript}
   .pair { display:grid; gap:12px; grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .frame { margin:0; min-width:0; }
   .frame figcaption, .figcap { margin:8px 0 0; font-size:13px; line-height:20px; color:var(--muted); min-height:20px; }
+  /* Spot changes */
+  .ver-shot { position:relative; }
+  .ver-tag { position:absolute; left:10px; top:10px; font-size:12px; font-weight:600; padding:3px 8px; border-radius:6px; background:rgba(18,18,17,.62); color:#fff; pointer-events:none; }
+  .pin-layer { position:absolute; left:0; top:0; width:100%; aspect-ratio:3 / 2; pointer-events:none; }
+  .pin-layer.pinning { pointer-events:auto; cursor:crosshair; outline:2px solid var(--primary); outline-offset:2px; border-radius:3px; }
+  .pin { position:absolute; width:28px; height:28px; margin:-14px 0 0 -14px; border-radius:50%; border:2px solid #fff; background:var(--primary); color:var(--primary-text); font:600 13px/1 var(--font); display:grid; place-items:center; box-shadow:0 1px 6px rgba(0,0,0,.35); padding:0; pointer-events:auto; cursor:pointer; }
+  .pin.saved { opacity:.9; cursor:help; }
+  .pin.r-missed, .pin.r-partial { background:var(--warn); color:#fff; }
+  .pin-hint { position:absolute; left:50%; bottom:12px; translate:-50% 0; font-size:12.5px; font-weight:500; padding:5px 10px; border-radius:999px; background:rgba(18,18,17,.72); color:#fff; pointer-events:none; white-space:nowrap; }
+  .versions { margin-top:20px; padding-top:16px; border-top:1px solid var(--line); }
+  .versions-head { display:flex; justify-content:space-between; align-items:center; gap:12px 20px; flex-wrap:wrap; }
+  .versions-head h3 { font-size:15px; }
+  .versions-head .fine, .composer .fine { margin:2px 0 0; }
+  .fine { font-size:13px; color:var(--muted); }
+  .cbtn { display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:6px 14px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); color:var(--text); font:500 14px/1.2 var(--font); cursor:pointer; text-decoration:none; }
+  .cbtn:hover { border-color:var(--primary); background:var(--primary-soft); }
+  .cbtn .icon { color:var(--primary); }
+  .cbtn.primary { background:var(--primary); border-color:transparent; color:var(--primary-text); }
+  .cbtn.primary:hover { filter:brightness(1.08); }
+  .cbtn.quiet { border-color:transparent; background:transparent; color:var(--muted); }
+  .cbtn.quiet:hover { color:var(--text); background:var(--surface-2); }
+  .cbtn[disabled] { opacity:.55; cursor:progress; }
+  .ver-strip { display:flex; gap:12px; overflow-x:auto; padding:14px 2px 6px; scroll-snap-type:x proximity; }
+  .ver-tile { position:relative; flex:0 0 176px; scroll-snap-align:start; display:grid; gap:6px; padding:6px; border:1px solid var(--line); border-radius:10px; background:var(--surface); text-align:left; font:inherit; color:inherit; cursor:pointer; }
+  .ver-tile:hover { border-color:var(--line-strong); }
+  .ver-tile[aria-pressed="true"] { border-color:var(--primary); box-shadow:0 0 0 1px var(--primary); }
+  .ver-tile[disabled] { cursor:progress; }
+  .ver-thumb { display:block; aspect-ratio:3 / 2; border-radius:6px; overflow:hidden; background:var(--surface-2); }
+  .ver-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+  .ver-working { height:100%; display:grid; place-items:center; align-content:center; gap:8px; padding:10px; font-size:12px; color:var(--muted); text-align:center; }
+  .ver-bar { width:80%; height:4px; border-radius:2px; background:var(--line); overflow:hidden; }
+  .ver-bar i { display:block; height:100%; width:4%; background:var(--primary); transition:width .5s linear; }
+  .ver-pick { position:absolute; right:12px; top:12px; font-size:11px; font-weight:600; padding:2px 7px; border-radius:6px; background:var(--primary); color:var(--primary-text); }
+  .ver-row { display:flex; justify-content:space-between; gap:8px; padding:0 4px; font-size:12.5px; font-weight:600; }
+  .ver-cap { padding:0 4px 4px; font-size:12.5px; color:var(--muted); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:38px; }
+  .your-change { margin-top:12px; padding:10px 12px; border-radius:8px; background:var(--surface-2); font-size:14px; }
+  .your-change p { margin:0; }
+  .your-change-head { font-size:12px !important; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin-bottom:2px !important; }
+  .pin-notes { list-style:none; margin:4px 0 0; padding:0; display:grid; gap:4px; }
+  .pin-notes li { display:flex; gap:8px; align-items:baseline; }
+  .pin-notes strong { font-weight:500; }
+  .pin-n { flex:none; width:20px; height:20px; border-radius:50%; background:var(--primary); color:var(--primary-text); font-size:11px; font-weight:600; display:inline-grid; place-items:center; }
+  .pin-result { margin-left:auto; font-size:12px; white-space:nowrap; color:var(--ok); }
+  .pin-result.r-missed, .pin-result.r-partial { color:var(--warn); }
+  .ref-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .ref-thumb { padding:0; border:0; background:none; cursor:pointer; border-radius:6px; }
+  .ref-thumb:hover img { opacity:.6; }
+  .ref-row img { width:56px; height:42px; object-fit:cover; border-radius:6px; }
+  .changed-tag { margin-left:8px; font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--primary); }
+  .ver-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:14px; }
+  .composer .ver-actions { margin-top:0; }
+  .in-use { display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--muted); }
+  .in-use .icon { color:var(--ok); width:14px; height:14px; }
+  .composer { margin-top:16px; padding:16px; border:1px solid var(--line-strong); border-radius:12px; display:grid; gap:14px; }
+  .composer label { display:block; font-size:13px; font-weight:500; margin-bottom:4px; }
+  .composer textarea, .composer input[type="text"] { width:100%; font:inherit; font-size:14px; color:var(--text); background:var(--bg); border:1px solid var(--line-strong); border-radius:8px; padding:9px 11px; resize:vertical; }
+  .composer textarea:focus, .composer input[type="text"]:focus { outline:2px solid var(--primary); outline-offset:-1px; }
+  .pin-list { list-style:none; margin:6px 0 0; padding:0; display:grid; gap:8px; }
+  .pin-list li { display:grid; grid-template-columns:auto minmax(0, 1fr) auto; gap:4px 10px; align-items:center; }
+  .pin-list .pin-item { grid-column:2; font-size:12.5px; color:var(--muted); }
+  .pin-list input { grid-column:2; }
+  .pin-list .cbtn { grid-column:3; grid-row:1 / span 2; }
+  .ref-field { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; }
+  .ref-field .ref-row { margin:0; }
+  .ref-add { margin:0 !important; font-size:13px !important; }
+  .composer-foot { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px 16px; }
+  .composer-status.error { color:var(--bad); }
   .info { display:grid; gap:12px; grid-template-columns:repeat(2, minmax(0, 1fr)); margin-top:16px; align-items:start; }
   .info > * { min-width:0; }
   .info-tier { grid-column:2; grid-row:1; }
@@ -913,6 +1374,8 @@ ${appearanceScript}
     motion.scroll(0);
     document.getElementById("top").focus({ preventScroll: true });
   });
+${ch ? `  const CHANGES_API = ${JSON.stringify(ch.api).replace(/</g, "\\u003c")};
+  ${CHANGES_SCRIPT}` : ""}
 })();
 </script>
 </body>

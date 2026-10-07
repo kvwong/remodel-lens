@@ -7,6 +7,7 @@ import sharp from "sharp";
 import { WHIM_PATHS } from "./branding.js";
 
 import { planCost, type CostRange } from "./redesign/plan.js";
+import { ORIGINAL, pickKey, versionsFor, type VersionsFile } from "./redesign/versions.js";
 import type { PhotoResult, TierResult } from "./redesign/run.js";
 import { TIER_LABELS, TIER_RANK, type Tier } from "./redesign/tiers.js";
 import {
@@ -40,6 +41,8 @@ export type ReportPdfInput = {
   /** Folder the photo paths in `photos` are relative to. */
   runDir: string;
   detail: PdfDetail;
+  /** Spot changes; rooms already show their picked version in `photos`. */
+  versions?: VersionsFile;
 };
 
 export const PDF_DETAIL_LABELS: Record<PdfDetail, string> = { summary: "Summary", full: "Full scope" };
@@ -513,6 +516,13 @@ export async function renderReportPdf(input: ReportPdfInput): Promise<Buffer> {
         if (fine) write(sentence(fine), rx + PAIR.w * 0.5, y + 0.5, PAIR.w * 0.5, { size: 7.5, color: C.faint, align: "right" });
         y += 16;
 
+        const pickedId = input.versions?.picks[pickKey(p.id, t.tier)];
+        const picked = pickedId && pickedId !== ORIGINAL ? input.versions!.versions.find((v) => v.id === pickedId && v.photoId === p.id && v.tier === t.tier) : null;
+        if (picked) {
+          const asks = [picked.request.ask, ...picked.request.pins.map((pin) => `${sentence(pin.item ?? "Pinned spot")}: ${pin.note}`)].filter(Boolean).join("; ");
+          ensure(14);
+          y += write(`Version ${picked.id.slice(1)} of ${versionsFor(input.versions!, p.id, t.tier).length + 1}. Your change: ${asks}`, M, y, W, { size: 8.5, color: C.muted }) + 4;
+        }
         const direction = [t.plan.expression && sentence(t.plan.expression), t.plan.architecturalLanguage].filter(Boolean).join(" · ");
         if (direction) {
           ensure(14);

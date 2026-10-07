@@ -13,6 +13,8 @@ import { logContext, progressContext, type Progress } from "../files.js";
 import { addListingPhoto, createListing, duplicateListing, deleteListing, restoreListing, updateListingDetails, listingDir, listListings, LISTINGS_DIR, readListing, saveListingOrder, saveSelection, type Listing } from "../listing/listing.js";
 import { listProfiles, listRuns, loadProfile, runListingRedesign, RUNS_DIR, type RunSummary } from "../redesign/job.js";
 import type { PhotoResult } from "../redesign/run.js";
+import { startChange } from "../redesign/change.js";
+import { applyPicks, ORIGINAL, pickKey, readVersions, updateVersions, type VersionsFile } from "../redesign/versions.js";
 import { renderReport } from "../report.js";
 import { motionScript } from "../motion.js";
 import { brandAppHtml } from "../branding.js";
@@ -69,8 +71,8 @@ const CONTENT_TYPES: Record<string, string> = {
 
 type Job = {
   id: string;
-  kind: "redesign" | "taste";
-  key: string; // listing id or profile id
+  kind: "redesign" | "taste" | "change";
+  key: string; // listing id, profile id, or run/photo/scope/version for a spot change
   status: "running" | "done" | "error";
   startedAt: number;
   log: string[];
@@ -206,6 +208,19 @@ async function tasteProfileJson(id: string) {
   };
 }
 
+/** A run's spot changes, with progress for the ones in flight. A running entry with no job here was cut off by a restart. */
+async function versionsView(runDir: string): Promise<VersionsFile> {
+  const file = await readVersions(runDir);
+  const rel = path.relative(RUNS_DIR, runDir).split(path.sep).join("/");
+  for (const v of file.versions) {
+    if (v.status !== "running") continue;
+    const job = activeJobs.get(jobKey("change", `${rel}/${v.photoId}/${v.tier}/${v.id}`));
+    if (job?.status === "running") Object.assign(v, { progress: { done: job.progress.done, total: job.progress.total, label: job.progress.label } });
+    else Object.assign(v, { status: "error", reasons: [job?.error ?? "Stopped before finishing. The app was closed or restarted while this change was being made."] });
+  }
+  return file;
+}
+
 /** What a run's report is drawn from: its saved results plus the listing and profile as they are now. */
 async function loadReportInput(runDir: string) {
   const resultsPath = path.join(runDir, "results.json");
@@ -215,10 +230,15 @@ async function loadReportInput(runDir: string) {
   const listing = await readListing(listingDir(run.listing)).catch(() => null);
   const profile = await loadProfile(run.profile).catch(() => null);
   const profileName = (await listRuns(run.listing)).find((r) => r.id === path.basename(runDir))?.profileName ?? null;
+  const versions = await versionsView(runDir);
+  const results = JSON.parse(await readFile(resultsPath, "utf8")) as PhotoResult[];
   return {
     listingId: run.listing,
     title: listing?.name ?? run.listing,
-    photos: JSON.parse(await readFile(resultsPath, "utf8")) as PhotoResult[],
+    // Each room shows, totals, and exports the version picked for it.
+    photos: applyPicks(results, versions),
+    originals: results,
+    versions,
     profileSummary: profile?.summary ?? "",
     location: listing?.location ?? null,
     run: { startedAt: run.startedAt, profileName, stopped: !!run.stopped },
@@ -230,9 +250,11 @@ async function freshReport(runDir: string): Promise<string | null> {
   try {
     const input = await loadReportInput(runDir);
     if (!input) return null;
-    const pdfBase = `/pdf/runs/${path.relative(RUNS_DIR, runDir).split(path.sep).map(encodeURIComponent).join("/")}`;
+    const runPath = path.relative(RUNS_DIR, runDir).split(path.sep).map(encodeURIComponent).join("/");
+    const pdfBase = `/pdf/runs/${runPath}`;
     return renderReport({
       ...input,
+      changes: { api: `/api/runs/${runPath}`, originals: input.originals, versions: input.versions },
       backHref: `/?listing=${encodeURIComponent(input.listingId)}`,
       pdf: { summary: `${pdfBase}?detail=summary`, full: `${pdfBase}?detail=full` },
     });
@@ -259,6 +281,15 @@ async function sendReportPdf(res: ServerResponse, runDir: string | null, detail:
 
 const SelectionBody = z.object({
   photos: z.array(z.object({ file: z.string().max(200), room: z.string().max(200).optional(), selected: z.boolean().optional() })).max(200),
+});
+const ChangeBody = z.object({
+  photo: z.string().max(100),
+  tier: z.enum(TIERS),
+  from: z.string().max(20),
+  ask: z.string().max(2000).default(""),
+  notes: z.string().max(2000).default(""),
+  pins: z.array(z.object({ x: z.number().min(0).max(1000), y: z.number().min(0).max(1000), note: z.string().max(500) })).max(8).default([]),
+  references: z.array(z.string().max(12_000_000)).max(3).default([]),
 });
 const RunBody = z.object({ tiers: z.array(z.enum(TIERS)).min(1), profile: z.string().max(60) });
 const CreateProfileBody = z.object({ name: z.string().max(60), description: z.string().max(300).optional(), from: z.string().max(60).nullable().optional() });
@@ -483,6 +514,46 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     if (req.method === "PUT" && parts[1] === "tuning" && parts[2] === "labels" && parts.length === 3) {
       const body = z.object({ key: z.string().max(500), label: z.enum(["ok", "broken"]).nullable() }).parse(await readBody(req));
       return send(res, 200, await labelAttempt(body.key, body.label));
+    }
+    if (parts[1] === "runs" && parts[2] && parts[3]) {
+      const runDir = safeJoin(RUNS_DIR, `${parts[2]}/${parts[3]}`);
+      if (!runDir || !existsSync(path.join(runDir, "results.json"))) return send(res, 404, { error: "Report not found" });
+      const rel = `${decodeURIComponent(parts[2])}/${decodeURIComponent(parts[3])}`;
+      if (req.method === "GET" && parts[4] === "versions" && parts.length === 5) return send(res, 200, await versionsView(runDir));
+      if (req.method === "POST" && parts[4] === "versions" && parts.length === 5) {
+        const body = ChangeBody.parse(JSON.parse((await readRaw(req, 40_000_000)).toString("utf8") || "{}"));
+        const models = resolveModels();
+        try {
+          requireKeys({ ...models, analysis: [] }); // a change only plans, edits, and judges
+        } catch (error) {
+          return send(res, 400, { error: (error as Error).message });
+        }
+        const references = body.references.map((ref) => Buffer.from(ref.replace(/^data:[^,]*,/, ""), "base64"));
+        const { id, work } = await startChange({ runDir, photoId: body.photo, tier: body.tier, from: body.from, request: body, references, models });
+        startJob("change", `${rel}/${body.photo}/${body.tier}/${id}`, work);
+        return send(res, 202, { id, versions: await versionsView(runDir) });
+      }
+      if (req.method === "PUT" && parts[4] === "picks" && parts.length === 5) {
+        const body = z.object({ photo: z.string().max(100), tier: z.enum(TIERS), version: z.string().max(20) }).parse(await readBody(req));
+        await updateVersions(runDir, (file) => {
+          if (body.version !== ORIGINAL && !file.versions.some((v) => v.photoId === body.photo && v.tier === body.tier && v.id === body.version && v.status !== "running" && v.image)) {
+            throw Object.assign(new Error("That version has no image to use."), { status: 409 });
+          }
+          if (body.version === ORIGINAL) delete file.picks[pickKey(body.photo, body.tier)];
+          else file.picks[pickKey(body.photo, body.tier)] = body.version;
+        });
+        return send(res, 200, await versionsView(runDir));
+      }
+      if (req.method === "DELETE" && parts[4] === "versions" && parts.length === 8) {
+        const [photo, tier, id] = parts.slice(5).map(decodeURIComponent) as [string, string, string];
+        if (isRunning("change", `${rel}/${photo}/${tier}/${id}`)) return send(res, 409, { error: "Wait for this change to finish before deleting it." });
+        await updateVersions(runDir, (file) => {
+          file.versions = file.versions.filter((v) => !(v.photoId === photo && v.tier === tier && v.id === id));
+          const key = `${photo}:${tier}`;
+          if (file.picks[key] === id) delete file.picks[key];
+        });
+        return send(res, 200, await versionsView(runDir));
+      }
     }
     if (req.method === "GET" && parts[1] === "home" && parts.length === 2) return send(res, 200, await homeView());
     if (req.method === "GET" && parts[1] === "status") {

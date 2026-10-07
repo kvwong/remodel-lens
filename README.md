@@ -221,6 +221,25 @@ reference photos.
 | Needs review | The judge passed, but an edge shifted near a fixed element or the plan was only partly followed. |
 | Unverified | The architecture checks still failed after a retry. Review the reported problems before relying on the image. |
 
+## Spot changes
+
+To change one room without re-running the whole listing, open its report in the
+app, pick the scope tab, and choose **Change this room**. Describe the change
+for the whole room, tap the redesign to pin notes to spots (each pin is matched
+to the item under it), and optionally add context and up to three reference
+photos. The change starts from the version you're looking at: it revises that
+plan, redraws that image, and checks the result against the listing photo and
+each pin. New versions are added to the room's **Versions** strip; **Use this
+one** picks the version the report totals and PDFs use. Versions are saved in
+the run folder as `versions.json` plus one folder per version, and the run's
+original results are never changed. Each change costs about $0.15 of API use.
+
+From the CLI (pins are 0–1000 from the image's top-left):
+
+```bash
+npm run change -- .runs/redesign/123-main-st/<run> photo_01 moderate "warmer white oak cabinets" --pin "400,120=smaller brass pendant"
+```
+
 ## Tune verification
 
 After a few real runs, check how well the edge check separates good images from

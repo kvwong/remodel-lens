@@ -79,12 +79,19 @@ export async function editImage(input: {
   image: Buffer;
   mask: Buffer | null;
   prompt: string;
+  /** Extra images after the one being edited (a marked-up copy, reference photos). They're context only; image 1 is edited. */
+  references?: Buffer[];
 }): Promise<Buffer> {
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const response = await imageSlots(() => withRetries(async () =>
     client.images.edit({
       model: input.model,
-      image: await toFile(input.image, "listing.png", { type: "image/png" }),
+      image: input.references?.length
+        ? [
+            await toFile(input.image, "listing.png", { type: "image/png" }),
+            ...(await Promise.all(input.references.map((bytes, i) => toFile(bytes, `reference-${i + 1}.png`, { type: "image/png" })))),
+          ]
+        : await toFile(input.image, "listing.png", { type: "image/png" }),
       ...(input.mask ? { mask: await toFile(input.mask, "mask.png", { type: "image/png" }) } : {}),
       prompt: input.prompt,
       size: "auto",

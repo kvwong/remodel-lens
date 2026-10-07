@@ -1430,6 +1430,7 @@ function runRow(r, aggregate = false) {
     r.profileName ? `${esc(r.profileName)} profile` : null,
     esc(r.tiers.map(tierName).join(", ")),
     `${r.photos.length} photos`,
+    r.changes ? `${r.changes} ${r.changes === 1 ? "change" : "changes"}` : null,
     r.apiCost != null ? `≈ ${money(r.apiCost)} API` : null,
   ].filter(Boolean).map((m) => `<span>${m}</span>`).join("");
   return `
