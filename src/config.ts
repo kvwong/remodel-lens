@@ -29,7 +29,11 @@ export type Models = {
   analysis: string[];
   /** Fusion, rule extraction, inventory, planning, judging. */
   reasoning: string;
-  /** Overrides reasoning for room inventory and redesign planning only, so the judge stays fixed. Set by `npm run tune -- compare --planners`. */
+  /**
+   * Room inventory and redesign planning. Defaults to the reasoning model at low effort, which ran a Talus test 18% faster
+   * with no loss in verified redesigns (2026-10-07); the judge keeps the reasoning model's effort. PLANNER_MODEL or
+   * `npm run tune -- compare --planners` overrides it.
+   */
   planner?: string;
   /** OpenAI image edit model. */
   image: string;
@@ -42,12 +46,14 @@ export const DEFAULT_MODELS: Models = {
 };
 
 export function resolveModels(): Models {
+  const reasoning = process.env.REASONING_MODEL ?? DEFAULT_MODELS.reasoning;
   return {
     analysis: (process.env.ANALYSIS_MODELS ?? DEFAULT_MODELS.analysis.join(","))
       .split(",")
       .map((m) => m.trim())
       .filter(Boolean),
-    reasoning: process.env.REASONING_MODEL ?? DEFAULT_MODELS.reasoning,
+    reasoning,
+    planner: process.env.PLANNER_MODEL ?? (/:(low|medium|high)$/.test(reasoning) ? reasoning : `${reasoning}:low`),
     image: process.env.IMAGE_MODEL ?? DEFAULT_MODELS.image,
   };
 }

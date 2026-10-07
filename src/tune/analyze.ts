@@ -209,7 +209,7 @@ export function renderTuningReport(records: AttemptRecord[], current: number): s
     "",
     "## Models",
     "",
-    "Verdicts are for the image each run kept. Runs from before the image model was recorded show as `unknown`. Planner is the inventory and planning model when `compare --planners` overrode it. Run time only compares fairly between runs of the same listing, photos and scopes.",
+    "Verdicts are for the image each run kept. Runs from before the image model was recorded show as `unknown`. Planner is the inventory and planning model (`default` on older runs, which used the reasoning model at medium effort). Run time only compares fairly between runs of the same listing, photos and scopes.",
     "",
     "| Image model | Planner | Run time | Tiers | Verified | Review | Failed | Verified first try | Mean attempts | Plan adherence | Broken (all attempts) |",
     "|---|---|---|---|---|---|---|---|---|---|---|",
