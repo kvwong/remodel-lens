@@ -73,7 +73,7 @@ async function redesignPhoto(input: {
   await writeArtifact(outDir, original, prepared.png);
 
   log(`${photo.id}: inventorying ${photo.basename}`);
-  const inventory = await inventoryRoom({ ...photo, bytes: prepared.png, mediaType: "image/png" }, models.reasoning);
+  const inventory = await inventoryRoom({ ...photo, bytes: prepared.png, mediaType: "image/png" }, models.planner ?? models.reasoning);
   await writeJson(outDir, `${photo.id}/inventory.json`, inventory);
   progressDone(UNITS.inventory, `${photo.basename}: inventoried`);
 
@@ -124,7 +124,7 @@ async function redesignTier(input: {
   const dir = `${photo.id}/${tier}`;
 
   log(`${photo.id} ${tier}: planning`);
-  const plan = await planRedesign({ inventory, profile, tier, model: models.reasoning, location });
+  const plan = await planRedesign({ inventory, profile, tier, model: models.planner ?? models.reasoning, location });
   await writeJson(outDir, `${dir}/plan.json`, plan);
   spend(budget, UNITS.plan, `${photo.basename} ${tier}: planned`);
   const warnings: string[] = [];

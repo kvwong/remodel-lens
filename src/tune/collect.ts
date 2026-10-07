@@ -41,6 +41,10 @@ export async function collectAttempts(runsDir: string, options: { only?: Set<str
       if (options.only && !options.only.has(`${listing}/${run}`)) continue;
       const runDir = path.join(runsDir, listing, run);
       const summary = await readJson<RunSummary>(path.join(runDir, "run.json"));
+      const runMinutes =
+        summary?.startedAt && summary.finishedAt && !summary.error && !summary.stopped
+          ? (Date.parse(summary.finishedAt) - Date.parse(summary.startedAt)) / 60_000
+          : null;
       for (const photo of await dirs(runDir)) {
         const inventory = await readJson<RoomInventory>(path.join(runDir, photo, "inventory.json"));
         const originalPath = path.join(runDir, photo, "original.png");
@@ -69,6 +73,8 @@ export async function collectAttempts(runsDir: string, options: { only?: Set<str
               tier,
               attempt,
               imageModel: summary?.imageModel ?? "unknown",
+              planner: summary?.plannerModel ?? null,
+              runMinutes,
               verdict: saved.verdict,
               final: attempt === attempts[attempts.length - 1],
               edges: edges.map((e) => ({ kind: e.kind, correlation: e.correlation })),

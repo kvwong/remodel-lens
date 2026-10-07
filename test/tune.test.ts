@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { RoomInventory } from "../src/listing/inventory.js";
 import type { JudgeResult } from "../src/redesign/verify.js";
+import { splitEffort } from "../src/providers.js";
 import { modelStats, renderTuningReport, suggestThreshold, sweep, type AttemptRecord } from "../src/tune/analyze.js";
 import { collectAttempts, readLabels, writeLabelTemplate } from "../src/tune/collect.js";
 
@@ -59,6 +60,17 @@ describe("model stats", () => {
     expect(stats).toEqual([
       expect.objectContaining({ imageModel: "a", tiers: 1, verified: 1, firstTry: 1, meanAttempts: 1, brokenRate: 0 }),
       expect.objectContaining({ imageModel: "b", tiers: 1, review: 1, firstTry: 0, meanAttempts: 2, brokenRate: 0.5 }),
+    ]);
+  });
+
+  it("splits runs by planner and reports their median run time", () => {
+    const stats = modelStats([
+      record(0.9, { imageModel: "a", run: "r1", runMinutes: 8, final: true, verdict: "verified" }),
+      record(0.9, { imageModel: "a", run: "r2", planner: "fast", runMinutes: 5, final: true, verdict: "verified" }),
+    ]);
+    expect(stats).toEqual([
+      expect.objectContaining({ imageModel: "a", planner: null, medianRunMinutes: 8 }),
+      expect.objectContaining({ imageModel: "a", planner: "fast", medianRunMinutes: 5 }),
     ]);
   });
 
@@ -120,5 +132,12 @@ describe("collecting past runs", () => {
     expect(await readLabels(labels)).toEqual({ "house/run1/photo-1/moderate/1": null, "house/run1/photo-1/moderate/2": "broken" });
     expect((await collectAttempts(dir, { labels: await readLabels(labels), only: new Set(["house/run1"]) }))[1]!.label).toBe("broken");
     expect(await collectAttempts(dir, { only: new Set(["other/run"]) })).toEqual([]);
+  });
+});
+
+describe("model effort suffix", () => {
+  it("reads :low/:medium/:high off a model id", () => {
+    expect(splitEffort("openai/gpt-6.1-sol:low")).toEqual({ model: "openai/gpt-6.1-sol", effort: "low" });
+    expect(splitEffort("anthropic/claude-sonnet-5-5")).toEqual({ model: "anthropic/claude-sonnet-5-5", effort: "medium" });
   });
 });

@@ -5,13 +5,21 @@ import type { z } from "zod";
 
 export type ImageInput = { bytes: Uint8Array; mediaType: string };
 
-const providerOptions = {
-  openai: { reasoningEffort: "medium" },
-  anthropic: { effort: "medium" },
-} as const;
+type Effort = "low" | "medium" | "high";
+
+/** A model id may end in :low, :medium or :high to set its reasoning effort, e.g. openai/gpt-6.1-sol:low. Medium otherwise. */
+export function splitEffort(model: string): { model: string; effort: Effort } {
+  const match = /^(.*):(low|medium|high)$/.exec(model);
+  return match ? { model: match[1]!, effort: match[2] as Effort } : { model, effort: "medium" };
+}
+
+function providerOptions(model: string) {
+  const { effort } = splitEffort(model);
+  return { openai: { reasoningEffort: effort }, anthropic: { effort } };
+}
 
 function languageModel(model: string): LanguageModel {
-  const [provider, ...rest] = model.split("/");
+  const [provider, ...rest] = splitEffort(model).model.split("/");
   const id = rest.join("/");
   if (provider === "openai") return createOpenAI({ apiKey: process.env.OPENAI_API_KEY })(id);
   if (provider === "anthropic") return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(id);
@@ -40,7 +48,7 @@ export async function generateMarkdown(input: {
       model: languageModel(input.model),
       messages: [{ role: "user", content: content(input.prompt, input.images ?? []) }],
       maxOutputTokens: input.maxOutputTokens ?? 8000,
-      providerOptions,
+      providerOptions: providerOptions(input.model),
       maxRetries: 2,
     }),
   );
@@ -60,7 +68,7 @@ export async function generateStructured<T>(input: {
       messages: [{ role: "user", content: content(input.prompt, input.images ?? []) }],
       output: Output.object({ schema: input.schema }),
       maxOutputTokens: input.maxOutputTokens ?? 16000,
-      providerOptions,
+      providerOptions: providerOptions(input.model),
       maxRetries: 2,
     }),
   );

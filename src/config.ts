@@ -29,6 +29,8 @@ export type Models = {
   analysis: string[];
   /** Fusion, rule extraction, inventory, planning, judging. */
   reasoning: string;
+  /** Overrides reasoning for room inventory and redesign planning only, so the judge stays fixed. Set by `npm run tune -- compare --planners`. */
+  planner?: string;
   /** OpenAI image edit model. */
   image: string;
 };
@@ -52,7 +54,7 @@ export function resolveModels(): Models {
 
 export function requireKeys(models: Models): void {
   const needed = new Set<string>(["OPENAI_API_KEY"]); // image edits always go through OpenAI
-  for (const model of [...models.analysis, models.reasoning]) {
+  for (const model of [...models.analysis, models.reasoning, ...(models.planner ? [models.planner] : [])]) {
     if (model.startsWith("anthropic/")) needed.add("ANTHROPIC_API_KEY");
     if (model.startsWith("openai/")) needed.add("OPENAI_API_KEY");
   }
