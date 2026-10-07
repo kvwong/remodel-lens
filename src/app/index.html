@@ -573,6 +573,19 @@
   .model-control { width:100%; max-width:420px; }
   .model-control select, .model-control .settings-input { width:100%; }
   .model-control select { height:38px; min-height:38px; font-size:15px; }
+  .effort { margin:12px 0 0; padding:0; border:0; min-width:0; justify-self:stretch; }
+  .effort legend { padding:0; margin-bottom:6px; font-size:13px; font-weight:600; color:var(--muted); }
+  .effort-seg { display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; max-width:420px; }
+  .effort-seg label { position:relative; display:flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:4px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); font-size:14px; cursor:pointer; }
+  .effort-seg input { position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
+  .effort-seg label:has(input:checked) { background:var(--primary-soft); border-color:var(--primary); color:var(--primary); font-weight:600; }
+  .effort-seg label:has(input:focus-visible) { outline:2px solid var(--primary); outline-offset:2px; }
+  .effort-seg .bars { display:inline-flex; align-items:flex-end; gap:2px; height:12px; }
+  .effort-seg .bars i { width:3px; border-radius:1px; background:currentColor; opacity:.25; }
+  .effort-seg .bars i:nth-child(1) { height:5px; } .effort-seg .bars i:nth-child(2) { height:8px; } .effort-seg .bars i:nth-child(3) { height:12px; }
+  .effort-seg .bars i.on { opacity:1; }
+  .effort[disabled] .effort-seg label { opacity:.5; cursor:not-allowed; }
+  .effort .control-note { margin-top:6px; }
   .result-ok { color:var(--ok); } .result-bad { color:var(--bad); }
   .checks { gap:2px; }
   .checks label { display:flex; align-items:center; gap:10px; min-height:32px; font-size:14px; }
@@ -2669,6 +2682,40 @@ function modelSelect(id, options, current, defaultId) {
     <input class="settings-input" type="text" id="${id}-other" value="${known ? "" : esc(current)}" ${known ? "hidden" : ""} spellcheck="false" autocomplete="off" aria-label="Model ID" placeholder="${id === "image-model" ? "e.g. gpt-image-2" : "openai/… or anthropic/…"}">`;
 }
 
+const EFFORT_LEVELS = [
+  ["low", "Low", "Fastest and cheapest. Tested on a real listing with no loss in quality."],
+  ["medium", "Medium", "More careful thinking, about 20% slower."],
+  ["high", "High", "Most careful. Slowest and priciest."],
+];
+
+function effortNote(name, level, def, supported) {
+  if (!supported) return "This model has no effort setting.";
+  const text = EFFORT_LEVELS.find(([id]) => id === level)?.[2] ?? "";
+  return level === def ? `${text} Default.` : text;
+}
+
+function effortControl(name, current, def, supported) {
+  return `<fieldset class="effort" data-effort="${name}" ${supported ? "" : "disabled"}>
+      <legend>Reasoning effort</legend>
+      <div class="effort-seg">${EFFORT_LEVELS.map(([id, label], i) => `<label><input type="radio" name="${name}-effort" value="${id}" ${id === current ? "checked" : ""}><span class="bars" aria-hidden="true">${[0, 1, 2].map((b) => `<i class="${b <= i ? "on" : ""}"></i>`).join("")}</span>${label}</label>`).join("")}</div>
+      <p class="control-note" data-effort-note="${name}">${esc(effortNote(name, current, def, supported))}</p>
+    </fieldset>`;
+}
+
+function supportsEffort(model) {
+  return !new RegExp(state.settings.models.effort.noEffort).test(model);
+}
+
+/** Greys out the reasoning effort control when the chosen model can't take one. */
+function syncEffortSupport() {
+  const field = $('[data-effort="reasoning"]');
+  if (!field) return;
+  const supported = supportsEffort(selectedModel("reasoning-model"));
+  field.disabled = !supported;
+  const level = field.querySelector("input:checked")?.value;
+  $('[data-effort-note="reasoning"]').textContent = effortNote("reasoning", level, state.settings.models.effort.defaults.reasoning, supported);
+}
+
 function renderModels() {
   const m = state.settings.models;
   const notes = (options, current) => options.find((o) => o.id === current)?.note ?? "";
@@ -2678,16 +2725,20 @@ function renderModels() {
   $("#settings-models").innerHTML = `<div class="panel-head"><h2 id="models-h">Models</h2></div>
     <form id="models-form" novalidate>
       <div class="setting-row">
-        <div class="setting-label"><label for="reasoning-model">Reasoning model</label><p>Writes taste rules, inventories each room, plans the changes, and judges every redesign. Runs at low reasoning effort, which tested faster with no loss in quality.</p></div>
+        <div class="setting-label"><label for="reasoning-model">Reasoning model</label><p>Writes taste rules, inventories each room, plans the changes, and judges every redesign. Effort sets how long it thinks before answering.</p></div>
         <div class="setting-control model-control">
           ${modelSelect("reasoning-model", m.options.reasoning, m.current.reasoning, m.defaults.reasoning)}
           <p class="control-note" data-model-note="reasoning-model">${esc(notes(m.options.reasoning, m.current.reasoning))}</p>
+          ${effortControl("reasoning", m.effort.current.reasoning, m.effort.defaults.reasoning, supportsEffort(m.current.reasoning))}
         </div>
       </div>
       <fieldset class="setting-row">
         <legend class="sr-only">Reference analysis models</legend>
         <div class="setting-label" aria-hidden="true"><span class="label-text">Reference analysis</span><p>Each model studies every reference photo on its own; the reasoning model merges their notes.</p></div>
-        <div class="setting-control checks">${analysisOptions.map((o) => `<label><input type="checkbox" name="analysis" value="${esc(o.id)}" ${m.current.analysis.includes(o.id) ? "checked" : ""}><span>${esc(o.label)}${m.defaults.analysis.includes(o.id) ? ' <span class="muted">· default</span>' : ""}</span></label>`).join("")}</div>
+        <div class="setting-control model-control">
+          <div class="checks">${analysisOptions.map((o) => `<label><input type="checkbox" name="analysis" value="${esc(o.id)}" ${m.current.analysis.includes(o.id) ? "checked" : ""}><span>${esc(o.label)}${m.defaults.analysis.includes(o.id) ? ' <span class="muted">· default</span>' : ""}</span></label>`).join("")}</div>
+          ${effortControl("analysis", m.effort.current.analysis, m.effort.defaults.analysis, true)}
+        </div>
       </fieldset>
       <div class="setting-row">
         <div class="setting-label"><label for="image-model">Image model</label><p>Makes the redesigned photos. Always OpenAI.</p></div>
@@ -2728,7 +2779,12 @@ async function saveModels(reset) {
   const image = selectedModel("image-model");
   const concurrency = Number($("#image-concurrency").value);
   if (!reset && !(Number.isInteger(concurrency) && concurrency >= 1 && concurrency <= 16)) { err.textContent = "Image edits at once must be a whole number from 1 to 16."; err.hidden = false; return; }
-  const body = reset ? { reasoning: null, analysis: null, image: null, imageConcurrency: null } : {
+  const effort = (name) => document.querySelector(`#models-form input[name="${name}-effort"]:checked`)?.value ?? m.effort.defaults[name];
+  const reasoningEffort = effort("reasoning");
+  const analysisEffort = effort("analysis");
+  const body = reset ? { reasoning: null, analysis: null, image: null, imageConcurrency: null, reasoningEffort: null, analysisEffort: null } : {
+    reasoningEffort: reasoningEffort === m.effort.defaults.reasoning ? null : reasoningEffort,
+    analysisEffort: analysisEffort === m.effort.defaults.analysis ? null : analysisEffort,
     reasoning: reasoning === m.defaults.reasoning ? null : reasoning,
     analysis: same(analysis, m.defaults.analysis) ? null : analysis,
     image: image === m.defaults.image ? null : image,
@@ -3121,6 +3177,13 @@ document.addEventListener("submit", (event) => {
 });
 
 document.addEventListener("change", (event) => {
+  const radio = event.target.closest?.(".effort input[type=radio]");
+  if (radio) {
+    const name = radio.closest("[data-effort]").dataset.effort;
+    $(`[data-effort-note="${name}"]`).textContent = effortNote(name, radio.value, state.settings.models.effort.defaults[name], true);
+    return;
+  }
+  if (event.target.id === "reasoning-model-other") return syncEffortSupport();
   const select = event.target.closest?.("[data-other-select]");
   if (!select) return;
   const other = $(`#${select.id}-other`);
@@ -3128,6 +3191,7 @@ document.addEventListener("change", (event) => {
   if (!other.hidden) other.focus();
   const options = state.settings.models.options[select.id === "image-model" ? "image" : "reasoning"];
   $(`[data-model-note="${select.id}"]`).textContent = options.find((o) => o.id === select.value)?.note ?? "";
+  if (select.id === "reasoning-model") syncEffortSupport();
 });
 
 document.addEventListener("click", async (event) => {

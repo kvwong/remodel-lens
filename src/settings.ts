@@ -7,6 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
+import { EFFORTS } from "./effort.js";
 import { setCostOverrides } from "./pricing/assumptions.js";
 import { COST_ITEMS, GRADES } from "./pricing/catalog.js";
 
@@ -25,6 +26,8 @@ export const Settings = z.object({
       analysis: z.array(ModelId).min(1).max(4).optional(),
       image: z.string().trim().regex(/^[\w.:-]+$/).max(100).optional(),
       imageConcurrency: z.number().int().min(1).max(16).optional(),
+      reasoningEffort: z.enum(EFFORTS).optional(),
+      analysisEffort: z.enum(EFFORTS).optional(),
     })
     .default({}),
   tuning: z.object({ edgeThreshold: z.number().gt(0).lt(1).optional() }).default({}),
@@ -46,6 +49,8 @@ const ENV = {
   REASONING_MODEL: (s: Settings) => s.models.reasoning,
   ANALYSIS_MODELS: (s: Settings) => s.models.analysis?.join(","),
   IMAGE_MODEL: (s: Settings) => s.models.image,
+  REASONING_EFFORT: (s: Settings) => s.models.reasoningEffort,
+  ANALYSIS_EFFORT: (s: Settings) => s.models.analysisEffort,
   IMAGE_CONCURRENCY: (s: Settings) => (s.models.imageConcurrency === undefined ? undefined : String(s.models.imageConcurrency)),
   EDGE_THRESHOLD: (s: Settings) => (s.tuning.edgeThreshold === undefined ? undefined : String(s.tuning.edgeThreshold)),
 } as const;
