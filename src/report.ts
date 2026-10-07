@@ -985,6 +985,10 @@ ${appearanceScript}
   .shot-btn .icon { width:16px; height:16px; }
   .shot-btn:hover { background:rgba(18,18,17,.78); }
   .shot-btn:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+  @media (hover:hover) {
+    .shot-btn { opacity:0; transition:opacity .15s ease; }
+    .shot:hover .shot-btn, .shot:focus-within .shot-btn { opacity:1; }
+  }
 
   .ver-select select, .viewer-ver { appearance:none; font:inherit; font-size:13px; font-weight:500; line-height:20px; color:#fff; background:rgba(18,18,17,.62) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center / 14px; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border:0; border-radius:8px; padding:5px 30px 5px 11px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.25); }
   .ver-select select:hover, .viewer-ver:hover { background-color:rgba(18,18,17,.78); }
