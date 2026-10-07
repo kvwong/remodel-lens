@@ -74,8 +74,10 @@ describe("report PDF", () => {
     expect(html).toContain('href="/pdf/runs/maple/r1?detail=summary"');
     expect(html).toContain('href="/pdf/runs/maple/r1?detail=full"');
     const both = renderReport({ title: "12 Maple St", photos, profileSummary: "", pdf: { summary: "/p?s", full: "/p?f" }, html: { summary: "/h?s", full: "/h?f" } });
-    expect(both).toContain(">Summary HTML</a>");
-    expect(both).toContain(">Full scope HTML</a>");
+    expect(both).toContain('href="/h?s" data-download="summary web page"');
+    expect(both).toContain('href="/h?f" data-download="full scope web page"');
+    expect(both).toContain('aria-controls="dl-pdf"');
+    expect(both).toContain('aria-controls="dl-html"');
     expect(renderReport({ title: "12 Maple St", photos, profileSummary: "" })).not.toContain("data-download=");
   });
 });

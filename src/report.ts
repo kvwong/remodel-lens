@@ -79,6 +79,7 @@ const ICON_PATHS = {
   arrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   arrowUp: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
   download: '<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>',
+  chevronDown: '<path d="m6 9 6 6 6-6"/>',
   pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   pin: '<path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11Z"/><circle cx="12" cy="10" r="2.2"/>',
   image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 9"/>',
@@ -923,10 +924,20 @@ ${appearanceScript}
   @media (max-width: 680px) { .card { padding:18px 16px; border-radius:10px; } }
   .meta { margin:8px 0 0; color:var(--muted); font-size:14px; }
   .meta span + span::before { content:"·"; margin:0 8px; opacity:.6; }
-  /* Downloads sit at the right, PDFs above HTML, their bottom edge on the title's baseline row (set inline: spanning the back link and title rows when there is a back link, else row 1). */
+  /* Downloads sit at the right, PDFs above HTML, their bottom edge on the title's baseline row (the row is set inline: 2 under a back link, else 1). */
   .page-head > .share { grid-column:2; align-self:end; margin-bottom:4px; }
-  .share { position:relative; display:grid; grid-template-columns:repeat(2, auto); justify-content:end; align-items:center; gap:8px 10px; }
-  .share-btn { display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:6px 14px 6px 12px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); text-decoration:none; color:var(--text); font-size:14px; font-weight:500; white-space:nowrap; }
+  .share { position:relative; display:flex; justify-content:flex-end; align-items:center; gap:10px; }
+  .dl { position:relative; }
+  .dl-caret { width:14px; height:14px; margin-left:-2px; color:var(--muted) !important; --motion:rotate var(--base) var(--ease); }
+  .share-btn[aria-expanded="true"] { border-color:var(--primary); background:var(--primary-soft); }
+  .share-btn[aria-expanded="true"] .dl-caret { rotate:180deg; }
+  .dl-menu { position:absolute; z-index:30; top:calc(100% + 6px); right:0; width:280px; display:grid; padding:6px; border-radius:10px; background:var(--surface); box-shadow:var(--shadow-hover); }
+  .dl-menu[hidden] { display:none; }
+  .dl-menu a { display:grid; gap:2px; padding:8px 10px; border-radius:6px; color:var(--text); text-decoration:none; font-size:14px; font-weight:500; }
+  .dl-menu a:hover, .dl-menu a:focus-visible { background:var(--surface-2); }
+  .dl-menu a[aria-busy="true"] { opacity:.6; cursor:progress; }
+  .dl-hint { font-size:13px; font-weight:400; color:var(--muted); }
+  .share-btn { font:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:6px 14px 6px 12px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); text-decoration:none; color:var(--text); font-size:14px; font-weight:500; white-space:nowrap; }
   .share-btn:hover { border-color:var(--primary); background:var(--primary-soft); }
   .share-btn .icon { color:var(--primary); }
   .share-btn[aria-busy="true"] { opacity:.6; cursor:progress; }
@@ -934,10 +945,11 @@ ${appearanceScript}
   .share-status { position:absolute; top:100%; right:0; margin-top:6px; white-space:nowrap; font-size:13px; color:var(--muted); }
   .share-status:empty { display:none; }
   @media (max-width: 900px) {
-    .page-head > .share { grid-column:1; grid-row:auto !important; margin:18px 0 0; justify-content:start; }
-    .share-status { position:static; grid-column:1 / -1; margin:0; white-space:normal; }
+    .page-head > .share { grid-column:1; grid-row:auto !important; margin:18px 0 0; justify-content:flex-start; flex-wrap:wrap; }
+    .dl-menu { right:auto; left:0; }
+    .share-status { position:static; flex-basis:100%; margin:0; white-space:normal; }
   }
-  @media (max-width: 680px) { .share { grid-template-columns:repeat(2, minmax(0, 1fr)); } .share-btn { justify-content:center; } }
+  @media (max-width: 680px) { .dl { flex:1 1 0; } .share-btn { width:100%; justify-content:center; } .dl + .dl .dl-menu { left:auto; right:0; } .dl-menu { width:min(280px, calc(100vw - 32px)); } }
   .notice { margin:16px 0 0; font-size:14px; color:var(--warn); }
 
   .status { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; white-space:nowrap; }
@@ -1256,11 +1268,17 @@ ${appearanceScript}
     <h1 id="top" tabindex="-1">${esc(input.title)}</h1>
     <p class="meta">${meta.map((m) => `<span>${esc(m)}</span>`).join("")}</p>
     ${input.pdf || input.html
-      ? `<div class="share" role="group" aria-label="Download to share" style="grid-row:${back ? "1 / 3" : 1}">
-      ${input.pdf ? `<a class="share-btn" href="${esc(input.pdf.summary)}" data-download="summary PDF" title="Costs and a before and after for every room" download>${icon("download")}Summary PDF</a>
-      <a class="share-btn" href="${esc(input.pdf.full)}" data-download="full scope PDF" title="Every room, scope, and planned change" download>${icon("download")}Full scope PDF</a>` : ""}
-      ${input.html ? `<a class="share-btn" href="${esc(input.html.summary)}" data-download="summary web page" title="One web page file with a before and after for every room, to open in any browser" download>${icon("download")}Summary HTML</a>
-      <a class="share-btn" href="${esc(input.html.full)}" data-download="full scope web page" title="One web page file with every room, scope, and planned change, to open in any browser" download>${icon("download")}Full scope HTML</a>` : ""}
+      ? `<div class="share" role="group" aria-label="Download to share" style="grid-row:${back ? 2 : 1}">
+      ${[
+        input.pdf && { id: "pdf", label: "PDF", links: input.pdf, kind: "PDF", hint: { summary: "Costs and a before and after for every room", full: "Every room, scope, and planned change" } },
+        input.html && { id: "html", label: "HTML", links: input.html, kind: "web page", hint: { summary: "One file to open in any browser: a before and after for every room", full: "One file to open in any browser: every room, scope, and planned change" } },
+      ].filter((d) => !!d).map((d) => `<div class="dl">
+        <button class="share-btn" type="button" aria-expanded="false" aria-controls="dl-${d.id}">${icon("download")}${d.label}${icon("chevronDown", "dl-caret")}</button>
+        <div class="dl-menu" id="dl-${d.id}" hidden>
+          <a href="${esc(d.links.summary)}" data-download="summary ${d.kind}" download><span>Summary</span><span class="dl-hint">${d.hint.summary}</span></a>
+          <a href="${esc(d.links.full)}" data-download="full scope ${d.kind}" download><span>Full scope</span><span class="dl-hint">${d.hint.full}</span></a>
+        </div>
+      </div>`).join("")}
       <span class="share-status" role="status" aria-live="polite"></span>
     </div>`
       : ""}
@@ -1517,13 +1535,46 @@ ${appearanceScript}
     }
   } catch {}
 
-  /* Downloads: fetch first so the button can say it's working (a long report takes a few seconds). */
+  /* Download menus: each button opens its Summary / Full scope choices. */
+  const dlButtons = [...document.querySelectorAll(".dl > button")];
+  const closeMenus = (except) => dlButtons.forEach((b) => {
+    if (b === except) return;
+    b.setAttribute("aria-expanded", "false");
+    document.getElementById(b.getAttribute("aria-controls")).hidden = true;
+  });
+  dlButtons.forEach((b) => b.addEventListener("click", () => {
+    const open = b.getAttribute("aria-expanded") !== "true";
+    closeMenus(b);
+    b.setAttribute("aria-expanded", String(open));
+    const menu = document.getElementById(b.getAttribute("aria-controls"));
+    menu.hidden = !open;
+    if (open) menu.querySelector("a").focus();
+  }));
+  document.addEventListener("click", (e) => { if (!e.target.closest(".dl")) closeMenus(); });
+  document.addEventListener("keydown", (e) => {
+    const open = dlButtons.find((b) => b.getAttribute("aria-expanded") === "true");
+    if (!open) return;
+    const menu = document.getElementById(open.getAttribute("aria-controls"));
+    if (e.key === "Escape") { closeMenus(); open.focus(); }
+    else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const links = [...menu.querySelectorAll("a")], i = links.indexOf(document.activeElement);
+      links[(i + (e.key === "ArrowDown" ? 1 : links.length - 1)) % links.length].focus();
+    }
+  });
+  document.addEventListener("focusin", (e) => { if (!e.target.closest(".dl")) closeMenus(); });
+
+  /* Downloads: fetch first so the page can say it's working (a long report takes a few seconds). */
   const shareStatus = document.querySelector(".share-status");
   document.querySelectorAll("a[data-download]").forEach((link) => link.addEventListener("click", async (e) => {
     e.preventDefault();
     if (link.getAttribute("aria-busy") === "true") return;
     const kind = link.dataset.download;
+    const button = link.closest(".dl")?.querySelector("button");
+    closeMenus();
+    button?.focus();
     link.setAttribute("aria-busy", "true");
+    button?.setAttribute("aria-busy", "true");
     shareStatus.textContent = "Preparing the " + kind + "…";
     try {
       const res = await fetch(link.href);
@@ -1540,6 +1591,7 @@ ${appearanceScript}
       shareStatus.textContent = "Couldn't make the " + kind + ": " + err.message;
     } finally {
       link.removeAttribute("aria-busy");
+      button?.removeAttribute("aria-busy");
     }
   }));
 
