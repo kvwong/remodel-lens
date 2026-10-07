@@ -970,11 +970,10 @@ ${appearanceScript}
     .shot:hover .shot-btn, .shot:focus-within .shot-btn { opacity:1; }
   }
 
-  .ver-select select, .viewer-ver { appearance:none; font:inherit; font-size:13px; font-weight:500; line-height:20px; color:#fff; background:rgba(18,18,17,.62) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center / 14px; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border:0; border-radius:8px; padding:5px 30px 5px 11px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.25); }
-  .ver-select select:hover, .viewer-ver:hover { background-color:rgba(18,18,17,.78); }
-  .ver-select select:focus-visible, .viewer-ver:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+  /* Version pickers are plain native selects over the image. */
+  .ver-select select, .viewer-ver { all:revert; font:inherit; font-size:13px; cursor:pointer; }
+  .viewer-ver { color-scheme:dark; }
   .ver-select select[disabled] { opacity:.6; cursor:progress; }
-  .ver-select option, .viewer-ver option { color:#1b1a19; background:#fff; }
   .frame figcaption, .figcap { margin:8px 0 0; font-size:13px; line-height:20px; color:var(--muted); min-height:20px; }
   /* Spot changes */
   .your-change { margin-top:12px; padding:10px 12px; border-radius:8px; background:var(--surface-2); font-size:14px; }
@@ -1095,7 +1094,7 @@ ${appearanceScript}
   .viewer-iter { display:grid; place-items:center; width:36px; padding:0; }
   .viewer-iter .icon { width:18px; height:18px; }
   .iter-sub, .iter-base, .iter-status { color:rgba(239,237,233,.6); font-size:13px; }
-  .iter-log { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:4px 16px 16px; display:flex; flex-direction:column; gap:14px; }
+  .iter-log { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:4px 16px 32px; display:flex; flex-direction:column; gap:14px; }
   .msg p { margin:6px 0 0; line-height:1.45; }
   .msg.user { align-self:flex-end; max-width:88%; padding:10px 12px; border-radius:14px 14px 4px 14px; background:#2a2a28; }
   .msg.user > :first-child { margin-top:0; }
@@ -1130,7 +1129,9 @@ ${appearanceScript}
   .msg-step { font-size:13px; color:rgba(239,237,233,.75); }
   .msg-bar { height:4px; border-radius:2px; background:rgba(255,255,255,.12); overflow:hidden; }
   .msg-bar i { display:block; height:100%; width:4%; background:#efede9; transition:width .5s linear; }
-  .iter-compose { flex:none; display:grid; gap:8px; padding:4px 16px max(12px, env(safe-area-inset-bottom)); }
+  .iter-compose { position:relative; flex:none; display:grid; gap:8px; padding:4px 16px max(12px, env(safe-area-inset-bottom)); background:#161615; }
+  /* The conversation fades out behind the prompt instead of cutting off. */
+  .iter-compose::before { content:""; position:absolute; left:0; right:0; bottom:100%; height:32px; background:linear-gradient(to bottom, rgba(22,22,21,0), #161615); pointer-events:none; }
   .iter-base, .iter-status { margin:0; }
   .iter-base:empty { display:none; }
   .iter-status:empty { display:none; }
@@ -1249,7 +1250,7 @@ ${appearanceScript}
         <ol class="iter-pins"></ol>
         <div class="iter-box">
           <div class="iter-refs"></div>
-          <textarea name="ask" rows="2" maxlength="2000" placeholder="Describe a change, or pin a spot on the image" aria-label="Describe a change"></textarea>
+          <textarea name="ask" rows="2" maxlength="2000" writingsuggestions="false" autocorrect="off" placeholder="Describe a change, or pin a spot on the image" aria-label="Describe a change"></textarea>
           <div class="iter-tools">
             <button type="button" class="itool" data-iter="pin" aria-pressed="false" title="Pin a note to a spot on the image">${icon("pin")}<span>Pin</span></button>
             <label class="itool" title="Add up to 3 reference photos">${icon("image")}<span>Photo</span><input type="file" accept="image/*" multiple hidden></label>
