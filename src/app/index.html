@@ -197,7 +197,6 @@
   .pick input:checked ~ .check { background:var(--primary); border-color:var(--primary); color:var(--primary-text); }
   .pick input:focus-visible ~ .check { outline:2px solid var(--text); outline-offset:3px; }
   .meta { padding-top:10px; display:grid; gap:6px; }
-  .meta label { font-size:12px; color:var(--muted); }
   .room { width:100%; min-height:36px; padding:6px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); font-size:16px; }
   .room:focus { outline:2px solid var(--text); outline-offset:1px; }
   .file { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12px; color:var(--muted); min-height:24px; }
@@ -471,7 +470,6 @@
     .pick { border-radius:6px; }
     .check { top:6px; left:6px; width:28px; height:28px; }
     .meta { padding-top:6px; gap:4px; }
-    .meta label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
     .room { min-height:40px; padding:6px 8px; }
     .file { font-size:11px; }
     .file a { min-width:32px; min-height:32px; justify-content:flex-end; }
@@ -1591,8 +1589,8 @@ function renderListing() {
                   <span class="sr-only">Redesign ${esc(label)} (${esc(p.file)})</span>
                 </label>
                 <div class="meta">
-                  <label for="room-${i}">Room</label>
-                  <input class="room" id="room-${i}" name="room-${esc(p.file)}" data-room="${esc(p.file)}" value="${esc(p.room)}" placeholder="e.g. kitchen…" autocomplete="off" spellcheck="false" maxlength="80">
+                  <label for="room-${i}" class="sr-only">Room</label>
+                  <input class="room" id="room-${i}" name="room-${esc(p.file)}" data-room="${esc(p.file)}" value="${esc(p.room)}" placeholder="Room" autocomplete="off" spellcheck="false" maxlength="80">
                   <div class="file"><span class="file-name">${p.selected ? "" : "Skipped · "}${esc(p.file)}</span><a href="${esc(p.full)}" target="_blank" rel="noopener" aria-label="View ${esc(label)} full size (opens in a new tab)">${icon("expand")}<span class="view-text">View</span></a></div>
                 </div>
               </div>`;
