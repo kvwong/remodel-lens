@@ -2691,7 +2691,9 @@ function modelSelect(id, options, current, defaultId) {
 const EFFORT_LEVELS = [
   ["low", "Low", "Fastest and cheapest. Tested on a real listing with no loss in quality."],
   ["medium", "Medium", "More careful thinking, about 20% slower."],
-  ["high", "High", "Most careful. Slowest and priciest."],
+  ["high", "High", "Thinks longer on hard rooms. Slower and pricier."],
+  ["xhigh", "Extra high", "Much longer thinking. Expect runs to take noticeably longer."],
+  ["max", "Max", "No limit on thinking. Slowest and priciest; rarely worth it here."],
 ];
 
 function effortIndex(level) {
@@ -2734,10 +2736,13 @@ function supportsEffort(model) {
   return !new RegExp(state.settings.models.effort.noEffort).test(model);
 }
 
-/** Hides the reasoning effort slider when the chosen model can't take one. */
+/** Hides an effort slider when none of its models can take one. */
 function syncEffortSupport() {
-  const field = $('[data-effort="reasoning"]');
-  if (field) field.hidden = !supportsEffort(selectedModel("reasoning-model"));
+  const reasoning = $('[data-effort="reasoning"]');
+  if (reasoning) reasoning.hidden = !supportsEffort(selectedModel("reasoning-model"));
+  const analysis = $('[data-effort="analysis"]');
+  const checked = [...document.querySelectorAll('#models-form input[name="analysis"]:checked')].map((i) => i.value);
+  if (analysis) analysis.hidden = checked.length > 0 && !checked.some(supportsEffort);
 }
 
 function renderModels() {
@@ -2761,7 +2766,7 @@ function renderModels() {
         <div class="setting-label" aria-hidden="true"><span class="label-text">Reference analysis</span><p>Each model studies every reference photo on its own; the reasoning model merges their notes.</p></div>
         <div class="setting-control model-control">
           <div class="checks">${analysisOptions.map((o) => `<label><input type="checkbox" name="analysis" value="${esc(o.id)}" ${m.current.analysis.includes(o.id) ? "checked" : ""}><span>${esc(o.label)}${m.defaults.analysis.includes(o.id) ? ' <span class="muted">· default</span>' : ""}</span></label>`).join("")}</div>
-          ${effortControl("analysis", m.effort.current.analysis, m.effort.defaults.analysis, true)}
+          ${effortControl("analysis", m.effort.current.analysis, m.effort.defaults.analysis, m.current.analysis.some(supportsEffort))}
         </div>
       </fieldset>
       <div class="setting-row">
@@ -3207,7 +3212,7 @@ document.addEventListener("submit", (event) => {
 });
 
 document.addEventListener("change", (event) => {
-  if (event.target.id === "reasoning-model-other") return syncEffortSupport();
+  if (event.target.id === "reasoning-model-other" || event.target.matches?.('#models-form input[name="analysis"]')) return syncEffortSupport();
   const select = event.target.closest?.("[data-other-select]");
   if (!select) return;
   const other = $(`#${select.id}-other`);

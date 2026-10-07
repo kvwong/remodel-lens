@@ -1,17 +1,18 @@
-// Reasoning effort for text models. A model id may end in :low, :medium or :high, e.g. openai/gpt-6.1-sol:low.
+// Reasoning effort for text models. A model id may end in :low, :medium, :high, :xhigh or :max, e.g. openai/gpt-6.1-sol:low.
+// GPT-6.1 Sol, Claude Sonnet 5.5 and Claude Opus 5.5 all take these five levels; Claude Haiku 4.5 takes none.
 
-export const EFFORTS = ["low", "medium", "high"] as const;
+export const EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
 export type Effort = (typeof EFFORTS)[number];
 
 /** Reads the effort suffix off a model id. Medium when there is none. */
 export function splitEffort(model: string): { model: string; effort: Effort } {
-  const match = /^(.*):(low|medium|high)$/.exec(model);
+  const match = /^(.*):(low|medium|high|xhigh|max)$/.exec(model);
   return match ? { model: match[1]!, effort: match[2] as Effort } : { model, effort: "medium" };
 }
 
 /** Appends the effort unless the model id already names one. */
 export function withEffort(model: string, effort: Effort): string {
-  return /:(low|medium|high)$/.test(model) ? model : `${model}:${effort}`;
+  return /:(low|medium|high|xhigh|max)$/.test(model) ? model : `${model}:${effort}`;
 }
 
 /** Anthropic models that reject the effort parameter. */
