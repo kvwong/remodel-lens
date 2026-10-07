@@ -13,9 +13,12 @@ export function splitEffort(model: string): { model: string; effort: Effort } {
   return match ? { model: match[1]!, effort: match[2] as Effort } : { model, effort: "medium" };
 }
 
+/** Anthropic models that reject the effort parameter. */
+const NO_EFFORT = /^anthropic\/claude-haiku-4/;
+
 function providerOptions(model: string) {
-  const { effort } = splitEffort(model);
-  return { openai: { reasoningEffort: effort }, anthropic: { effort } };
+  const { model: id, effort } = splitEffort(model);
+  return { openai: { reasoningEffort: effort }, anthropic: NO_EFFORT.test(id) ? {} : { effort } };
 }
 
 function languageModel(model: string): LanguageModel {
