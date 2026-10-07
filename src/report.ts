@@ -281,11 +281,13 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
     const row = y < 333 ? "Upper" : y < 667 ? "Middle" : "Lower", col = x < 333 ? "left" : x < 667 ? "center" : "right";
     return { item: row + " " + col + " of the image", fixed: false };
   }
-  /** Keeps the version dropdown on the image's top-left corner, inside the visible part of the stage. */
+  /** Keeps the version dropdown on the image's bottom-right corner, inside the visible part of the stage. */
   function placeVersionMenu() {
     if (verMenu.hidden || !img.isConnected) return;
-    verMenu.style.left = Math.max(stage.offsetLeft + 14, stage.offsetLeft + img.offsetLeft - stage.scrollLeft + 14) + "px";
-    verMenu.style.top = Math.max(stage.offsetTop + 14, stage.offsetTop + img.offsetTop - stage.scrollTop + 14) + "px";
+    const right = Math.min(stage.clientWidth, img.offsetLeft - stage.scrollLeft + img.offsetWidth);
+    const bottom = Math.min(stage.clientHeight, img.offsetTop - stage.scrollTop + img.offsetHeight);
+    verMenu.style.left = stage.offsetLeft + right - verMenu.offsetWidth - 14 + "px";
+    verMenu.style.top = stage.offsetTop + bottom - verMenu.offsetHeight - 14 + "px";
   }
   stage.addEventListener("scroll", placeVersionMenu, { passive: true });
   function layoutPins() {
@@ -767,9 +769,8 @@ export function renderReport(input: {
           return `
         <div role="tabpanel" id="${p.id}-img-${t.tier}" aria-labelledby="${p.id}-tab-${t.tier}" data-panel="${p.id}:${t.tier}"${i === 0 ? "" : " hidden"}>
           ${t.image
-            ? zoomable({ src: t.image, alt: `${tierName(t.tier)} redesign of the ${room.toLowerCase()}`, group: p.id, label: `${room} · ${tierName(t.tier)}`, status: t.status, room: ch ? p.id : undefined, tier: t.tier, version: v?.id ?? ORIGINAL, edit: !!ch })
+            ? `<div class="shot">${zoomable({ src: t.image, alt: `${tierName(t.tier)} redesign of the ${room.toLowerCase()}`, group: p.id, label: `${room} · ${tierName(t.tier)}`, status: t.status, room: ch ? p.id : undefined, tier: t.tier, version: v?.id ?? ORIGINAL, edit: !!ch })}${n > 1 ? versionSelect(p, t.tier, v?.id ?? ORIGINAL) : ""}</div>`
             : `<div class="no-image">${STATUS[t.status].label}. ${STATUS[t.status].meaning}.</div>`}
-          ${n > 1 && t.image ? versionSelect(p, t.tier, v?.id ?? ORIGINAL) : ""}
           <p class="figcap">${tierName(t.tier)} · ${TIER_LABELS[t.tier].blurb}</p>
         </div>`;
         }).join("")}
@@ -972,9 +973,10 @@ ${appearanceScript}
   .tab-mark { display:inline-flex; } .tab-mark .icon { width:13px; height:13px; }
   .pair { display:grid; gap:12px; grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .frame { margin:0; min-width:0; }
-  /* Version dropdowns sit over the top-left corner of the image, on the report and in the inspector. */
-  [role="tabpanel"]:has(> .ver-select) { position:relative; }
-  .ver-select { position:absolute; left:10px; top:10px; z-index:2; }
+  /* Version dropdowns sit over the bottom-right corner of the image, on the report and in the inspector. */
+  .shot { position:relative; }
+  .ver-select { position:absolute; right:10px; bottom:10px; z-index:2; }
+  .shot:has(.ver-select) .zoom-hint { top:10px; bottom:auto; }
   .ver-select select, .viewer-ver { appearance:none; font:inherit; font-size:13px; font-weight:500; line-height:20px; color:#fff; background:rgba(18,18,17,.62) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center / 14px; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border:0; border-radius:8px; padding:5px 30px 5px 11px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.25); }
   .ver-select select:hover, .viewer-ver:hover { background-color:rgba(18,18,17,.78); }
   .ver-select select:focus-visible, .viewer-ver:focus-visible { outline:2px solid #fff; outline-offset:2px; }
@@ -1058,7 +1060,7 @@ ${appearanceScript}
   .viewer-bar { display:grid; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr); gap:8px 16px; align-items:center; padding:0 max(14px, env(safe-area-inset-left)); border-bottom:1px solid rgba(255,255,255,.1); height:66px; flex:none; }
   .viewer-title { display:grid; grid-template-rows:20px 20px; gap:2px; min-width:0; }
   .viewer-body { position:relative; }
-  .viewer-ver { position:absolute; left:14px; top:14px; z-index:3; }
+  .viewer-ver { position:absolute; z-index:3; }
   .viewer-title strong, #viewer-status { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:20px; }
   #viewer-status .status { white-space:nowrap; }
   .viewer-plain { color:rgba(239,237,233,.6); font-size:13px; }
