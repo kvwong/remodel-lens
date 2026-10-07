@@ -481,6 +481,13 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
     if (!dialog.classList.contains("iter-closed")) askEl.focus({ preventScroll: true });
     else dialog.querySelector(".viewer-iter")?.focus({ preventScroll: true });
   });
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-open-change]");
+    if (!b) return;
+    setPanel(true);
+    b.closest(".shot")?.querySelector(".zoom")?.click();
+    requestAnimationFrame(() => askEl.focus({ preventScroll: true }));
+  });
   dialog.addEventListener("keydown", (e) => {
     if ((e.key === "c" || e.key === "C") && !e.metaKey && !e.ctrlKey && !e.altKey && !e.target.closest?.("input, textarea, select")) {
       e.preventDefault();
@@ -529,7 +536,7 @@ function zoomable(input: { src: string; alt: string; group: string; label: strin
   const iter = input.room && input.tier ? ` data-room="${esc(input.room)}" data-tier="${input.tier}" data-version="${esc(input.version ?? ORIGINAL)}"` : "";
   return `<button class="zoom" type="button" data-group="${esc(input.group)}" data-src="${esc(input.src)}" data-label="${esc(input.label)}"${input.status ? ` data-status="${input.status}"` : ""}${iter} aria-label="${input.edit ? "Open and change" : "Enlarge"} ${esc(input.label)}">
       <img src="${esc(input.src)}" alt="${esc(input.alt)}" loading="${input.eager ? "eager" : "lazy"}" decoding="async">
-      <span class="zoom-hint${input.edit ? " edit" : ""}" aria-hidden="true">${input.edit ? `${icon("pencil")}<span>Open and change</span>` : icon("expand")}</span>
+      <span class="zoom-hint${input.edit ? " top" : ""}" aria-hidden="true">${icon("expand")}</span>
     </button>`;
 }
 
@@ -769,7 +776,7 @@ export function renderReport(input: {
           return `
         <div role="tabpanel" id="${p.id}-img-${t.tier}" aria-labelledby="${p.id}-tab-${t.tier}" data-panel="${p.id}:${t.tier}"${i === 0 ? "" : " hidden"}>
           ${t.image
-            ? `<div class="shot">${zoomable({ src: t.image, alt: `${tierName(t.tier)} redesign of the ${room.toLowerCase()}`, group: p.id, label: `${room} · ${tierName(t.tier)}`, status: t.status, room: ch ? p.id : undefined, tier: t.tier, version: v?.id ?? ORIGINAL, edit: !!ch })}${n > 1 ? versionSelect(p, t.tier, v?.id ?? ORIGINAL) : ""}</div>`
+            ? `<div class="shot">${zoomable({ src: t.image, alt: `${tierName(t.tier)} redesign of the ${room.toLowerCase()}`, group: p.id, label: `${room} · ${tierName(t.tier)}`, status: t.status, room: ch ? p.id : undefined, tier: t.tier, version: v?.id ?? ORIGINAL, edit: !!ch })}${ch ? `<div class="shot-tools"><button type="button" class="shot-btn" data-open-change="${p.id}:${t.tier}" aria-label="Change the ${tierName(t.tier)} ${esc(room.toLowerCase())}" title="Change this redesign">${icon("pencil")}</button>${n > 1 ? versionSelect(p, t.tier, v?.id ?? ORIGINAL) : ""}</div>` : ""}</div>`
             : `<div class="no-image">${STATUS[t.status].label}. ${STATUS[t.status].meaning}.</div>`}
           <p class="figcap">${tierName(t.tier)} · ${TIER_LABELS[t.tier].blurb}</p>
         </div>`;
@@ -934,8 +941,7 @@ ${appearanceScript}
   .zoom:hover img { transform:scale(1.015); }
   .zoom-hint { position:absolute; right:10px; bottom:10px; width:32px; height:32px; display:grid; place-items:center; border-radius:50%; background:rgba(18,18,17,.55); color:#fff; opacity:0; --motion:opacity .2s; }
   .zoom:hover .zoom-hint, .zoom:focus-visible .zoom-hint { opacity:1; }
-  .zoom-hint.edit { width:auto; height:32px; padding:0 12px 0 10px; border-radius:999px; display:flex; gap:6px; align-items:center; font-size:13px; font-weight:500; }
-  .zoom-hint.edit .icon { width:15px; height:15px; }
+  .zoom-hint.top { top:10px; bottom:auto; }
   .no-image { aspect-ratio:3 / 2; display:grid; place-items:center; border-radius:3px; border:1px dashed var(--line-strong); color:var(--muted); font-size:13px; text-align:center; padding:16px; }
 
   /* By room */
@@ -975,8 +981,12 @@ ${appearanceScript}
   .frame { margin:0; min-width:0; }
   /* Version dropdowns sit over the bottom-right corner of the image, on the report and in the inspector. */
   .shot { position:relative; }
-  .ver-select { position:absolute; right:10px; bottom:10px; z-index:2; }
-  .shot:has(.ver-select) .zoom-hint { top:10px; bottom:auto; }
+  .shot-tools { position:absolute; right:10px; bottom:10px; z-index:2; display:flex; gap:6px; align-items:center; }
+  .shot-btn { width:30px; height:30px; display:grid; place-items:center; padding:0; border:0; border-radius:8px; color:#fff; background:rgba(18,18,17,.62); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); box-shadow:0 1px 4px rgba(0,0,0,.25); cursor:pointer; }
+  .shot-btn .icon { width:16px; height:16px; }
+  .shot-btn:hover { background:rgba(18,18,17,.78); }
+  .shot-btn:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+
   .ver-select select, .viewer-ver { appearance:none; font:inherit; font-size:13px; font-weight:500; line-height:20px; color:#fff; background:rgba(18,18,17,.62) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center / 14px; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border:0; border-radius:8px; padding:5px 30px 5px 11px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.25); }
   .ver-select select:hover, .viewer-ver:hover { background-color:rgba(18,18,17,.78); }
   .ver-select select:focus-visible, .viewer-ver:focus-visible { outline:2px solid #fff; outline-offset:2px; }
@@ -1095,8 +1105,7 @@ ${appearanceScript}
     .viewer-actions { display:contents; }
     .viewer-actions > [data-viewer="close"] { grid-column:3; grid-row:1; justify-self:end; }
     /* Phones swap the shortcuts button (no keyboard) for an icon-only Changes toggle. */
-    .viewer-iter { grid-column:2; grid-row:2; width:36px; padding:0; justify-content:center; }
-    .viewer-iter span { display:none; }
+    .viewer-iter { grid-column:2; grid-row:2; }
     .viewer:has(.viewer-iter) .viewer-shortcuts { display:none; }
     .viewer.iter-closed .viewer-stage { flex:1; aspect-ratio:auto; max-height:none; }
     .viewer-tabs { grid-column:1; grid-row:2; justify-self:start; min-width:0; max-width:100%; overflow:auto; }
@@ -1112,8 +1121,8 @@ ${appearanceScript}
   .iter-close { margin-left:auto; align-self:center; min-height:28px; padding:2px 6px; }
   .iter-close .icon { width:16px; height:16px; display:block; }
   .viewer.iter-closed .iter { display:none; }
-  .viewer-iter { display:inline-flex; align-items:center; gap:6px; }
-  .viewer-iter .icon { width:15px; height:15px; }
+  .viewer-iter { display:grid; place-items:center; width:36px; padding:0; }
+  .viewer-iter .icon { width:18px; height:18px; }
   .iter-sub, .iter-empty, .iter-base, .iter-status { color:rgba(239,237,233,.6); font-size:13px; }
   .iter-empty { margin:0; padding:0 16px; }
   .iter-log { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:4px 16px 16px; display:flex; flex-direction:column; gap:14px; }
@@ -1247,7 +1256,7 @@ ${appearanceScript}
     <div class="viewer-title"><strong id="viewer-title"></strong><span id="viewer-status"></span></div>
     <div class="seg viewer-tabs" role="group" aria-label="Compare versions"></div>
     <div class="viewer-actions">${ch ? `
-      <button class="vbtn viewer-iter" type="button" data-viewer="changes" aria-pressed="true" aria-controls="iter-panel" aria-label="Changes" title="Show or hide changes (C)">${icon("pencil")}<span>Changes</span></button>` : ""}
+      <button class="vbtn viewer-iter" type="button" data-viewer="changes" aria-pressed="true" aria-controls="iter-panel" aria-label="Changes" title="Show or hide changes (C)">${icon("pencil")}</button>` : ""}
       <div class="viewer-shortcuts">
         <button class="vbtn" type="button" aria-label="Keyboard shortcuts" aria-describedby="viewer-help">${icon("keyboard")}</button>
         <div class="viewer-help" id="viewer-help" role="tooltip"><strong>Keyboard shortcuts</strong><div><kbd>← →</kbd><span>Switch versions</span></div><div><kbd>↑ ↓</kbd><span>Switch rooms</span></div><div><kbd>Z</kbd><span>Toggle zoom</span></div>${ch ? "<div><kbd>C</kbd><span>Show or hide changes</span></div>" : ""}<div><kbd>Esc</kbd><span>Close viewer</span></div></div>
