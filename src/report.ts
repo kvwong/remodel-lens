@@ -1145,11 +1145,13 @@ ${appearanceScript}
   .iter-compose textarea::placeholder, .iter-pins input::placeholder { color:rgba(239,237,233,.45); }
   .iter-pins { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
   .iter-pins:empty, .iter-refs:empty { display:none; }
-  .iter-pins li { display:grid; grid-template-columns:auto minmax(0, 1fr) auto; gap:2px 8px; align-items:center; }
-  .iter-pins .pin-n { grid-row:1 / span 2; align-self:start; margin-top:2px; }
+  /* Pin row: badge and item name on one line, the note and its remove button lined up below. */
+  .iter-pins li { display:grid; grid-template-columns:auto minmax(0, 1fr) auto; gap:4px 8px; align-items:center; }
+  .iter-pins .pin-n { grid-column:1; grid-row:1; margin:0; }
+  .iter-pins .ipin-item { grid-column:2 / 4; grid-row:1; }
   .ipin-item { font-size:12px; color:rgba(239,237,233,.6); }
-  .iter-pins input { grid-column:2; width:100%; font:inherit; font-size:13px; color:#efede9; background:#232322; border:1px solid rgba(255,255,255,.16); border-radius:8px; padding:6px 9px; }
-  .iter-pins li > button, .iref { grid-column:3; grid-row:1 / span 2; }
+  .iter-pins input { grid-column:2; grid-row:2; width:100%; font:inherit; font-size:13px; color:#efede9; background:#232322; border:1px solid rgba(255,255,255,.16); border-radius:8px; padding:6px 9px; }
+  .iter-pins li > button { grid-column:3; grid-row:2; }
   .iter-refs { display:flex; gap:6px; }
   .iref { padding:0; border:0; background:none; border-radius:6px; cursor:pointer; }
   .iref img { width:56px; height:42px; object-fit:cover; border-radius:6px; display:block; }
