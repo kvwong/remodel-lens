@@ -199,12 +199,7 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
     const list = ctx ? versions() : [];
     verMenu.hidden = !list.length;
     if (!list.length) return;
-    const inUse = picked();
-    verMenu.innerHTML = ["v1", ...list.map((v) => v.id)].map((id) => {
-      const e = entry(id);
-      const note = e.status === "running" ? " (being made)" : !e.image ? " (not generated)" : id === inUse ? " · in report" : "";
-      return '<option value="' + id + '"' + (usable(id) ? "" : " disabled") + ">Version " + num(id || "v1") + (id === "v1" ? " (original)" : "") + note + "</option>";
-    }).join("");
+    verMenu.innerHTML = ["v1", ...list.map((v) => v.id)].map((id) => '<option value="' + id + '"' + (usable(id) ? "" : " disabled") + ">Version " + num(id) + "</option>").join("");
     verMenu.value = viewed;
     placeVersionMenu();
   }
@@ -740,10 +735,10 @@ export function renderReport(input: {
   /** Picks which version the report uses for one room and scope. */
   const versionSelect = (p: PhotoResult, tier: Tier, picked: string) => {
     const options = [
-      { id: ORIGINAL, text: "Version 1 (original)", ok: true },
+      { id: ORIGINAL, text: "Version 1", ok: true },
       ...versionsFor(ch!.versions, p.id, tier).map((v) => ({
         id: v.id,
-        text: `Version ${v.id.slice(1)}${v.status === "running" ? " (being made)" : !v.image ? " (not generated)" : ""}`,
+        text: `Version ${v.id.slice(1)}`,
         ok: v.status !== "running" && !!v.image,
       })),
     ];
