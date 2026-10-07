@@ -84,7 +84,6 @@ const ICON_PATHS = {
   pin: '<path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11Z"/><circle cx="12" cy="10" r="2.2"/>',
   image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 9"/>',
   note: '<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/>',
-  keyboard: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 15h10"/>',
 } as const;
 type IconName = keyof typeof ICON_PATHS;
 
@@ -131,7 +130,7 @@ export function plainReason(reason: string): string {
 /** Inspector code for spot changes; only included when the app serves the report. Runs inside the viewer's scope. */
 const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scope beside the image. Each reply is a new version, and a change starts from the version on screen. */
   const panel = dialog.querySelector(".iter");
-  const log = panel.querySelector(".iter-log"), form = panel.querySelector(".iter-compose"), empty = panel.querySelector(".iter-empty"), sub = panel.querySelector(".iter-sub");
+  const log = panel.querySelector(".iter-log"), form = panel.querySelector(".iter-compose"), sub = panel.querySelector(".iter-sub");
   const pinsEl = form.querySelector(".iter-pins"), refsEl = form.querySelector(".iter-refs"), baseEl = form.querySelector(".iter-base"), statusLine = form.querySelector(".iter-status");
   const askEl = form.elements.ask, notesEl = form.elements.notes, fileEl = form.querySelector('input[type="file"]');
   const pinTool = form.querySelector('[data-iter="pin"]'), ctxTool = form.querySelector('[data-iter="context"]'), sendBtn = form.querySelector(".isend");
@@ -213,8 +212,8 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
   }
   function render() {
     const on = !!ctx;
+    dialog.classList.toggle("iter-none", !on);
     log.hidden = form.hidden = !on;
-    empty.hidden = on;
     sub.textContent = on ? original().name + " · " + room().name : "";
     if (!on) { vpins.replaceChildren(); renderVersionMenu(); return; }
     renderLog(true);
@@ -489,7 +488,7 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
     requestAnimationFrame(() => askEl.focus({ preventScroll: true }));
   });
   dialog.addEventListener("keydown", (e) => {
-    if ((e.key === "c" || e.key === "C") && !e.metaKey && !e.ctrlKey && !e.altKey && !e.target.closest?.("input, textarea, select")) {
+    if ((e.key === "c" || e.key === "C") && !dialog.classList.contains("iter-none") && !e.metaKey && !e.ctrlKey && !e.altKey && !e.target.closest?.("input, textarea, select")) {
       e.preventDefault();
       setPanel(dialog.classList.contains("iter-closed"));
     }
@@ -1083,15 +1082,6 @@ ${appearanceScript}
   .viewer button:focus-visible { outline:2px solid #efede9; outline-offset:-3px; border-radius:6px; }
   .viewer .seg button[aria-pressed="true"]:focus-visible { outline-color:#0f0f0e; }
   .viewer-actions { display:flex; gap:6px; align-items:center; }
-  .viewer-shortcuts { position:relative; }
-  .viewer-shortcuts > button { display:grid; place-items:center; width:36px; padding:0; }
-  .viewer-shortcuts .icon { width:20px; height:20px; }
-  .viewer-help { position:absolute; right:0; top:calc(100% + 8px); z-index:2; width:220px; padding:12px; border:1px solid rgba(255,255,255,.22); border-radius:10px; background:#242423; box-shadow:0 8px 24px rgba(0,0,0,.35); font-size:12px; visibility:hidden; opacity:0; }
-  .viewer-shortcuts:hover .viewer-help, .viewer-shortcuts:focus-within .viewer-help { visibility:visible; opacity:1; }
-  .viewer-help strong { display:block; margin-bottom:8px; font-weight:600; }
-  .viewer-help div { display:flex; justify-content:space-between; gap:16px; line-height:24px; }
-  .viewer-help kbd { font:inherit; color:#efede9; }
-  .viewer-help span { color:rgba(239,237,233,.7); }
   .vbtn { font:inherit; font-size:13px; min-height:36px; padding:4px 12px; border-radius:8px; border:1px solid rgba(255,255,255,.22); background:transparent; color:inherit; cursor:pointer; }
   .vbtn[aria-pressed="true"] { background:#efede9; color:#0f0f0e; }
   .viewer-body { flex:1; min-height:0; display:flex; }
@@ -1104,27 +1094,22 @@ ${appearanceScript}
     .viewer-title { grid-column:1 / 3; grid-row:1; }
     .viewer-actions { display:contents; }
     .viewer-actions > [data-viewer="close"] { grid-column:3; grid-row:1; justify-self:end; }
-    /* Phones swap the shortcuts button (no keyboard) for an icon-only Changes toggle. */
     .viewer-iter { grid-column:2; grid-row:2; }
-    .viewer:has(.viewer-iter) .viewer-shortcuts { display:none; }
-    .viewer.iter-closed .viewer-stage { flex:1; aspect-ratio:auto; max-height:none; }
+    .viewer.iter-closed .viewer-stage, .viewer.iter-none .viewer-stage { flex:1; aspect-ratio:auto; max-height:none; }
     .viewer-tabs { grid-column:1; grid-row:2; justify-self:start; min-width:0; max-width:100%; overflow:auto; }
     .viewer-tabs button { flex:none; padding-inline:8px; }
-    .viewer-shortcuts { grid-column:2; grid-row:2; }
-    .viewer-zoom { grid-column:3; grid-row:2; }
-    .viewer-help { position:fixed; top:110px; right:14px; }
-  }
+      .viewer-zoom { grid-column:3; grid-row:2; }
+    }
   /* Change panel: a conversation beside the image, where each reply is a new version. */
   .iter { flex:none; width:380px; display:flex; flex-direction:column; min-height:0; border-left:1px solid rgba(255,255,255,.1); background:#161615; font-size:14px; }
   .iter-head { display:flex; align-items:baseline; gap:10px; padding:14px 16px 10px; }
   .iter-head h2 { font-size:15px; font-weight:600; margin:0; }
   .iter-close { margin-left:auto; align-self:center; min-height:28px; padding:2px 6px; }
   .iter-close .icon { width:16px; height:16px; display:block; }
-  .viewer.iter-closed .iter { display:none; }
+  .viewer.iter-closed .iter, .viewer.iter-none .iter, .viewer.iter-none .viewer-iter { display:none; }
   .viewer-iter { display:grid; place-items:center; width:36px; padding:0; }
   .viewer-iter .icon { width:18px; height:18px; }
-  .iter-sub, .iter-empty, .iter-base, .iter-status { color:rgba(239,237,233,.6); font-size:13px; }
-  .iter-empty { margin:0; padding:0 16px; }
+  .iter-sub, .iter-base, .iter-status { color:rgba(239,237,233,.6); font-size:13px; }
   .iter-log { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:4px 16px 16px; display:flex; flex-direction:column; gap:14px; }
   .msg p { margin:6px 0 0; line-height:1.45; }
   .msg.user { align-self:flex-end; max-width:88%; padding:10px 12px; border-radius:14px 14px 4px 14px; background:#2a2a28; }
@@ -1257,13 +1242,9 @@ ${appearanceScript}
     <div class="seg viewer-tabs" role="group" aria-label="Compare versions"></div>
     <div class="viewer-actions">${ch ? `
       <button class="vbtn viewer-iter" type="button" data-viewer="changes" aria-pressed="true" aria-controls="iter-panel" aria-label="Changes" title="Show or hide changes (C)">${icon("pencil")}</button>` : ""}
-      <div class="viewer-shortcuts">
-        <button class="vbtn" type="button" aria-label="Keyboard shortcuts" aria-describedby="viewer-help">${icon("keyboard")}</button>
-        <div class="viewer-help" id="viewer-help" role="tooltip"><strong>Keyboard shortcuts</strong><div><kbd>← →</kbd><span>Switch versions</span></div><div><kbd>↑ ↓</kbd><span>Switch rooms</span></div><div><kbd>Z</kbd><span>Toggle zoom</span></div>${ch ? "<div><kbd>C</kbd><span>Show or hide changes</span></div>" : ""}<div><kbd>Esc</kbd><span>Close viewer</span></div></div>
-      </div>
       <div class="seg viewer-zoom" role="group" aria-label="Image size">
-        <button type="button" data-viewer="fit" aria-pressed="true">Fit</button>
-        <button type="button" data-viewer="actual" aria-pressed="false">100%</button>
+        <button type="button" data-viewer="fit" aria-pressed="true" title="Fit (Z)">Fit</button>
+        <button type="button" data-viewer="actual" aria-pressed="false" title="Actual size (Z)">100%</button>
       </div>
       <button class="vbtn" type="button" data-viewer="close">Close</button>
     </div>
@@ -1273,7 +1254,6 @@ ${appearanceScript}
     <select class="viewer-ver" aria-label="Version on screen" hidden></select>
     <aside class="iter" id="iter-panel" aria-labelledby="iter-h">
       <div class="iter-head"><h2 id="iter-h">Changes</h2><span class="iter-sub"></span><button type="button" class="ibtn quiet iter-close" data-viewer="changes" aria-label="Hide changes">${icon("x")}</button></div>
-      <p class="iter-empty" hidden>The listing photo stays as photographed. Pick a scope above to change its redesign.</p>
       <div class="iter-log" role="log" aria-label="Versions of this redesign"></div>
       <form class="iter-compose">
         <p class="iter-base"></p>
