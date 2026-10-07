@@ -21,6 +21,7 @@ import { brandAppHtml } from "../branding.js";
 import { homeView } from "./home-api.js";
 import { labelAttempt, settingsView, testKey, tuningView, updateSettings } from "./settings-api.js";
 import { pdfFilename, renderReportPdf, type PdfDetail } from "../report-pdf.js";
+import { htmlFilename, renderReportHtml } from "../report-html.js";
 import { TIERS } from "../redesign/tiers.js";
 import { runTasteBuild } from "../taste/build.js";
 import { TasteProfile } from "../taste/schema.js";
@@ -250,17 +251,21 @@ async function freshReport(runDir: string): Promise<string | null> {
     if (!input) return null;
     const runPath = path.relative(RUNS_DIR, runDir).split(path.sep).map(encodeURIComponent).join("/");
     const pdfBase = `/pdf/runs/${runPath}`;
+    const htmlBase = `/html/runs/${runPath}`;
     return renderReport({
       ...input,
       changes: { api: `/api/runs/${runPath}`, originals: input.originals, versions: input.versions },
       previewBase: `/thumb/runs/${runPath}`,
       backHref: `/?listing=${encodeURIComponent(input.listingId)}`,
       pdf: { summary: `${pdfBase}?detail=summary`, full: `${pdfBase}?detail=full` },
+      html: { summary: `${htmlBase}?detail=summary`, full: `${htmlBase}?detail=full` },
     });
   } catch {
     return null; // fall back to the static file written at run time
   }
 }
+
+const attachment = (name: string) => `attachment; filename="${name.replace(/[^\x20-\x7e]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(name)}`;
 
 /** A run's report as a PDF to share: /pdf/runs/<listing>/<run>?detail=summary|full */
 async function sendReportPdf(res: ServerResponse, runDir: string | null, detail: string | null) {
@@ -268,14 +273,28 @@ async function sendReportPdf(res: ServerResponse, runDir: string | null, detail:
   if (!runDir || !input) return send(res, 404, { error: "Report not found" });
   const level: PdfDetail = detail === "full" ? "full" : "summary";
   const pdf = await renderReportPdf({ ...input, runDir, detail: level });
-  const name = pdfFilename(input.title, level);
   res.writeHead(200, {
     "content-type": "application/pdf",
     "content-length": pdf.length,
-    "content-disposition": `attachment; filename="${name.replace(/[^\x20-\x7e]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+    "content-disposition": attachment(pdfFilename(input.title, level)),
     "cache-control": "no-store",
   });
   res.end(pdf);
+}
+
+/** A run's report as one self-contained HTML file to share: /html/runs/<listing>/<run>?detail=summary|full */
+async function sendReportHtml(res: ServerResponse, runDir: string | null, detail: string | null) {
+  const input = runDir ? await loadReportInput(runDir) : null;
+  if (!runDir || !input) return send(res, 404, { error: "Report not found" });
+  const level: PdfDetail = detail === "full" ? "full" : "summary";
+  const html = Buffer.from(await renderReportHtml({ ...input, runDir, detail: level }));
+  res.writeHead(200, {
+    "content-type": "text/html; charset=utf-8",
+    "content-length": html.length,
+    "content-disposition": attachment(htmlFilename(input.title, level)),
+    "cache-control": "no-store",
+  });
+  res.end(html);
 }
 
 const SelectionBody = z.object({
@@ -591,6 +610,9 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   }
   if (req.method === "GET" && parts[0] === "pdf" && parts[1] === "runs" && parts.length === 4) {
     return sendReportPdf(res, safeJoin(RUNS_DIR, parts.slice(2).join("/")), url.searchParams.get("detail"));
+  }
+  if (req.method === "GET" && parts[0] === "html" && parts[1] === "runs" && parts.length === 4) {
+    return sendReportHtml(res, safeJoin(RUNS_DIR, parts.slice(2).join("/")), url.searchParams.get("detail"));
   }
   if (req.method === "GET" && parts[0] === "thumb" && parts[1] === "listings") {
     const width = Math.min(1600, Math.max(80, Number(url.searchParams.get("w")) || 640));
