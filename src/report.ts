@@ -1046,6 +1046,9 @@ ${appearanceScript}
 
   dialog.viewer { width:100%; height:100dvh; max-width:none; max-height:none; margin:0; padding:0; border:0; background:#0f0f0e; color:#efede9; }
   dialog.viewer::backdrop { background:rgba(0,0,0,.85); }
+  /* The page behind the photo viewer stays put while it is open. */
+  html:has(dialog.viewer[open]) { overflow:hidden; }
+  dialog.viewer { overscroll-behavior:contain; }
   dialog.viewer[open] { display:flex; flex-direction:column; }
   dialog.viewer:focus { outline:none; }
   /* Fixed columns and a reserved status line, so switching versions never moves the tabs or the image. */
