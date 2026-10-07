@@ -19,6 +19,7 @@ import {
   plainReason,
   roomName,
   sentence,
+  showcase,
   STATUS,
   tierName,
   type Status,
@@ -103,22 +104,10 @@ async function loadImages(wanted: Img[]): Promise<Map<string, Buffer>> {
 }
 
 /** Resolve a run-relative image path, refusing anything that escapes the run folder. */
-function runFile(runDir: string, rel: string | null): string | null {
+export function runFile(runDir: string, rel: string | null): string | null {
   if (!rel) return null;
   const full = path.resolve(runDir, rel);
   return full.startsWith(path.resolve(runDir) + path.sep) ? full : null;
-}
-
-/* ---------- Choosing what to show ---------- */
-
-const usable = (t: TierResult | undefined): t is TierResult & { image: string } => !!t?.image && (t.status === "verified" || t.status === "review");
-
-/** The redesign to put next to a listing photo: the preferred scope if it's trustworthy, else the most ambitious trustworthy one. */
-function showcase(photo: PhotoResult, preferred: Tier | null): TierResult | null {
-  const pref = photo.tiers.find((t) => t.tier === preferred);
-  if (usable(pref)) return pref;
-  const ranked = [...photo.tiers].sort((a, b) => TIER_RANK[b.tier] - TIER_RANK[a.tier]);
-  return ranked.find(usable) ?? ranked.find((t) => !!t.image) ?? null;
 }
 
 /* ---------- Rendering ---------- */

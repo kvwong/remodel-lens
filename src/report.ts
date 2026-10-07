@@ -587,6 +587,16 @@ export function pickFeature(photos: PhotoResult[]): PhotoResult | null {
   return [...photos].sort((a, b) => score(b) - score(a) || maxCost(b) - maxCost(a))[0] ?? null;
 }
 
+const usable = (t: TierResult | undefined): t is TierResult & { image: string } => !!t?.image && (t.status === "verified" || t.status === "review");
+
+/** The redesign to put next to a listing photo: the preferred scope if it's trustworthy, else the most ambitious trustworthy one. */
+export function showcase(photo: PhotoResult, preferred: Tier | null): TierResult | null {
+  const pref = photo.tiers.find((t) => t.tier === preferred);
+  if (usable(pref)) return pref;
+  const ranked = [...photo.tiers].sort((a, b) => TIER_RANK[b.tier] - TIER_RANK[a.tier]);
+  return ranked.find(usable) ?? ranked.find((t) => !!t.image) ?? null;
+}
+
 /** The biggest single changes in one scope, one entry per room and element (rooms shot twice count once). */
 export function largestCosts(photos: PhotoResult[], tier: Tier, limit = 4): Array<{ room: string; c: ChangePlan["changes"][number] }> {
   return photos
@@ -609,6 +619,10 @@ export function renderReport(input: {
   run?: { startedAt: string; profileName?: string | null; stopped?: boolean };
   /** PDF download links; only the app can build PDFs, so static reports omit them. */
   pdf?: { summary: string; full: string } | null;
+  /** Shareable single-file HTML download links, served by the app like the PDFs. */
+  html?: { summary: string; full: string } | null;
+  /** Renders the page as a shared copy: "summary" shows one redesign per room with its costs, "full" is the whole report. */
+  share?: "summary" | "full" | null;
   /** Spot changes; only the app can make them, so static reports omit this. `photos` already has each room's pick applied. */
   changes?: { api: string; originals: PhotoResult[]; versions: VersionsFile } | null;
 }): string {
@@ -624,7 +638,10 @@ export function renderReport(input: {
     input.location?.replace(/\s*\(.*\)$/, ""),
     `${photos.length} ${photos.length === 1 ? "photo" : "photos"}`,
     input.changes?.versions.versions.length ? `${input.changes.versions.versions.length} ${input.changes.versions.versions.length === 1 ? "change" : "changes"}` : null,
+    input.share === "summary" ? "Summary" : input.share === "full" ? "Full scope" : null,
   ].filter(Boolean) as string[];
+  const summary = input.share === "summary";
+  const preferred = feature ? showcase(feature, null)?.tier ?? null : null;
   const back = input.backHref ? { href: esc(input.backHref), label: `Back to ${esc(input.title)}` } : null;
   const docTitle = `${input.title}${started ? ` · ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(started)}` : ""} · Whim`;
 
@@ -737,7 +754,38 @@ export function renderReport(input: {
   };
   const countVersions = (p: PhotoResult, tier: Tier) => (ch ? 1 + versionsFor(ch.versions, p.id, tier).length : 1);
 
+  /** A summary room: the listing photo beside one redesign, with every scope's verdict and cost. */
+  const summaryRoom = (p: PhotoResult) => {
+    const room = roomName(p);
+    const shown = showcase(p, preferred);
+    return `
+  <section class="room card" id="${p.id}" aria-labelledby="${p.id}-h">
+    <div class="room-head">
+      <div class="room-title"><h2 id="${p.id}-h">${esc(room)}</h2><span class="file">${esc(p.basename)}</span></div>
+    </div>
+    <div class="pair">
+      <figure class="frame">
+        ${zoomable({ src: p.original, alt: `Listing photo of the ${room.toLowerCase()}`, group: p.id, label: `${room} · Listing photo` })}
+        <figcaption>Listing photo</figcaption>
+      </figure>
+      <figure class="frame">
+        ${shown?.image
+          ? zoomable({ src: shown.image, alt: `${tierName(shown.tier)} redesign of the ${room.toLowerCase()}`, group: p.id, label: `${room} · ${tierName(shown.tier)}`, status: shown.status })
+          : `<div class="no-image">No redesign image</div>`}
+        <figcaption>${shown ? `${tierName(shown.tier)} · ${TIER_LABELS[shown.tier].blurb}` : ""}</figcaption>
+      </figure>
+    </div>
+    <div class="info">
+      <ul class="info-tier scope-lines">${p.tiers.map((t) => {
+        const cost = planCost(t.plan);
+        return `<li><span class="scope-name">${tierName(t.tier)}</span>${statusTag(t.status)}<span class="num">${cost ? money(cost) : "–"}</span></li>`;
+      }).join("")}</ul>
+    </div>
+  </section>`;
+  };
+
   const rooms = photos.map((p) => {
+    if (summary) return summaryRoom(p);
     const room = roomName(p);
     return `
   <section class="room card" id="${p.id}" aria-labelledby="${p.id}-h">
@@ -875,9 +923,9 @@ ${appearanceScript}
   @media (max-width: 680px) { .card { padding:18px 16px; border-radius:10px; } }
   .meta { margin:8px 0 0; color:var(--muted); font-size:14px; }
   .meta span + span::before { content:"·"; margin:0 8px; opacity:.6; }
-  /* PDF downloads sit at the right, their bottom edge on the title's baseline row (the row is set inline: 2 under a back link, else 1). */
+  /* Downloads sit at the right, PDFs above HTML, their bottom edge on the title's baseline row (set inline: spanning the back link and title rows when there is a back link, else row 1). */
   .page-head > .share { grid-column:2; align-self:end; margin-bottom:4px; }
-  .share { position:relative; display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px 10px; max-width:560px; }
+  .share { position:relative; display:grid; grid-template-columns:repeat(2, auto); justify-content:end; align-items:center; gap:8px 10px; }
   .share-btn { display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:6px 14px 6px 12px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); text-decoration:none; color:var(--text); font-size:14px; font-weight:500; white-space:nowrap; }
   .share-btn:hover { border-color:var(--primary); background:var(--primary-soft); }
   .share-btn .icon { color:var(--primary); }
@@ -886,10 +934,10 @@ ${appearanceScript}
   .share-status { position:absolute; top:100%; right:0; margin-top:6px; white-space:nowrap; font-size:13px; color:var(--muted); }
   .share-status:empty { display:none; }
   @media (max-width: 900px) {
-    .page-head > .share { grid-column:1; grid-row:auto !important; margin:18px 0 0; justify-content:flex-start; max-width:none; }
-    .share-status { position:static; flex-basis:100%; margin:0; white-space:normal; }
+    .page-head > .share { grid-column:1; grid-row:auto !important; margin:18px 0 0; justify-content:start; }
+    .share-status { position:static; grid-column:1 / -1; margin:0; white-space:normal; }
   }
-  @media (max-width: 680px) { .share-btn { flex:1 1 0; justify-content:center; } }
+  @media (max-width: 680px) { .share { grid-template-columns:repeat(2, minmax(0, 1fr)); } .share-btn { justify-content:center; } }
   .notice { margin:16px 0 0; font-size:14px; color:var(--warn); }
 
   .status { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; white-space:nowrap; }
@@ -993,6 +1041,9 @@ ${appearanceScript}
   .verdict { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:4px 16px; min-height:44px; padding:6px 0; border-bottom:1px solid var(--line); }
   .verdict .status { white-space:normal; flex-wrap:wrap; }
   .verdict-cost { font-size:18px; font-weight:500; }
+  .scope-lines { list-style:none; margin:0; padding:0; }
+  .scope-lines li { display:grid; grid-template-columns:minmax(0, 1fr) auto auto; align-items:center; gap:4px 16px; min-height:40px; padding:6px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .scope-lines .scope-name { font-weight:500; }
 
   details.fold { border-bottom:1px solid var(--line); }
   details.fold > summary { display:flex; align-items:center; gap:8px; min-height:44px; padding:0; cursor:pointer; list-style:none; font-weight:500; font-size:14px; }
@@ -1204,10 +1255,12 @@ ${appearanceScript}
     ${back ? `<a class="crumb" href="${back.href}" data-back>${icon("arrowLeft")}${back.label}</a>` : ""}
     <h1 id="top" tabindex="-1">${esc(input.title)}</h1>
     <p class="meta">${meta.map((m) => `<span>${esc(m)}</span>`).join("")}</p>
-    ${input.pdf
-      ? `<div class="share" role="group" aria-label="Download PDF" style="grid-row:${back ? 2 : 1}">
-      <a class="share-btn" href="${esc(input.pdf.summary)}" data-pdf="Summary" title="Costs and a before and after for every room" download>${icon("download")}Summary PDF</a>
-      <a class="share-btn" href="${esc(input.pdf.full)}" data-pdf="Full scope" title="Every room, scope, and planned change" download>${icon("download")}Full scope PDF</a>
+    ${input.pdf || input.html
+      ? `<div class="share" role="group" aria-label="Download to share" style="grid-row:${back ? "1 / 3" : 1}">
+      ${input.pdf ? `<a class="share-btn" href="${esc(input.pdf.summary)}" data-download="summary PDF" title="Costs and a before and after for every room" download>${icon("download")}Summary PDF</a>
+      <a class="share-btn" href="${esc(input.pdf.full)}" data-download="full scope PDF" title="Every room, scope, and planned change" download>${icon("download")}Full scope PDF</a>` : ""}
+      ${input.html ? `<a class="share-btn" href="${esc(input.html.summary)}" data-download="summary web page" title="One web page file with a before and after for every room, to open in any browser" download>${icon("download")}Summary HTML</a>
+      <a class="share-btn" href="${esc(input.html.full)}" data-download="full scope web page" title="One web page file with every room, scope, and planned change, to open in any browser" download>${icon("download")}Full scope HTML</a>` : ""}
       <span class="share-status" role="status" aria-live="polite"></span>
     </div>`
       : ""}
@@ -1220,7 +1273,7 @@ ${appearanceScript}
     ${back ? `<a class="crumb" href="${back.href}" data-back aria-label="${back.label}">${icon("arrowLeft")}<span>${esc(input.title)}</span></a>` : ""}
     <label class="sr-only" for="room-jump">Jump to room</label>
     <select id="room-jump"><option value="">Jump to room…</option>${photos.map((p) => `<option value="${p.id}">${esc(roomName(p))}</option>`).join("")}</select>
-    ${tiers.length > 1
+    ${tiers.length > 1 && !summary
       ? `<span class="seg-label" id="seg-label">Show in every room</span><div class="seg" role="group" aria-labelledby="seg-label">${tiers.map((t) => `<button type="button" data-all-tier="${t}" aria-pressed="false">${tierName(t)}</button>`).join("")}</div>`
       : ""}
   </div>
@@ -1357,7 +1410,7 @@ ${appearanceScript}
     index = (i + items.length) % items.length;
     const item = items[index];
     if (!img.isConnected) stage.append(img);
-    img.src = item.dataset.src;
+    img.src = item.dataset.src || item.querySelector("img").src;
     img.alt = item.dataset.label;
     title.textContent = item.dataset.label;
     const s = STATUS[item.dataset.status];
@@ -1464,27 +1517,27 @@ ${appearanceScript}
     }
   } catch {}
 
-  /* PDF downloads: fetch first so the button can say it's working (a long report takes a few seconds). */
+  /* Downloads: fetch first so the button can say it's working (a long report takes a few seconds). */
   const shareStatus = document.querySelector(".share-status");
-  document.querySelectorAll("a[data-pdf]").forEach((link) => link.addEventListener("click", async (e) => {
+  document.querySelectorAll("a[data-download]").forEach((link) => link.addEventListener("click", async (e) => {
     e.preventDefault();
     if (link.getAttribute("aria-busy") === "true") return;
-    const kind = link.dataset.pdf;
+    const kind = link.dataset.download;
     link.setAttribute("aria-busy", "true");
-    shareStatus.textContent = "Preparing the " + kind.toLowerCase() + " PDF…";
+    shareStatus.textContent = "Preparing the " + kind + "…";
     try {
       const res = await fetch(link.href);
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "HTTP " + res.status);
       const name = /filename[*]=UTF-8''([^;]+)/.exec(res.headers.get("content-disposition") || "")?.[1];
       const url = URL.createObjectURL(await res.blob());
-      const a = Object.assign(document.createElement("a"), { href: url, download: name ? decodeURIComponent(name) : "report.pdf" });
+      const a = Object.assign(document.createElement("a"), { href: url, download: name ? decodeURIComponent(name) : "report" });
       document.body.append(a);
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
-      shareStatus.textContent = kind + " PDF downloaded.";
+      shareStatus.textContent = kind[0].toUpperCase() + kind.slice(1) + " downloaded.";
     } catch (err) {
-      shareStatus.textContent = "Couldn't make the PDF: " + err.message;
+      shareStatus.textContent = "Couldn't make the " + kind + ": " + err.message;
     } finally {
       link.removeAttribute("aria-busy");
     }

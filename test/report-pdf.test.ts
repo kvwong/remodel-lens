@@ -9,6 +9,7 @@ import type { ChangePlan } from "../src/redesign/plan.js";
 import type { PhotoResult, TierResult } from "../src/redesign/run.js";
 import { renderReport } from "../src/report.js";
 import { pdfFilename, renderReportPdf } from "../src/report-pdf.js";
+import { htmlFilename, renderReportHtml } from "../src/report-html.js";
 
 const runDir = mkdtempSync(path.join(tmpdir(), "remodel-lens-pdf-"));
 
@@ -72,6 +73,43 @@ describe("report PDF", () => {
     const html = renderReport({ title: "12 Maple St", photos, profileSummary: "", pdf: { summary: "/pdf/runs/maple/r1?detail=summary", full: "/pdf/runs/maple/r1?detail=full" } });
     expect(html).toContain('href="/pdf/runs/maple/r1?detail=summary"');
     expect(html).toContain('href="/pdf/runs/maple/r1?detail=full"');
-    expect(renderReport({ title: "12 Maple St", photos, profileSummary: "" })).not.toContain("data-pdf=");
+    const both = renderReport({ title: "12 Maple St", photos, profileSummary: "", pdf: { summary: "/p?s", full: "/p?f" }, html: { summary: "/h?s", full: "/h?f" } });
+    expect(both).toContain(">Summary HTML</a>");
+    expect(both).toContain(">Full scope HTML</a>");
+    expect(renderReport({ title: "12 Maple St", photos, profileSummary: "" })).not.toContain("data-download=");
+  });
+});
+
+describe("report HTML", () => {
+  const base = { title: "12 Maple St", photos, profileSummary: "Warm and quiet.", location: "Bellevue, WA", run: { startedAt: "2026-10-04T18:00:00Z" }, runDir };
+
+  it("embeds every photo and the font, so the file works on its own", async () => {
+    for (const detail of ["summary", "full"] as const) {
+      const html = await renderReportHtml({ ...base, detail });
+      const sources = [...html.matchAll(/<img\b[^>]*\ssrc="([^"]*)"/g)].map((m) => m[1]!);
+      // Only the missing moderate images keep their path; everything else is inline.
+      expect(sources.filter((s) => !s.startsWith("data:"))).toEqual(sources.filter((s) => s.endsWith("missing.png")));
+      expect(sources.some((s) => s.startsWith("data:image/webp;base64,"))).toBe(true);
+      expect(html).not.toContain("fonts.googleapis.com");
+      expect(html).toContain("data:font/woff2;base64,");
+      expect(html).not.toContain(" data-src=");
+      expect(html).not.toContain("data-download=");
+      expect(html).not.toContain('class="iter-panel');
+    }
+  });
+
+  it("shows one redesign per room in the summary and every scope in the full scope", async () => {
+    const summary = await renderReportHtml({ ...base, detail: "summary" });
+    const full = await renderReportHtml({ ...base, detail: "full" });
+    expect(summary).toContain('class="info-tier scope-lines"');
+    expect(summary).not.toContain('<button role="tab"');
+    expect(summary).not.toContain("Planned changes");
+    expect(full).toContain('<button role="tab"');
+    expect(full).toContain("Planned changes");
+  });
+
+  it("names files safely", () => {
+    expect(htmlFilename('12 Maple St / Unit "B"', "full")).toBe("12 Maple St Unit B - Remodel full scope.html");
+    expect(htmlFilename("", "summary")).toBe("Listing - Remodel summary.html");
   });
 });
