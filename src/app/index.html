@@ -180,6 +180,10 @@
   .zone-divider { height:1px; background:var(--line); margin:24px 0; border:0; }
   .error { color:var(--bad); margin:0; }
   .notice { padding:10px 14px; border-radius:8px; background:var(--warn-bg); color:var(--warn); margin:0; font-size:14px; }
+  /* A notice with its fix beside it, like the stale rules alert's Rebuild button. */
+  .notice-action { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; }
+  .notice-action > span { flex:1 1 280px; }
+  .notice-action .btn { flex:none; }
 
   /* Listing: photo selection */
   .fade { --motion:opacity .2s var(--ease), visibility 0s; }
@@ -1219,7 +1223,7 @@ function renderJob() {
     }
     renderJobInto($("#job"), state.job, state.job?.reportUrl ? `<p style="margin:4px 0 0"><a class="btn" href="${esc(state.job.reportUrl)}">Open report</a></p>` : "");
   } else {
-    const button = $('[data-action="confirm-build"]');
+    const button = $("#build-btn");
     if (button) button.disabled = running || !!state.textEdit || state.taste.references.length < 3;
     renderJobInto($("#taste-job"), state.job, "");
   }
@@ -1781,7 +1785,7 @@ function renderTaste() {
         ${t.meta.description ? `<span>${esc(t.meta.description)}</span>` : ""}
       </p>`
     })}
-    ${t.stale && !running ? `<p class="notice" role="status">Photos or the brief changed since these rules were built. Rebuild to bring the rules up to date.</p>` : ""}
+    ${t.stale && !running ? `<div class="notice notice-action" role="status"><span>Photos or the brief changed since these rules were built. Rebuild to bring the rules up to date.</span><button class="btn btn-small" type="button" data-action="confirm-build" ${t.references.length < 3 ? "disabled" : ""}>${icon("refresh")}Rebuild</button></div>` : ""}
 
     <section class="panel" aria-labelledby="refs-h">
       <div class="section-head">
@@ -1821,7 +1825,7 @@ function renderTaste() {
             <button class="btn btn-primary" type="button" data-action="build">Rebuild now</button>
           </div>`
         : `<div class="field-row" style="margin-top:14px">
-            <button class="btn" type="button" data-action="confirm-build" ${running || t.references.length < 3 ? "disabled" : ""}>${icon("refresh")}Rebuild rules</button>
+            <button class="btn" id="build-btn" type="button" data-action="confirm-build" ${running || t.references.length < 3 ? "disabled" : ""}>${icon("refresh")}Rebuild rules</button>
             ${t.hasPrevious && !running ? `<button class="btn btn-quiet" type="button" data-action="restore-previous">Restore previous rules</button>` : ""}
             ${t.references.length < 3 ? `<span class="hint" style="margin:0">Add at least 3 photos first.</span>` : ""}
           </div>`}
@@ -2324,13 +2328,16 @@ document.addEventListener("click", async (event) => {
   if (action === "cancel-confirm") {
     state.confirming = null;
     if (state.view === "listing") { renderListing(); $('#run-form button[type="submit"]')?.focus(); }
-    else { rerenderTaste(); $('[data-action="confirm-build"]')?.focus(); }
+    else { rerenderTaste(); $("#build-btn")?.focus(); }
     return;
   }
   if (action === "confirm-build") {
     state.confirming = "build";
     rerenderTaste();
-    $('[data-action="build"]')?.focus();
+    // The stale alert's Rebuild sits far above the confirm, so bring the confirm into view.
+    const confirmBuild = $('[data-action="build"]');
+    confirmBuild?.focus({ preventScroll: true });
+    confirmBuild?.closest(".confirm")?.scrollIntoView({ block: "center", behavior: reducedMotion.matches ? "auto" : "smooth" });
     return;
   }
   if (action === "stop-job") {
