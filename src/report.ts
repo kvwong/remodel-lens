@@ -130,7 +130,7 @@ export function plainReason(reason: string): string {
 /** Inspector code for spot changes; only included when the app serves the report. Runs inside the viewer's scope. */
 const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scope beside the image. Each reply is a new version, and a change starts from the version on screen. */
   const panel = dialog.querySelector(".iter");
-  const log = panel.querySelector(".iter-log"), form = panel.querySelector(".iter-compose"), empty = panel.querySelector(".iter-empty"), sub = panel.querySelector(".iter-sub");
+  const log = panel.querySelector(".iter-log"), form = panel.querySelector(".iter-compose"), sub = panel.querySelector(".iter-sub");
   const pinsEl = form.querySelector(".iter-pins"), refsEl = form.querySelector(".iter-refs"), baseEl = form.querySelector(".iter-base"), statusLine = form.querySelector(".iter-status");
   const askEl = form.elements.ask, notesEl = form.elements.notes, fileEl = form.querySelector('input[type="file"]');
   const pinTool = form.querySelector('[data-iter="pin"]'), ctxTool = form.querySelector('[data-iter="context"]'), sendBtn = form.querySelector(".isend");
@@ -212,8 +212,8 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
   }
   function render() {
     const on = !!ctx;
+    dialog.classList.toggle("iter-none", !on);
     log.hidden = form.hidden = !on;
-    empty.hidden = on;
     sub.textContent = on ? original().name + " · " + room().name : "";
     if (!on) { vpins.replaceChildren(); renderVersionMenu(); return; }
     renderLog(true);
@@ -488,7 +488,7 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
     requestAnimationFrame(() => askEl.focus({ preventScroll: true }));
   });
   dialog.addEventListener("keydown", (e) => {
-    if ((e.key === "c" || e.key === "C") && !e.metaKey && !e.ctrlKey && !e.altKey && !e.target.closest?.("input, textarea, select")) {
+    if ((e.key === "c" || e.key === "C") && !dialog.classList.contains("iter-none") && !e.metaKey && !e.ctrlKey && !e.altKey && !e.target.closest?.("input, textarea, select")) {
       e.preventDefault();
       setPanel(dialog.classList.contains("iter-closed"));
     }
@@ -1095,7 +1095,7 @@ ${appearanceScript}
     .viewer-actions { display:contents; }
     .viewer-actions > [data-viewer="close"] { grid-column:3; grid-row:1; justify-self:end; }
     .viewer-iter { grid-column:2; grid-row:2; }
-    .viewer.iter-closed .viewer-stage { flex:1; aspect-ratio:auto; max-height:none; }
+    .viewer.iter-closed .viewer-stage, .viewer.iter-none .viewer-stage { flex:1; aspect-ratio:auto; max-height:none; }
     .viewer-tabs { grid-column:1; grid-row:2; justify-self:start; min-width:0; max-width:100%; overflow:auto; }
     .viewer-tabs button { flex:none; padding-inline:8px; }
       .viewer-zoom { grid-column:3; grid-row:2; }
@@ -1106,11 +1106,10 @@ ${appearanceScript}
   .iter-head h2 { font-size:15px; font-weight:600; margin:0; }
   .iter-close { margin-left:auto; align-self:center; min-height:28px; padding:2px 6px; }
   .iter-close .icon { width:16px; height:16px; display:block; }
-  .viewer.iter-closed .iter { display:none; }
+  .viewer.iter-closed .iter, .viewer.iter-none .iter, .viewer.iter-none .viewer-iter { display:none; }
   .viewer-iter { display:grid; place-items:center; width:36px; padding:0; }
   .viewer-iter .icon { width:18px; height:18px; }
-  .iter-sub, .iter-empty, .iter-base, .iter-status { color:rgba(239,237,233,.6); font-size:13px; }
-  .iter-empty { margin:0; padding:0 16px; }
+  .iter-sub, .iter-base, .iter-status { color:rgba(239,237,233,.6); font-size:13px; }
   .iter-log { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:4px 16px 16px; display:flex; flex-direction:column; gap:14px; }
   .msg p { margin:6px 0 0; line-height:1.45; }
   .msg.user { align-self:flex-end; max-width:88%; padding:10px 12px; border-radius:14px 14px 4px 14px; background:#2a2a28; }
@@ -1255,7 +1254,6 @@ ${appearanceScript}
     <select class="viewer-ver" aria-label="Version on screen" hidden></select>
     <aside class="iter" id="iter-panel" aria-labelledby="iter-h">
       <div class="iter-head"><h2 id="iter-h">Changes</h2><span class="iter-sub"></span><button type="button" class="ibtn quiet iter-close" data-viewer="changes" aria-label="Hide changes">${icon("x")}</button></div>
-      <p class="iter-empty" hidden>The listing photo stays as photographed. Pick a scope above to change its redesign.</p>
       <div class="iter-log" role="log" aria-label="Versions of this redesign"></div>
       <form class="iter-compose">
         <p class="iter-base"></p>
