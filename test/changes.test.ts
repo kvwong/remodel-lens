@@ -161,7 +161,8 @@ describe("a spot change", () => {
 
     const html = renderReport({ title: "12 Maple St", photos, profileSummary: "", changes: { api: "/api/runs/l/r", originals: [photo], versions: file } });
     expect(html).toContain('data-room="photo_01" data-tier="cosmetic" data-version="v2"');
-    expect(html).toContain("Version 2 of 3");
+    expect(html).toContain('<option value="v2" selected>Version 2</option>');
+    expect(html).toContain("Version 1 (original)");
     expect(html).toContain("Version 2 · Your change");
     expect(html).toContain('class="iter"');
     expect(html).toContain("const ITER = ");

@@ -193,10 +193,27 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
         (v ? '<button type="button" class="ibtn quiet" data-delete="' + e.id + '">Delete</button>' : "") +
       "</div></div>";
   }
+  /* The dropdown beside the title: which version is on screen (and what the next change starts from). */
+  const verMenu = dialog.querySelector(".viewer-ver");
+  function renderVersionMenu() {
+    const list = ctx ? versions() : [];
+    verMenu.hidden = !list.length;
+    if (!list.length) return;
+    const inUse = picked();
+    verMenu.innerHTML = ["v1", ...list.map((v) => v.id)].map((id) => {
+      const e = entry(id);
+      const note = e.status === "running" ? " (being made)" : !e.image ? " (not generated)" : id === inUse ? " · in report" : "";
+      return '<option value="' + id + '"' + (usable(id) ? "" : " disabled") + ">Version " + num(id || "v1") + (id === "v1" ? " (original)" : "") + note + "</option>";
+    }).join("");
+    verMenu.value = viewed;
+    placeVersionMenu();
+  }
+  verMenu.addEventListener("change", () => showOnStage(verMenu.value));
   function renderLog(toBottom) {
     const near = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
     const list = versions();
     log.innerHTML = botMsg(entry("v1")) + list.map((v, i) => userMsg(v, i ? list[i - 1].id : "v1") + botMsg(v)).join("");
+    renderVersionMenu();
     if (toBottom || near) log.scrollTop = log.scrollHeight;
   }
   function render() {
@@ -204,7 +221,7 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
     log.hidden = form.hidden = !on;
     empty.hidden = on;
     sub.textContent = on ? original().name + " · " + room().name : "";
-    if (!on) { vpins.replaceChildren(); return; }
+    if (!on) { vpins.replaceChildren(); renderVersionMenu(); return; }
     renderLog(true);
     renderDraft();
   }
@@ -269,7 +286,15 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
     const row = y < 333 ? "Upper" : y < 667 ? "Middle" : "Lower", col = x < 333 ? "left" : x < 667 ? "center" : "right";
     return { item: row + " " + col + " of the image", fixed: false };
   }
+  /** Keeps the version dropdown on the image's top-left corner, inside the visible part of the stage. */
+  function placeVersionMenu() {
+    if (verMenu.hidden || !img.isConnected) return;
+    verMenu.style.left = Math.max(stage.offsetLeft + 14, stage.offsetLeft + img.offsetLeft - stage.scrollLeft + 14) + "px";
+    verMenu.style.top = Math.max(stage.offsetTop + 14, stage.offsetTop + img.offsetTop - stage.scrollTop + 14) + "px";
+  }
+  stage.addEventListener("scroll", placeVersionMenu, { passive: true });
   function layoutPins() {
+    placeVersionMenu();
     vpins.replaceChildren();
     if (!ctx || !img.isConnected || !img.offsetWidth) return;
     const d = draft();
@@ -316,7 +341,9 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
     viewed = id;
     if (!img.isConnected) stage.append(img);
     img.src = e.image;
-    img.alt = title.textContent = room().name + " · " + original().name + (versions().length ? " · " + label(id) : "");
+    title.textContent = room().name + " · " + original().name;
+    img.alt = title.textContent + (versions().length ? " · " + label(id) : "");
+    renderVersionMenu();
     statusEl.innerHTML = STATUS[e.status] ? '<span class="status s-' + e.status + '">' + STATUS[e.status].icon + "<span>" + STATUS[e.status].label + '</span><span class="status-meaning">' + STATUS[e.status].meaning + "</span></span>" : "";
     log.querySelectorAll("[data-show]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.show === id)));
     renderBase();
@@ -463,6 +490,17 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
       setPanel(dialog.classList.contains("iter-closed"));
     }
   });
+  /* Room card dropdowns pick the version the report, totals, and PDFs use. */
+  document.querySelectorAll("select[data-pick]").forEach((sel) => sel.addEventListener("change", async () => {
+    sel.disabled = true;
+    try {
+      await call("PUT", "/picks", { photo: sel.dataset.room, tier: sel.dataset.tier, version: sel.value });
+      reloadKeepingPlace();
+    } catch (err) {
+      sel.disabled = false;
+      alert(err.message);
+    }
+  }));
   dialog.addEventListener("cancel", (e) => { if (pinMode) { e.preventDefault(); setPinMode(false); } });
   dialog.addEventListener("close", () => {
     setPinMode(false);
@@ -699,6 +737,18 @@ export function renderReport(input: {
       ${v.request.pins.length ? `<ol class="pin-notes">${v.request.pins.map((pin, i) => `<li><span class="pin-n" aria-hidden="true">${i + 1}</span><span><strong>${esc(sentence(pin.item ?? "Pinned spot"))}:</strong> ${esc(pin.note)}</span>${pin.result ? `<span class="pin-result r-${pin.result}">${pin.result === "done" ? "Done" : pin.result === "partial" ? "Partly done" : "Missed"}</span>` : ""}</li>`).join("")}</ol>` : ""}
       ${v.request.notes ? `<p class="fine">Context: ${esc(v.request.notes)}</p>` : ""}
     </div>`;
+  /** Picks which version the report uses for one room and scope. */
+  const versionSelect = (p: PhotoResult, tier: Tier, picked: string) => {
+    const options = [
+      { id: ORIGINAL, text: "Version 1 (original)", ok: true },
+      ...versionsFor(ch!.versions, p.id, tier).map((v) => ({
+        id: v.id,
+        text: `Version ${v.id.slice(1)}${v.status === "running" ? " (being made)" : !v.image ? " (not generated)" : ""}`,
+        ok: v.status !== "running" && !!v.image,
+      })),
+    ];
+    return `<label class="ver-select"><span class="sr-only">Version of the ${tierName(tier)} ${esc(roomName(p).toLowerCase())} used in the report</span><select data-pick data-room="${p.id}" data-tier="${tier}">${options.map((o) => `<option value="${o.id}"${o.id === picked ? " selected" : ""}${o.ok ? "" : " disabled"}>${o.text}</option>`).join("")}</select></label>`;
+  };
   const countVersions = (p: PhotoResult, tier: Tier) => (ch ? 1 + versionsFor(ch.versions, p.id, tier).length : 1);
 
   const rooms = photos.map((p) => {
@@ -724,7 +774,8 @@ export function renderReport(input: {
           ${t.image
             ? zoomable({ src: t.image, alt: `${tierName(t.tier)} redesign of the ${room.toLowerCase()}`, group: p.id, label: `${room} · ${tierName(t.tier)}`, status: t.status, room: ch ? p.id : undefined, tier: t.tier, version: v?.id ?? ORIGINAL, edit: !!ch })
             : `<div class="no-image">${STATUS[t.status].label}. ${STATUS[t.status].meaning}.</div>`}
-          <p class="figcap">${tierName(t.tier)} · ${TIER_LABELS[t.tier].blurb}${n > 1 ? ` · Version ${v ? v.id.slice(1) : 1} of ${n}` : ""}</p>
+          ${n > 1 && t.image ? versionSelect(p, t.tier, v?.id ?? ORIGINAL) : ""}
+          <p class="figcap">${tierName(t.tier)} · ${TIER_LABELS[t.tier].blurb}</p>
         </div>`;
         }).join("")}
       </div>
@@ -926,6 +977,14 @@ ${appearanceScript}
   .tab-mark { display:inline-flex; } .tab-mark .icon { width:13px; height:13px; }
   .pair { display:grid; gap:12px; grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .frame { margin:0; min-width:0; }
+  /* Version dropdowns sit over the top-left corner of the image, on the report and in the inspector. */
+  [role="tabpanel"]:has(> .ver-select) { position:relative; }
+  .ver-select { position:absolute; left:10px; top:10px; z-index:2; }
+  .ver-select select, .viewer-ver { appearance:none; font:inherit; font-size:13px; font-weight:500; line-height:20px; color:#fff; background:rgba(18,18,17,.62) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center / 14px; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border:0; border-radius:8px; padding:5px 30px 5px 11px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.25); }
+  .ver-select select:hover, .viewer-ver:hover { background-color:rgba(18,18,17,.78); }
+  .ver-select select:focus-visible, .viewer-ver:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+  .ver-select select[disabled] { opacity:.6; cursor:progress; }
+  .ver-select option, .viewer-ver option { color:#1b1a19; background:#fff; }
   .frame figcaption, .figcap { margin:8px 0 0; font-size:13px; line-height:20px; color:var(--muted); min-height:20px; }
   /* Spot changes */
   .your-change { margin-top:12px; padding:10px 12px; border-radius:8px; background:var(--surface-2); font-size:14px; }
@@ -1003,6 +1062,8 @@ ${appearanceScript}
   /* Fixed columns and a reserved status line, so switching versions never moves the tabs or the image. */
   .viewer-bar { display:grid; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr); gap:8px 16px; align-items:center; padding:0 max(14px, env(safe-area-inset-left)); border-bottom:1px solid rgba(255,255,255,.1); height:66px; flex:none; }
   .viewer-title { display:grid; grid-template-rows:20px 20px; gap:2px; min-width:0; }
+  .viewer-body { position:relative; }
+  .viewer-ver { position:absolute; left:14px; top:14px; z-index:3; }
   .viewer-title strong, #viewer-status { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:20px; }
   #viewer-status .status { white-space:nowrap; }
   .viewer-plain { color:rgba(239,237,233,.6); font-size:13px; }
@@ -1203,6 +1264,7 @@ ${appearanceScript}
   </div>
   <div class="viewer-body">
     <div class="viewer-stage"><div class="vpins"></div></div>${ch ? `
+    <select class="viewer-ver" aria-label="Version on screen" hidden></select>
     <aside class="iter" id="iter-panel" aria-labelledby="iter-h">
       <div class="iter-head"><h2 id="iter-h">Changes</h2><span class="iter-sub"></span><button type="button" class="ibtn quiet iter-close" data-viewer="changes" aria-label="Hide changes">${icon("x")}</button></div>
       <p class="iter-empty" hidden>The listing photo stays as photographed. Pick a scope above to change its redesign.</p>
