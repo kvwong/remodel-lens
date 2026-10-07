@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
-import sharp from "sharp";
+import { imagePreview } from "../image-cache.js";
 import { z } from "zod";
 
 import { loadEnv, requireKeys, resolveModels } from "../config.js";
@@ -148,18 +148,16 @@ async function sendFile(res: ServerResponse, file: string | null) {
   res.end(await readFile(file));
 }
 
-const thumbCache = new Map<string, Buffer>();
 async function sendThumb(res: ServerResponse, file: string | null, width: number) {
   if (!file || !existsSync(file)) return send(res, 404, { error: "Not found" });
-  const { mtimeMs } = await stat(file);
-  const key = `${file}:${width}:${mtimeMs}`;
-  let thumb = thumbCache.get(key);
-  if (!thumb) {
-    thumb = await sharp(file).rotate().resize({ width, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer();
-    thumbCache.set(key, thumb);
+  const preview = await imagePreview(file, width);
+  const etag = `"${preview.version}-${preview.width}-v1"`;
+  const headers = { "cache-control": "private, max-age=0, must-revalidate", etag };
+  if (res.req.headers["if-none-match"] === etag) {
+    res.writeHead(304, headers); return res.end();
   }
-  res.writeHead(200, { "content-type": "image/webp", "cache-control": "max-age=3600" });
-  res.end(thumb);
+  res.writeHead(200, { ...headers, "content-type": "image/webp" });
+  res.end(preview.bytes);
 }
 
 function listingJson(listing: Listing, runs: RunSummary[]) {
@@ -255,6 +253,7 @@ async function freshReport(runDir: string): Promise<string | null> {
     return renderReport({
       ...input,
       changes: { api: `/api/runs/${runPath}`, originals: input.originals, versions: input.versions },
+      previewBase: `/thumb/runs/${runPath}`,
       backHref: `/?listing=${encodeURIComponent(input.listingId)}`,
       pdf: { summary: `${pdfBase}?detail=summary`, full: `${pdfBase}?detail=full` },
     });

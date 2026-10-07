@@ -514,11 +514,18 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
 
 /* ---------- Pieces ---------- */
 
+/** App previews keep the same aspect ratio; full source remains the viewer target. */
+export function previewAttributes(src: string, base?: string): string {
+  if (!base) return `src="${esc(src)}"`;
+  const url = `${base}/${src.split("/").map(encodeURIComponent).join("/")}`;
+  return `src="${esc(url)}?w=960" srcset="${esc(url)}?w=480 480w, ${esc(url)}?w=960 960w, ${esc(url)}?w=1600 1600w" sizes="(max-width: 700px) 100vw, 50vw"`;
+}
+
 /** Clickable image that opens the viewer; every image of one room shares a group for ←/→ comparison. */
-function zoomable(input: { src: string; alt: string; group: string; label: string; status?: Status; eager?: boolean; room?: string; tier?: Tier; version?: string; edit?: boolean }): string {
+function renderZoomable(input: { previewBase?: string | undefined; src: string; alt: string; group: string; label: string; status?: Status; eager?: boolean; room?: string; tier?: Tier; version?: string; edit?: boolean }): string {
   const iter = input.room && input.tier ? ` data-room="${esc(input.room)}" data-tier="${input.tier}" data-version="${esc(input.version ?? ORIGINAL)}"` : "";
   return `<button class="zoom" type="button" data-group="${esc(input.group)}" data-src="${esc(input.src)}" data-label="${esc(input.label)}"${input.status ? ` data-status="${input.status}"` : ""}${iter} aria-label="${input.edit ? "Open and change" : "Enlarge"} ${esc(input.label)}">
-      <img src="${esc(input.src)}" alt="${esc(input.alt)}" loading="${input.eager ? "eager" : "lazy"}" decoding="async">
+      <img ${previewAttributes(input.src, input.previewBase)} alt="${esc(input.alt)}" loading="${input.eager ? "eager" : "lazy"}" decoding="async">
     </button>`;
 }
 
@@ -601,6 +608,7 @@ export function largestCosts(photos: PhotoResult[], tier: Tier, limit = 4): Arra
 
 export function renderReport(input: {
   title: string;
+  previewBase?: string;
   photos: PhotoResult[];
   profileSummary: string;
   location?: string | null;
@@ -612,6 +620,7 @@ export function renderReport(input: {
   /** Spot changes; only the app can make them, so static reports omit this. `photos` already has each room's pick applied. */
   changes?: { api: string; originals: PhotoResult[]; versions: VersionsFile } | null;
 }): string {
+  const zoomable = (shot: Parameters<typeof renderZoomable>[0]) => renderZoomable({ ...shot, previewBase: input.previewBase });
   const photos = input.photos;
   const tiers = [...new Set(photos.flatMap((p) => p.tiers.map((t) => t.tier)))].sort((a, b) => TIER_RANK[a] - TIER_RANK[b]);
   const totals = listingTotals(photos);
@@ -685,7 +694,7 @@ export function renderReport(input: {
         <thead><tr><th scope="col">Room</th>${tiers.map((t) => `<th scope="col">${tierName(t)}</th>`).join("")}</tr></thead>
         <tbody>${photos.map((p) => `
           <tr>
-            <th scope="row"><a class="room-link" href="#${p.id}"><img class="room-thumb" src="${esc(p.original)}" alt="" width="64" height="48" loading="lazy" decoding="async"><span>${esc(roomName(p))}</span></a></th>
+            <th scope="row"><a class="room-link" href="#${p.id}"><img class="room-thumb" src="${esc(input.previewBase ? `${input.previewBase}/${p.original.split("/").map(encodeURIComponent).join("/")}?w=160` : p.original)}" alt="" width="64" height="48" loading="lazy" decoding="async"><span>${esc(roomName(p))}</span></a></th>
             ${tiers.map((tier) => {
               const t = p.tiers.find((x) => x.tier === tier);
               const cost = t ? planCost(t.plan) : null;

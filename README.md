@@ -322,3 +322,17 @@ continuous motion on transforms; measure layout outside the animation clock.
 npm run check
 npm test
 ```
+
+### Image performance
+
+App reports use responsive WebP previews; the image viewer keeps the full original
+for zooming and editing. Preview derivatives and prepared generation inputs are
+cached in `.runs/.image-cache/` and reused after restarts. The memory cache is
+limited to 32 MiB, and simultaneous conversions of the same image share one job.
+Source changes invalidate previews. This cache is disposable and regenerates on
+demand; it does not replace listing photos or generated originals.
+
+New redesign runs write per-stage wall times to `timings/` inside the run folder,
+including preparation, inventory, planning, generation, and verification. Generation
+times include waiting for an API slot and retries. These measurements do not reduce
+AI image quality or change the report's PDF export behavior.

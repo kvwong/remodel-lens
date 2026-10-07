@@ -8,6 +8,20 @@ import { planRedesign, type ChangePlan } from "./plan.js";
 import { allowedAt, type Tier } from "./tiers.js";
 import { edgeChecks, judge, verdict, type EdgeCheck, type JudgeResult, type Verdict } from "./verify.js";
 
+/** Includes queueing and retries in wall time; records failures as well as successes. */
+async function timedStage<T>(outDir: string, stage: string, operation: () => Promise<T>): Promise<T> {
+  const startedAt = new Date().toISOString();
+  const start = performance.now();
+  let status = "error";
+  try { const value = await operation(); status = "success"; return value; }
+  finally {
+    const durationMs = Math.round(performance.now() - start);
+    log(`${stage}: ${durationMs}ms (${status})`);
+    await writeJson(outDir, `timings/${stage}.json`, { stage, startedAt, durationMs, status })
+      .catch(error => log(`Could not save timing: ${String(error)}`));
+  }
+}
+
 export type TierResult = {
   tier: Tier;
   plan: ChangePlan;
@@ -68,12 +82,12 @@ async function redesignPhoto(input: {
 }): Promise<PhotoResult | null> {
   const { photo, profile, models, outDir, location } = input;
   if (isCancelled()) return null;
-  const prepared = await prepareImage(photo.bytes);
+  const prepared = await timedStage(outDir, `${photo.id}/prepare`, () => prepareImage(photo.bytes));
   const original = `${photo.id}/original.png`;
   await writeArtifact(outDir, original, prepared.png);
 
   log(`${photo.id}: inventorying ${photo.basename}`);
-  const inventory = await inventoryRoom({ ...photo, bytes: prepared.png, mediaType: "image/png" }, models.planner ?? models.reasoning);
+  const inventory = await timedStage(outDir, `${photo.id}/inventory`, () => inventoryRoom({ ...photo, bytes: prepared.png, mediaType: "image/png" }, models.planner ?? models.reasoning));
   await writeJson(outDir, `${photo.id}/inventory.json`, inventory);
   progressDone(UNITS.inventory, `${photo.basename}: inventoried`);
 
@@ -124,7 +138,7 @@ async function redesignTier(input: {
   const dir = `${photo.id}/${tier}`;
 
   log(`${photo.id} ${tier}: planning`);
-  const plan = await planRedesign({ inventory, profile, tier, model: models.planner ?? models.reasoning, location });
+  const plan = await timedStage(outDir, `${photo.id}/${tier}/plan`, () => planRedesign({ inventory, profile, tier, model: models.planner ?? models.reasoning, location }));
   await writeJson(outDir, `${dir}/plan.json`, plan);
   spend(budget, UNITS.plan, `${photo.basename} ${tier}: planned`);
   const warnings: string[] = [];
@@ -161,16 +175,16 @@ async function redesignTier(input: {
     }
     const prompt = editPrompt({ inventory, plan, profile, feedback });
     await writeArtifact(outDir, `${dir}/prompt-${attempt}.txt`, prompt);
-    const redesign = await editImage({ model: models.image, image: prepared.png, mask: useMask ? mask : null, prompt });
+    const redesign = await timedStage(outDir, `${dir}/generate-${attempt}`, () => editImage({ model: models.image, image: prepared.png, mask: useMask ? mask : null, prompt }));
     const image = `${dir}/redesign-${attempt}.png`;
     await writeArtifact(outDir, image, redesign);
 
     spend(budget, UNITS.generate, `${photo.basename} ${tier}: generated (attempt ${attempt})`);
     log(`${photo.id} ${tier}: verifying`);
-    const [edges, judgement] = await Promise.all([
+    const [edges, judgement] = await timedStage(outDir, `${dir}/verify-${attempt}`, () => Promise.all([
       edgeChecks(prepared.png, redesign, inventory),
       judge({ model: models.reasoning, original: prepared.png, redesign, inventory, plan }),
-    ]);
+    ]));
     const result = verdict(edges, judgement);
     await writeJson(outDir, `${dir}/verify-${attempt}.json`, { ...result, edges, judgement });
     last = { status: result.verdict, reasons: result.reasons, attempts: attempt, image, edges, judgement };

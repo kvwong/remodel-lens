@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
@@ -51,6 +51,9 @@ describe("redesign scheduling", () => {
       outDir,
     });
     expect(gate.peak).toBe(6);
+    const timing = JSON.parse(await readFile(path.join(outDir, "timings/a/major/generate-1.json"), "utf8"));
+    expect(timing.status).toBe("success");
+    expect(timing.durationMs).toBeGreaterThanOrEqual(0);
     expect(results.map((r) => r.tiers.map((t) => `${t.tier}:${t.status}`))).toEqual([
       ["cosmetic:verified", "moderate:verified", "major:verified"],
       ["cosmetic:verified", "moderate:verified", "major:verified"],

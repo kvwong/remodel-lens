@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { cachedImage } from "../image-cache.js";
 import sharp from "sharp";
 
 import type { BoxTuple, RoomInventory } from "../listing/inventory.js";
@@ -52,12 +54,12 @@ export function editableBoxes(inventory: RoomInventory, plan: ChangePlan): BoxTu
 
 /** Resize the listing photo to an API-friendly PNG; the mask must share these exact dimensions. */
 export async function prepareImage(bytes: Uint8Array): Promise<{ png: Buffer; width: number; height: number }> {
-  const { data, info } = await sharp(bytes)
-    .rotate()
+  const key = `prepared-png-v1:${MAX_EDGE}:${createHash("sha256").update(bytes).digest("hex")}`;
+  const data = await cachedImage(key, () => sharp(bytes).rotate()
     .resize({ width: MAX_EDGE, height: MAX_EDGE, fit: "inside", withoutEnlargement: true })
-    .png()
-    .toBuffer({ resolveWithObject: true });
-  return { png: data, width: info.width, height: info.height };
+    .png().toBuffer());
+  const info = await sharp(data).metadata();
+  return { png: data, width: info.width!, height: info.height! };
 }
 
 /**
