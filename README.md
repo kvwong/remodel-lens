@@ -11,7 +11,7 @@ for architecture and roadmap details.
 
 - Node.js 22 or newer and npm.
 - API keys for OpenAI and Anthropic to use the default models. Image generation
-  always uses OpenAI. You can start the local app without keys, but you need
+  can use direct OpenAI or OpenRouter. You can start the local app without keys, but you need
   the required keys to rebuild taste rules or generate redesigns.
 
 ### Install and configure
@@ -83,10 +83,48 @@ The app opens on **Home**, with a reel of redesigned photos and the five most
 recent reports. Click the Whim logo to return there. On a phone, the bottom bar
 has **Home**, **Listings**, **Tastes**, **Reports**, and **Settings**.
 
+Drag or swipe the reel to browse photos, or use its pause/play button to
+control the automatic drift. Hovering or keyboard-focusing a photo brings it
+forward and blurs its neighbors. With reduced motion enabled on your device,
+the reel stays still until you browse it manually.
+
 **Reports** collects reports across your listings, newest first. Each listing
 also keeps its own past runs. The sun/moon switch follows your device's
 appearance by default; a manual light/dark choice lasts for the current tab
 session. The logo and favicon adapt to the selected mode.
+
+## OpenRouter image models
+
+In **Settings → API keys**, save and check an OpenRouter key. Under **Models**,
+choose **Image provider → OpenRouter**, select **FLUX.2 Klein 4B** or **FLUX.2 Pro**,
+then **Save models**. For another image-editing model, choose **Other model ID**
+and enter its OpenRouter slug, such as `black-forest-labs/flux.2-klein-4b`.
+Reasoning and reference analysis also offer OpenRouter options: Qwen3.8 27B,
+Mistral Small 3.2 24B, and Qwen3 VL 235B A22B. These accept photo inputs and
+structured output. OpenRouter models use their provider default thinking settings;
+the effort slider applies only to supported direct-provider models. Choose them
+independently of the image provider. Current defaults remain OpenAI/Anthropic.
+
+The adapter sends the source photo first, then revision references, through the
+[OpenRouter Image API](https://openrouter.ai/docs/guides/overview/multimodal/image-generation).
+It checks endpoint capabilities before generation, enforces reference limits,
+chooses the closest supported aspect ratio, and normalizes outputs to PNG. It
+uses 1K when a resolution control is supported; otherwise the provider default
+applies. FLUX Klein accepts four images total, including the source and any pin
+markup. Generation is prompt-based without a mask. Existing architecture checks
+and automatic quality retries still apply.
+
+The selected route is recorded with each run; revisions retain that model even
+after Settings changes. CLI configuration uses
+`IMAGE_MODEL=openrouter/black-forest-labs/flux.2-klein-4b` and `OPENROUTER_API_KEY`.
+The in-app dollar estimates remain approximate constants, not OpenRouter billing.
+Compare using the same photos, scopes, and profile, for example:
+
+```bash
+npm run tune -- compare listings/your-listing --models gpt-image-2.5-sunburst,openrouter/black-forest-labs/flux.2-klein-4b --profile profiles/your-profile/profile.json --tiers cosmetic --max 3
+```
+
+This comparison makes paid calls to both providers.
 
 ## Create a taste profile
 
@@ -168,6 +206,10 @@ listing. Label rooms (for example, `kitchen` or `den`), choose which photos to
 redesign, select a taste profile, and choose the budget tiers: **Cosmetic**,
 **Finishes**, or **Structural**.
 
+Use **Done** to collapse the photo grid into a stack; click the stack to show
+the grid again. Smaller screens show fewer whole thumbnails, and the stack
+reserves room for its hover fan so it stays clear of neighboring controls.
+
 You can also import photos from a local folder using the CLI. Replace the
 example path, ID, and name with your own:
 
@@ -186,9 +228,16 @@ again with the same ID.
 
 ## Generate a redesign
 
-In the app, open the listing and choose **Run redesign**. The report opens when
-the run finishes. Each room includes before-and-after images by tier, a change
-list with cost bands, and a verification status.
+In the app, open the listing, select the photos and taste profile, and check
+at least one renovation scope. Scopes start unchecked unless the page URL
+already includes a scope selection. **Run redesign** stays disabled until you
+choose a scope.
+
+The app shows the number of redesigns and an approximate duration before you
+start: five selected photos across two scopes produce ten redesigns. Choose
+**Run redesign**, review the confirmation, then choose **Start run**. The report
+opens when the run finishes. Each room includes before-and-after images by
+tier, a change list with cost bands, and a verification status.
 
 Each photo's selected scopes run in parallel after its room inventory is
 complete. The app shares the **Image edits at once** limit across running
@@ -308,15 +357,38 @@ and `.env`, in that order. Env files live in the repository root.
 | `EDGE_THRESHOLD` | `0.45` | Minimum edge correlation for a fixed element to pass. See [Tune verification](#tune-verification). |
 | `PORT` | `4310` | Local app port. |
 
-## Development checks
+## UI motion and layout
 
-UI motion uses the locally installed [Motion](https://motion.dev/docs/animate) bundle, shared by the app and embedded
-in generated HTML reports so animations also work when a report is opened from
-disk. `src/app/motion.js` owns timing, interruption, reduced motion, and cleanup
-when a view is removed. CSS `--motion` declarations list the properties and
-durations to animate between hover, focus, pressed, and other state destinations.
-Use `whimMotion.animate()` or a tracked sequence for coordinated interactions. Keep
-continuous motion on transforms; measure layout outside the animation clock.
+The app and generated HTML reports use the locally installed
+[Motion](https://motion.dev/docs/animate) bundle. The animation code is embedded
+in generated reports, so it works when the HTML is opened from disk without
+loading an animation library from a CDN. Report photos still live alongside
+the HTML in the run folder.
+
+[The shared runtime](src/app/motion.js) owns timing, interruption, reduced
+motion, and cleanup when a view is removed. [The bundle loader](src/motion.ts)
+supplies the same runtime to the app and [report renderer](src/report.ts).
+CSS `--motion` declarations in the app and report styles specify properties
+and durations for hover, focus, pressed, and selection feedback. Use
+`whimMotion.animate()` or `whimMotion.sequence()` for coordinated interactions
+such as photo-grid expansion, dialogs, progress bars, and report tabs.
+
+Native Motion CSS animations handle transforms, opacity, and the reel's bokeh
+filters. Motion also handles CSS variables and numeric values; the reel uses
+its shared frame loop. Continuous motion pauses when the tab is hidden, and
+reduced-motion preferences apply to ongoing animations and loading spinners.
+
+Photo stacks reserve their full hover footprint at rest. Listing stacks use
+container queries to show whole thumbnails that fit the panel; report previews
+leave space between the expanded fan and the report action. Keep continuous
+movement on transforms and measure layout outside the frame loop rather than
+animating thumbnail margins.
+
+After changing the shared runtime or bundle loader, restart the app and reload
+the page. Wait for active redesigns or taste rebuilds to finish before
+restarting.
+
+## Development checks
 
 ```bash
 npm run check

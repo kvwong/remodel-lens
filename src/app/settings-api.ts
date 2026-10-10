@@ -16,6 +16,7 @@ import { collectAttempts, LABELS_FILE, readLabels, setLabel } from "../tune/coll
 export const PROVIDERS = {
   openai: { name: "OpenAI", env: "OPENAI_API_KEY", url: "https://platform.openai.com/api-keys" },
   anthropic: { name: "Anthropic", env: "ANTHROPIC_API_KEY", url: "https://console.anthropic.com/settings/keys" },
+  openrouter: { name: "OpenRouter", env: "OPENROUTER_API_KEY", url: "https://openrouter.ai/settings/keys" },
 } as const;
 type Provider = keyof typeof PROVIDERS;
 
@@ -24,11 +25,16 @@ export const MODEL_OPTIONS = {
     { id: "openai/gpt-6.1-sol", label: "GPT-6.1 Sol", note: "OpenAI." },
     { id: "anthropic/claude-sonnet-5-5", label: "Claude Sonnet 5.5", note: "Anthropic." },
     { id: "anthropic/claude-opus-5-5", label: "Claude Opus 5.5", note: "Anthropic. Most capable, slower and pricier." },
+    { id: "openrouter/qwen/qwen3.8-27b", label: "Qwen3.8 27B · OpenRouter", note: "Open weights. Recommended first vision/planning comparison. Uses the provider's default thinking settings." },
+    { id: "openrouter/mistralai/mistral-small-3.2-24b-instruct", label: "Mistral Small 3.2 24B · OpenRouter", note: "Open weights. Budget comparison for photo analysis and structured planning." },
+    { id: "openrouter/qwen/qwen3-vl-235b-a22b-instruct", label: "Qwen3 VL 235B A22B · OpenRouter", note: "Open weights. Larger vision model for challenging rooms and architecture checks." },
   ],
   image: [
     { id: "gpt-image-2.5-sunburst", label: "gpt-image-2.5-sunburst", note: "Most precise edits." },
     { id: "gpt-image-2.5-flare", label: "gpt-image-2.5-flare", note: "Same price, faster, less precise." },
     { id: "gpt-image-2", label: "gpt-image-2", note: "Older. Edits through a mask." },
+    { id: "openrouter/black-forest-labs/flux.2-klein-4b", label: "FLUX.2 Klein 4B · Open weights", note: "Recommended first image comparison. Fast, low-cost edits; up to four input images. Uses provider default output size." },
+    { id: "openrouter/black-forest-labs/flux.2-pro", label: "FLUX.2 Pro · Hosted commercial", note: "Commercial hosted model. Higher-quality comparison; uses 1K when supported." },
   ],
 };
 
@@ -53,7 +59,7 @@ export function settingsView() {
     keysError = (error as Error).message;
   }
   return {
-    keys: { openai: keyView("openai", settings), anthropic: keyView("anthropic", settings) },
+    keys: { openai: keyView("openai", settings), anthropic: keyView("anthropic", settings), openrouter: keyView("openrouter", settings) },
     keysError,
     models: {
       // The pickers list ids without the effort suffix; effort has its own control.
@@ -83,7 +89,7 @@ export function settingsView() {
 
 const Clearable = <T extends z.ZodType>(schema: T) => schema.nullable().optional();
 export const SettingsPatch = z.object({
-  keys: z.object({ openai: Clearable(z.string().trim().max(500)), anthropic: Clearable(z.string().trim().max(500)) }).optional(),
+  keys: z.object({ openai: Clearable(z.string().trim().max(500)), anthropic: Clearable(z.string().trim().max(500)), openrouter: Clearable(z.string().trim().max(500)) }).optional(),
   models: z
     .object({
       reasoning: Clearable(z.string().trim().max(100)),
@@ -131,14 +137,16 @@ export async function updateSettings(body: unknown) {
   return settingsView();
 }
 
-/** Lists models with the key: free, and proves the key is live without spending anything. */
+/** Checks provider authentication without generating anything or incurring inference costs. */
 export async function testKey(provider: Provider, typed?: string): Promise<{ ok: boolean; message: string }> {
   const key = typed?.trim() || process.env[PROVIDERS[provider].env];
   if (!key) return { ok: false, message: "No key to check yet." };
   const request: { url: string; headers: Record<string, string> } =
     provider === "openai"
       ? { url: "https://api.openai.com/v1/models", headers: { authorization: `Bearer ${key}` } }
-      : { url: "https://api.anthropic.com/v1/models", headers: { "x-api-key": key, "anthropic-version": "2023-06-01" } };
+      : provider === "openrouter"
+        ? { url: "https://openrouter.ai/api/v1/key", headers: { authorization: `Bearer ${key}` } }
+        : { url: "https://api.anthropic.com/v1/models", headers: { "x-api-key": key, "anthropic-version": "2023-06-01" } };
   try {
     const res = await fetch(request.url, { headers: request.headers, signal: AbortSignal.timeout(10_000) });
     if (res.ok) return { ok: true, message: `${PROVIDERS[provider].name} accepted this key.` };

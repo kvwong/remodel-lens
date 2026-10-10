@@ -10,6 +10,7 @@ import { splitEffort, supportsEffort } from "./effort.js";
 export { splitEffort } from "./effort.js";
 
 function providerOptions(model: string) {
+  if (model.startsWith("openrouter/")) return undefined;
   const { effort } = splitEffort(model);
   return { openai: { reasoningEffort: effort }, anthropic: supportsEffort(model) ? { effort } : {} };
 }
@@ -19,7 +20,8 @@ function languageModel(model: string): LanguageModel {
   const id = rest.join("/");
   if (provider === "openai") return createOpenAI({ apiKey: process.env.OPENAI_API_KEY })(id);
   if (provider === "anthropic") return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(id);
-  throw new Error(`Unsupported model "${model}". Use an openai/… or anthropic/… id.`);
+  if (provider === "openrouter") return createOpenAI({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: "https://openrouter.ai/api/v1", name: "openrouter" }).chat(id);
+  throw new Error(`Unsupported model "${model}". Use an openai/…, anthropic/…, or openrouter/<organization>/<model> id.`);
 }
 
 function content(prompt: string, images: ImageInput[]): UserContent {

@@ -523,7 +523,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       if (req.method === "PATCH") return send(res, 200, await updateSettings(await readBody(req)));
     }
     if (req.method === "POST" && parts[1] === "settings" && parts[2] === "test-key" && parts.length === 3) {
-      const body = z.object({ provider: z.enum(["openai", "anthropic"]), key: z.string().max(500).optional() }).parse(await readBody(req));
+      const body = z.object({ provider: z.enum(["openai", "anthropic", "openrouter"]), key: z.string().max(500).optional() }).parse(await readBody(req));
       return send(res, 200, await testKey(body.provider, body.key));
     }
     if (req.method === "GET" && parts[1] === "tuning" && parts.length === 2) {
@@ -542,7 +542,8 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         const body = ChangeBody.parse(JSON.parse((await readRaw(req, 40_000_000)).toString("utf8") || "{}"));
         const models = resolveModels();
         try {
-          requireKeys({ ...models, analysis: [] }); // a change only plans, edits, and judges
+          const run = JSON.parse(await readFile(path.join(runDir, "run.json"), "utf8"));
+          requireKeys({ ...models, image: run.imageModel ?? models.image, analysis: [] });
         } catch (error) {
           return send(res, 400, { error: (error as Error).message });
         }

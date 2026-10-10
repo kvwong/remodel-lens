@@ -1,4 +1,5 @@
 import OpenAI, { toFile } from "openai";
+import { editOpenRouterImage } from "./openrouter.js";
 
 import type { RoomInventory } from "../listing/inventory.js";
 import { createLimiter } from "../files.js";
@@ -60,7 +61,7 @@ export function editPrompt(input: {
  * they get prompt-only edits; older GPT image models still get the mask.
  */
 export function supportsMask(model: string): boolean {
-  return !/^gpt-image-2\.5/.test(model);
+  return !/^gpt-image-2\.5/.test(model) && !model.startsWith("openrouter/");
 }
 
 export const DEFAULT_IMAGE_CONCURRENCY = 6;
@@ -82,6 +83,7 @@ export async function editImage(input: {
   /** Extra images after the one being edited (a marked-up copy, reference photos). They're context only; image 1 is edited. */
   references?: Buffer[];
 }): Promise<Buffer> {
+  if (input.model.startsWith("openrouter/")) return imageSlots(() => editOpenRouterImage(input));
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const response = await imageSlots(() => withRetries(async () =>
     client.images.edit({

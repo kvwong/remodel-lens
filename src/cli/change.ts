@@ -37,7 +37,8 @@ async function main() {
   const runDir = path.resolve(dir);
   const [tier] = parseTiers(scope);
   const models = resolveModels();
-  requireKeys({ ...models, analysis: [] }); // a change only plans, edits, and judges
+  const run = JSON.parse(await readFile(path.join(runDir, "run.json"), "utf8"));
+  requireKeys({ ...models, image: run.imageModel ?? models.image, analysis: [] });
   // Default to the version the report currently uses, the one you'd be looking at.
   const from = values.from ?? (await readVersions(runDir)).picks[pickKey(photoId, tier!)] ?? ORIGINAL;
   const { id, work } = await startChange({

@@ -14,17 +14,17 @@ import { COST_ITEMS, GRADES } from "./pricing/catalog.js";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SETTINGS_FILE = path.join(ROOT, ".settings.json");
 
-const ModelId = z.string().trim().regex(/^(openai|anthropic)\/[\w.:-]+$/, "Use an openai/… or anthropic/… model id.");
+const ModelId = z.string().trim().regex(/^(?:(?:openai|anthropic)\/[\w.:-]+|openrouter\/\w[\w.:-]*\/\w[\w.:-]*)$/, "Use an openai/…, anthropic/…, or openrouter/<organization>/<model> id.");
 const Factor = z.number().finite().gt(0).max(10);
 const UnitCost = z.object({ low: z.number().finite().min(0), high: z.number().finite().min(0) }).refine((c) => c.high >= c.low, "High must be at least low.");
 
 export const Settings = z.object({
-  keys: z.object({ openai: z.string().optional(), anthropic: z.string().optional() }).default({}),
+  keys: z.object({ openai: z.string().optional(), anthropic: z.string().optional(), openrouter: z.string().optional() }).default({}),
   models: z
     .object({
       reasoning: ModelId.optional(),
       analysis: z.array(ModelId).min(1).max(4).optional(),
-      image: z.string().trim().regex(/^[\w.:-]+$/).max(100).optional(),
+      image: z.string().trim().regex(/^(?:[\w.:-]+|openrouter\/\w[\w.:-]*\/\w[\w.:-]*)$/).max(100).optional(),
       imageConcurrency: z.number().int().min(1).max(16).optional(),
       reasoningEffort: z.enum(EFFORTS).optional(),
       analysisEffort: z.enum(EFFORTS).optional(),
@@ -46,6 +46,7 @@ export type Settings = z.infer<typeof Settings>;
 const ENV = {
   OPENAI_API_KEY: (s: Settings) => s.keys.openai,
   ANTHROPIC_API_KEY: (s: Settings) => s.keys.anthropic,
+  OPENROUTER_API_KEY: (s: Settings) => s.keys.openrouter,
   REASONING_MODEL: (s: Settings) => s.models.reasoning,
   ANALYSIS_MODELS: (s: Settings) => s.models.analysis?.join(","),
   IMAGE_MODEL: (s: Settings) => s.models.image,

@@ -32,7 +32,7 @@ export type Models = {
   reasoning: string;
   /** Overrides reasoning for room inventory and redesign planning only (PLANNER_MODEL, or `npm run tune -- compare --planners`). */
   planner?: string;
-  /** OpenAI image edit model. */
+  /** Direct OpenAI id, or openrouter/<organization>/<model>. Kept in run metadata for revisions. */
   image: string;
 };
 
@@ -65,10 +65,11 @@ export function resolveModels(): Models {
 }
 
 export function requireKeys(models: Models): void {
-  const needed = new Set<string>(["OPENAI_API_KEY"]); // image edits always go through OpenAI
+  const needed = new Set<string>([models.image.startsWith("openrouter/") ? "OPENROUTER_API_KEY" : "OPENAI_API_KEY"]);
   for (const model of [...models.analysis, models.reasoning, ...(models.planner ? [models.planner] : [])]) {
     if (model.startsWith("anthropic/")) needed.add("ANTHROPIC_API_KEY");
     if (model.startsWith("openai/")) needed.add("OPENAI_API_KEY");
+    if (model.startsWith("openrouter/")) needed.add("OPENROUTER_API_KEY");
   }
   const missing = [...needed].filter((key) => !process.env[key]);
   if (missing.length > 0) {

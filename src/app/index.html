@@ -2628,7 +2628,8 @@ function renderKeys() {
     const ends = k.hint && k.hint !== "…" ? ` · ends in ${esc(k.hint.slice(1))}` : "";
     const status = k.source === "settings" ? `Saved${ends}` : k.source === "environment" ? `From .env.local${ends}`
       : id === "anthropic" && !needsAnthropic ? "Not needed with the current models" : "Not set";
-    const purpose = id === "openai" ? "Always needed. It makes the image edits."
+    const purpose = id === "openai" ? "Used for OpenAI models and direct OpenAI image edits."
+      : id === "openrouter" ? "Needed for OpenRouter image, reasoning, or reference analysis models."
       : needsAnthropic ? "Needed for the Claude model picked under Models." : "Needed only if you pick a Claude model under Models.";
     return `<form class="setting-row" data-key-form="${id}" novalidate>
       <div class="setting-label"><label for="key-${id}">${esc(k.name)}</label><p>${purpose} <a href="${esc(k.url)}" target="_blank" rel="noopener">Get a key</a></p></div>
@@ -2647,7 +2648,7 @@ function renderKeys() {
   $("#settings-keys").innerHTML = `<div class="panel-head"><h2 id="keys-h">API keys</h2>
     <p class="hint">Keys stay on this computer and are sent only to their own provider. Once saved, only the last four characters are shown. Everything on this page is stored in <code>.settings.json</code> and replaces the same value in <code>.env.local</code>.</p></div>
     ${s.keysError ? `<p class="notice">${esc(s.keysError.replace(/ Add (it|them) on.*$/, ""))}</p>` : ""}
-    ${row("openai")}${row("anthropic")}`;
+    ${row("openai")}${row("anthropic")}${row("openrouter")}`;
 }
 
 async function checkKey(id) {
@@ -2685,7 +2686,7 @@ function modelSelect(id, options, current, defaultId) {
       ${options.map((o) => `<option value="${esc(o.id)}" ${o.id === current ? "selected" : ""}>${esc(o.label)}${o.id === defaultId ? " · default" : ""}</option>`).join("")}
       <option value="${OTHER}" ${known ? "" : "selected"}>Other model ID…</option>
     </select>
-    <input class="settings-input" type="text" id="${id}-other" value="${known ? "" : esc(current)}" ${known ? "hidden" : ""} spellcheck="false" autocomplete="off" aria-label="Model ID" placeholder="${id === "image-model" ? "e.g. gpt-image-2" : "openai/… or anthropic/…"}">`;
+    <input class="settings-input" type="text" id="${id}-other" value="${known ? "" : esc(current)}" ${known ? "hidden" : ""} spellcheck="false" autocomplete="off" aria-label="Model ID" placeholder="${id === "image-model" ? "e.g. gpt-image-2" : "openai/…, anthropic/…, or openrouter/org/model"}">`;
 }
 
 const EFFORT_LEVELS = [
@@ -2747,6 +2748,8 @@ function syncEffortSupport() {
 
 function renderModels() {
   const m = state.settings.models;
+  const imageProvider = m.current.image.startsWith("openrouter/") ? "openrouter" : "openai";
+  const imageOptions = m.options.image.filter(o => o.id.startsWith("openrouter/") === (imageProvider === "openrouter"));
   const notes = (options, current) => options.find((o) => o.id === current)?.note ?? "";
   const analysisOptions = [...m.options.reasoning];
   for (const id of m.current.analysis) if (!analysisOptions.some((o) => o.id === id)) analysisOptions.push({ id, label: id });
@@ -2770,14 +2773,20 @@ function renderModels() {
         </div>
       </fieldset>
       <div class="setting-row">
-        <div class="setting-label"><label for="image-model">Image model</label><p>Makes the redesigned photos. Always OpenAI.</p></div>
+        <div class="setting-label"><label for="image-provider">Image provider</label><p>Where room photos and edit instructions are sent to generate redesigns. Planning and verification keep their selected models.</p></div>
+        <div class="setting-control">
+          <select id="image-provider"><option value="openai" ${imageProvider === "openai" ? "selected" : ""}>OpenAI</option><option value="openrouter" ${imageProvider === "openrouter" ? "selected" : ""}>OpenRouter</option></select>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label"><label for="image-model">Image model</label><p>Makes the redesigned photos. OpenRouter matches the source aspect ratio as closely as the model supports; output size follows the provider default, or 1K when supported.</p></div>
         <div class="setting-control model-control">
-          ${modelSelect("image-model", m.options.image, m.current.image, m.defaults.image)}
+          <div id="image-model-picker">${modelSelect("image-model", imageOptions, m.current.image, m.defaults.image)}</div>
           <p class="control-note" data-model-note="image-model">${esc(notes(m.options.image, m.current.image))}</p>
         </div>
       </div>
       <div class="setting-row">
-        <div class="setting-label"><label for="image-concurrency">Image edits at once</label><p>How many redesigns generate side by side. Higher is faster; lower it if OpenAI starts rate-limiting.</p></div>
+        <div class="setting-label"><label for="image-concurrency">Image edits at once</label><p>How many redesigns generate side by side. Higher is faster; lower it if your image provider starts rate-limiting.</p></div>
         <div class="setting-control">
           <input class="settings-input num-input" type="number" id="image-concurrency" min="1" max="16" step="1" value="${m.imageConcurrency.current}" inputmode="numeric">
           <p class="control-note">Default ${m.imageConcurrency.default}</p>
@@ -2805,7 +2814,10 @@ async function saveModels(reset) {
   // Store only what differs from the defaults, so default changes in the code still reach this computer.
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const reasoning = selectedModel("reasoning-model");
-  const image = selectedModel("image-model");
+  let image = selectedModel("image-model");
+  const imageProvider = $("#image-provider").value;
+  if (imageProvider === "openrouter" && !image.startsWith("openrouter/")) image = `openrouter/${image}`;
+  if (!reset && imageProvider === "openai" && image.startsWith("openrouter/")) { err.textContent = "Choose OpenRouter to use this image model."; err.hidden = false; return; }
   const concurrency = Number($("#image-concurrency").value);
   if (!reset && !(Number.isInteger(concurrency) && concurrency >= 1 && concurrency <= 16)) { err.textContent = "Image edits at once must be a whole number from 1 to 16."; err.hidden = false; return; }
   const effort = (name) => {
@@ -3212,6 +3224,13 @@ document.addEventListener("submit", (event) => {
 });
 
 document.addEventListener("change", (event) => {
+  if (event.target.id === "image-provider") {
+    const options = state.settings.models.options.image.filter(o => o.id.startsWith("openrouter/") === (event.target.value === "openrouter"));
+    const current = options[0].id;
+    $("#image-model-picker").innerHTML = modelSelect("image-model", options, current, state.settings.models.defaults.image);
+    $('[data-model-note="image-model"]').textContent = options[0].note;
+    return;
+  }
   if (event.target.id === "reasoning-model-other" || event.target.matches?.('#models-form input[name="analysis"]')) return syncEffortSupport();
   const select = event.target.closest?.("[data-other-select]");
   if (!select) return;

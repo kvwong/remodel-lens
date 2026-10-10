@@ -16,7 +16,7 @@ export function withEffort(model: string, effort: Effort): string {
 }
 
 /** Anthropic models that reject the effort parameter. */
-export const NO_EFFORT = /^anthropic\/claude-haiku-4/;
+export const NO_EFFORT = /^(?:anthropic\/claude-haiku-4|openrouter\/)/;
 
 export function supportsEffort(model: string): boolean {
   return !NO_EFFORT.test(splitEffort(model).model);
