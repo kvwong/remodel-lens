@@ -24,6 +24,7 @@ ${detailHeaderStyles}</style>
 <script>window.renderPageHeader = ${renderPageHeader.toString()};</script>
 <meta name="application-name" content="Whim">
 <meta name="apple-mobile-web-app-title" content="Whim">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1">
 <link id="whim-favicon" rel="icon" type="image/svg+xml" sizes="any" href="${favicons.light}" data-light="${favicons.light}" data-dark="${favicons.dark}">
 <style>
   .whim-lockup { display:block; width:116px; height:28px; }
@@ -68,7 +69,7 @@ export const appearanceScript = `<script>
 
 export function brandAppHtml(template: string): string {
   return template
-    .replace("<!-- WHIM_HEAD -->", brandHead)
+    .replace("<!-- WHIM_HEAD -->", brandHead + '\n<link rel="manifest" href="/manifest.webmanifest">\n<meta name="apple-mobile-web-app-capable" content="yes">')
     .replace("<!-- WHIM_APPEARANCE -->", appearanceScript)
     .replace("<!-- WHIM_LOCKUP -->", brandLockup);
 }

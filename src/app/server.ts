@@ -334,6 +334,22 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
   const parts = url.pathname.split("/").filter(Boolean);
 
+  if (req.method === "GET" && url.pathname === "/manifest.webmanifest") {
+    res.writeHead(200, { "content-type": "application/manifest+json", "cache-control": "no-cache" });
+    return res.end(JSON.stringify({
+      id: "/", name: "Whim", short_name: "Whim", start_url: "/", scope: "/", display: "standalone",
+      background_color: "#f5f4f1", theme_color: "#f5f4f1",
+      icons: [192, 512].map((size) => ({ src: `/assets/brand/icon-${size}.png`, sizes: `${size}x${size}`, type: "image/png", purpose: "any" })),
+    }));
+  }
+  const appIcons: Record<string, string> = {
+    "/apple-touch-icon.png": "icon-180.png",
+    "/assets/brand/icon-192.png": "icon-192.png",
+    "/assets/brand/icon-512.png": "icon-512.png",
+  };
+  const appIcon = appIcons[url.pathname];
+  if (req.method === "GET" && appIcon) return sendFile(res, new URL(`./brand/${appIcon}`, import.meta.url).pathname);
+
   if (req.method === "GET" && url.pathname === "/assets/motion.js") {
     res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" });
     return res.end(motionScript);
