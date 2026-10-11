@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Local listing picker: npm run app → http://localhost:4310
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
@@ -48,6 +48,8 @@ const PORT = Number(process.env.PORT ?? 4310);
 // Listen on the LAN so the app can be opened from another device on the same Wi-Fi.
 const HOST = process.env.HOST ?? "0.0.0.0";
 const INDEX = path.join(path.dirname(new URL(import.meta.url).pathname), "index.html");
+// Pull to refresh for the iPhone home screen app; inert in a browser tab.
+const pullRefreshScript = readFileSync(new URL("./pull-refresh.js", import.meta.url), "utf8");
 
 function isAllowedRequestHost(host: string): boolean {
   // Explicit hostnames for private reverse proxies such as Tailscale Serve.
@@ -355,6 +357,10 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   if (req.method === "GET" && url.pathname === "/assets/motion.js") {
     res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" });
     return res.end(motionScript);
+  }
+  if (req.method === "GET" && url.pathname === "/assets/pull-refresh.js") {
+    res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" });
+    return res.end(pullRefreshScript);
   }
 
   // Writes must come from this page, not from another site in the same browser.

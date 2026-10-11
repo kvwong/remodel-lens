@@ -1419,7 +1419,7 @@ ${appearanceScript}
   </div>
 </dialog>
 
-<script>${motionScript}</script>
+<script>${motionScript}</script>${input.changes ? `\n<script src="/assets/pull-refresh.js"></script>` : ""}
 <script>
 (() => {
   const motion = window.whimMotion;
