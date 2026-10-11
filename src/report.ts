@@ -1006,15 +1006,19 @@ ${appearanceScript}
   @media(max-width:600px) { .album-facts { grid-template-columns:minmax(0,1fr); gap:12px; } }
   .album-summary > summary { cursor:pointer; font-size:14px; font-weight:500; }
   .album-summary p { max-width:70ch; color:var(--muted); font-size:14px; }
-  .scope-albums:has(> :nth-child(2)) .scope-link > .album-cover { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
-  .scope-albums:has(> :nth-child(2)) .scope-link .album-pile { width:calc(100% - 16px); max-width:none; aspect-ratio:3/2; }
-  @media(max-width:600px) { .scope-albums { gap:12px; } .scope-album > .album-cover { flex-wrap:wrap; gap:12px; } .album-pile { width:45%; margin:28px 8px; } .album-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .scope-album .plate-total { font-size:18px; } }
-  @media(max-width:600px) {
-    .album-copy .plate-sub { display:none; }
-    .scope-albums:has(> :nth-child(2)) { grid-template-columns:minmax(0,1fr); gap:24px; }
-    .scope-albums:has(> :nth-child(2)) .scope-link > .album-cover { grid-template-columns:104px minmax(0,1fr); gap:16px; align-items:center; padding-block:16px; }
-    .scope-albums:has(> :nth-child(2)) .album-pile { width:96px; aspect-ratio:4/3; margin:12px 4px; align-self:center; }
+  @media(min-width:601px) {
+    .scope-albums:has(> :nth-child(2)) .scope-link > .album-cover { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
+    .scope-albums:has(> :nth-child(2)) .scope-link .album-pile { width:calc(100% - 16px); max-width:none; aspect-ratio:3/2; }
   }
+  @media(max-width:600px) {
+    .scope-albums { grid-template-columns:minmax(0,1fr); gap:24px; }
+    .scope-album > .album-cover { flex-wrap:nowrap; gap:12px; align-items:center; }
+    .album-pile { width:45%; margin:28px 8px; }
+    .album-copy .plate-sub { display:none; }
+    .album-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .scope-album .plate-total { font-size:18px; }
+  }
+
   .plates { display:grid; gap:0 20px; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); }
   /* Each plate spans the same rows, so titles, totals, and tallies line up across all four. */
   .plate { margin:0; min-width:0; display:grid; grid-row:span 7; grid-template-rows:subgrid; align-content:start; }
