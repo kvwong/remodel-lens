@@ -956,15 +956,15 @@ ${appearanceScript}
   .album-pile { position:relative; display:block; width:42%; max-width:320px; aspect-ratio:4/3; flex:none; margin:12px 8px; }
   .album-pile { --pile-direction:1; }
   .scope-link:nth-child(even) .album-pile { --pile-direction:-1; }
-  .album-pile img { --angle:-5deg; --offset:-5%; --lift:3px; position:absolute; width:84%; height:100%; object-fit:cover; border:3px solid var(--surface); border-radius:12px; box-shadow:var(--shadow-hover); left:8%; transform:translateX(calc(var(--offset) * var(--pile-direction))) translateY(var(--lift)) rotate(calc(var(--angle) * var(--pile-direction))); --motion:transform 520ms cubic-bezier(.22,1,.36,1); }
-  .album-pile img:nth-child(2) { --angle:4deg; --offset:5%; --lift:-5px; }
-  .album-pile img:nth-child(3) { --angle:-3deg; --offset:-2.5%; --lift:6px; }
+  .album-pile img { --angle:-5.5deg; --offset:-5%; --lift:3px; position:absolute; width:84%; height:100%; object-fit:cover; border:3px solid var(--surface); border-radius:12px; box-shadow:var(--shadow-hover); left:8%; transform:translateX(calc(var(--offset) * var(--pile-direction))) translateY(var(--lift)) rotate(calc(var(--angle) * var(--pile-direction))); --motion:transform 300ms cubic-bezier(0,.18,.16,2); }
+  .album-pile img:nth-child(2) { --angle:5deg; --offset:5%; --lift:11px; }
+  .album-pile img:nth-child(3) { --angle:-2deg; --offset:-.5%; --lift:17px; }
   .album-pile img:nth-child(4) { --angle:2deg; --offset:2.5%; --lift:0px; }
   @media (hover:hover) and (prefers-reduced-motion:no-preference) {
-    .album-pile:hover img { --angle:-8deg; --offset:-7%; --lift:-3px; }
-    .album-pile:hover img:nth-child(2) { --angle:7deg; --offset:7%; --lift:-8px; }
-    .album-pile:hover img:nth-child(3) { --angle:-5deg; --offset:-3.5%; --lift:4px; }
-    .album-pile:hover img:nth-child(4) { --angle:3deg; --offset:3.5%; --lift:-1px; }
+    .album-pile:hover img { --angle:-13.5deg; --offset:-4%; --lift:-3px; }
+    .album-pile:hover img:nth-child(2) { --angle:7deg; --offset:7%; --lift:12px; }
+    .album-pile:hover img:nth-child(3) { --angle:-3.5deg; --offset:-1%; --lift:18px; }
+    .album-pile:hover img:nth-child(4) { --angle:0deg; --offset:3.5%; --lift:-1px; }
   }
   @media (prefers-reduced-motion:no-preference) {
     .album-pile:focus-visible img { --offset:calc((var(--i) - 1.5) * 3%); --lift:-3px; }
