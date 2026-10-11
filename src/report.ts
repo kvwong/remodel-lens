@@ -1197,7 +1197,6 @@ ${appearanceScript}
   .vbtn { font:inherit; font-size:13px; min-height:36px; padding:4px 12px; border-radius:8px; border:1px solid rgba(255,255,255,.22); background:transparent; color:inherit; cursor:pointer; }
   .vbtn[aria-pressed="true"] { background:#efede9; color:#0f0f0e; }
   .viewer-body { flex:1; min-height:0; display:flex; }
-  .viewer-load-status { position:absolute; z-index:4; left:50%; bottom:20px; transform:translateX(-50%); padding:8px 14px; border-radius:20px; background:rgba(0,0,0,.8); color:white; font-size:13px; pointer-events:none; }
   .viewer-stage { background-position:center; background-repeat:no-repeat; background-size:contain; position:relative; flex:1; min-width:0; min-height:0; overflow:auto; overscroll-behavior:contain; touch-action:none; display:flex; cursor:zoom-in; }
   .viewer-stage img { flex:none; margin:auto; max-width:100%; max-height:100%; object-fit:contain; display:block; user-select:none; -webkit-user-drag:none; -webkit-touch-callout:none; }
   .viewer-stage.actual { cursor:grab; } .viewer-stage.actual.dragging { cursor:grabbing; }
@@ -1515,21 +1514,14 @@ ${appearanceScript}
   const img = document.createElement("img");
   img.alt = "";
   img.decoding = "async";
-  const loadingStatus = document.createElement("div");
-  loadingStatus.className = "viewer-load-status";
-  loadingStatus.setAttribute("role", "status");
-  loadingStatus.hidden = true;
-  stage.parentElement.append(loadingStatus);
   const finishImage = () => {
     img.style.visibility = "";
     stage.style.backgroundImage = "";
     stage.setAttribute("aria-busy", "false");
-    loadingStatus.hidden = true;
   };
   img.addEventListener("error", () => {
+    // Keep the preview visible when the original cannot be fetched.
     stage.setAttribute("aria-busy", "false");
-    loadingStatus.textContent = "Full image unavailable. Close and reopen to retry.";
-    loadingStatus.hidden = false;
   });
   const tabsEl = dialog.querySelector(".viewer-tabs");
   const title = dialog.querySelector("#viewer-title");
@@ -1556,8 +1548,6 @@ ${appearanceScript}
     stage.style.backgroundImage = preview ? "url(" + JSON.stringify(preview) + ")" : "";
     img.style.visibility = "hidden";
     stage.setAttribute("aria-busy", "true");
-    loadingStatus.textContent = "Loading full-resolution image…";
-    loadingStatus.hidden = false;
     img.src = source;
     if (img.complete && img.naturalWidth) finishImage();
   }
@@ -1580,6 +1570,7 @@ ${appearanceScript}
     if (!keepZoom) setZoom(false);
     else if (img.complete) centerImage();
     iterShow?.(item);
+    prefetchNearby();
   }
   function setZoom(actual, point) {
     resetInteraction();
@@ -1644,7 +1635,61 @@ ${appearanceScript}
   let drag = null, holdTimer = null, springFrame = null, reel = null, split = null;
   const pointers = new Set();
   const imageSource = (item) => item?.dataset.src || item?.querySelector("img")?.src;
-  const previewSource = (item) => item?.querySelector("img")?.currentSrc || item?.querySelector("img")?.src || imageSource(item);
+  const previewSource = (item) => {
+    const source = imageSource(item), warmed = warmedImages.get(source);
+    return warmed?.complete && warmed.naturalWidth ? source : item?.querySelector("img")?.currentSrc || item?.querySelector("img")?.src || source;
+  };
+  // Warm only the likely next interactions, with bounded concurrency and cache size.
+  const warmedImages = new Map();
+  let prefetchQueue = [], prefetchActive = 0;
+  function prefetchImage(source) {
+    if (!source || source.startsWith("data:") || warmedImages.has(source) || prefetchQueue.includes(source)) return;
+    if (prefetchQueue.length >= 4) prefetchQueue.shift();
+    prefetchQueue.push(source);
+    drainPrefetch();
+  }
+  function drainPrefetch() {
+    while (prefetchActive < 2 && prefetchQueue.length) {
+      const source = prefetchQueue.shift();
+      if (warmedImages.has(source)) continue;
+      const image = new Image();
+      image.decoding = "async";
+      image.fetchPriority = "low";
+      warmedImages.set(source, image);
+      prefetchActive++;
+      const done = (failed) => {
+        if (failed) warmedImages.delete(source);
+        prefetchActive--;
+        while (warmedImages.size > 8) {
+          const oldest = [...warmedImages].find(([, candidate]) => candidate.complete);
+          if (!oldest) break;
+          warmedImages.delete(oldest[0]);
+        }
+        drainPrefetch();
+      };
+      image.onload = () => done(false);
+      image.onerror = () => done(true);
+      image.src = source;
+    }
+  }
+  function prefetchNearby() {
+    prefetchQueue = [];
+    prefetchImage(imageSource(items[comparisonIndex()]));
+    // On metered connections, warm the comparison only.
+    if (navigator.connection?.saveData) return;
+    for (const direction of [1, -1]) {
+      const neighbor = adjacentPhoto(direction);
+      prefetchImage(imageSource(neighbor));
+      prefetchImage(previewSource(neighbor));
+    }
+  }
+  function prefetchIntent(e) {
+    const target = e.target.closest?.(".zoom");
+    if (target) prefetchImage(imageSource(target));
+  }
+  document.addEventListener("pointerover", prefetchIntent, { passive:true });
+  document.addEventListener("focusin", prefetchIntent);
+  document.addEventListener("pointerdown", prefetchIntent, { passive:true });
   function resetInteraction() {
     clearTimeout(holdTimer); holdTimer = null;
     cancelAnimationFrame(springFrame); springFrame = null;
@@ -1699,7 +1744,9 @@ ${appearanceScript}
   function moveSplit(x) {
     if (!split) return;
     split.x = Math.max(0, Math.min(stage.clientWidth, x));
-    split.layer.style.clipPath = "inset(0 0 0 " + split.x + "px)";
+    split.layer.style.clipPath = split.side === "left"
+      ? "inset(0 " + (stage.clientWidth - split.x) + "px 0 0)"
+      : "inset(0 0 0 " + split.x + "px)";
     split.divider.style.left = split.x + "px";
   }
   function startSplit() {
@@ -1712,7 +1759,8 @@ ${appearanceScript}
     // A loaded preview appears immediately while the full image is fetched.
     layer.style.backgroundImage += ", url(" + JSON.stringify(previewSource(items[other])) + ")";
     stage.append(layer, divider);
-    split = { layer, divider, other, x: stage.clientWidth * .75 };
+    const x = Math.max(0, Math.min(stage.clientWidth, drag.x - stage.getBoundingClientRect().left));
+    split = { layer, divider, other, x, side: x < stage.clientWidth / 2 ? "left" : "right" };
     drag.axis = "split"; drag.splitStart = split.x;
     stage.classList.add("comparing");
     moveSplit(split.x);
@@ -1762,8 +1810,10 @@ ${appearanceScript}
     if (!gesture || gesture.id !== e.pointerId) return;
     const dx = e.clientX - gesture.x, dy = e.clientY - gesture.y;
     if (split) {
-      const other = split.other, chooseOther = split.x < stage.clientWidth / 2;
-      spring(split.x, chooseOther ? 0 : stage.clientWidth, 0, moveSplit, () => {
+      const other = split.other;
+      const chooseOther = split.side === "left" ? split.x > stage.clientWidth / 2 : split.x < stage.clientWidth / 2;
+      const end = (split.side === "left") === chooseOther ? stage.clientWidth : 0;
+      spring(split.x, end, 0, moveSplit, () => {
         resetInteraction(); if (chooseOther) show(other, false);
       });
       return;
@@ -1803,7 +1853,7 @@ ${appearanceScript}
     if (e.key === "z" || e.key === "Z") { e.preventDefault(); setZoom(!stage.classList.contains("actual")); }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); nextPhoto(e.key === "ArrowDown" ? 1 : -1); }
   });
-  dialog.addEventListener("close", () => { resetInteraction(); pointers.clear(); img.remove(); trigger?.focus({ preventScroll: true }); });
+  dialog.addEventListener("close", () => { resetInteraction(); pointers.clear(); prefetchQueue = []; img.remove(); trigger?.focus({ preventScroll: true }); });
 
   /* Return to the exact picker state when that's where we came from. */
   try {
