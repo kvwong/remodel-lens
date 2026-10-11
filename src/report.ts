@@ -1012,8 +1012,8 @@ ${appearanceScript}
   @media(max-width:600px) {
     .album-copy .plate-sub { display:none; }
     .scope-albums:has(> :nth-child(2)) { grid-template-columns:minmax(0,1fr); gap:24px; }
-    .scope-albums:has(> :nth-child(2)) .scope-link > .album-cover { grid-template-columns:104px minmax(0,1fr); gap:8px 16px; }
-    .scope-albums:has(> :nth-child(2)) .album-pile { width:96px; aspect-ratio:4/3; grid-row:1 / 3; align-self:start; }
+    .scope-albums:has(> :nth-child(2)) .scope-link > .album-cover { grid-template-columns:104px minmax(0,1fr); gap:16px; align-items:center; padding-block:16px; }
+    .scope-albums:has(> :nth-child(2)) .album-pile { width:96px; aspect-ratio:4/3; margin:12px 4px; align-self:center; }
   }
   .plates { display:grid; gap:0 20px; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); }
   /* Each plate spans the same rows, so titles, totals, and tallies line up across all four. */
