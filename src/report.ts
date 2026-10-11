@@ -669,7 +669,7 @@ export function renderReport(input: {
 
   const overview = tiers.length && !input.share ? `
   <section class="overview card" aria-label="Redesigns">
-    ${input.redesignScope ? "" : `<h2 id="overview-h">Redesigns</h2><p class="lede">Explore each scope, then open a photo to compare it with the original.</p>`}
+    ${input.redesignScope ? "" : `<h2 id="overview-h">Redesigns</h2>`}
     <div class="scope-albums" style="--cols:${input.redesignScope ? 1 : tiers.length}">
     ${(input.redesignScope ? tiers.filter(t => t === input.redesignScope) : tiers).map((tier) => {
       const results = photos.flatMap(p => { const t = p.tiers.find(t => t.tier === tier); return t?.image ? [{ p, t }] : []; });
