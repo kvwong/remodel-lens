@@ -30,9 +30,9 @@ export async function homeView(allReports = false): Promise<{ reports: HomeRepor
     })),
   ))).flat().sort((a, b) => b.startedAt.localeCompare(a.startedAt) || a.listingName.localeCompare(b.listingName));
 
-  // The reel mixes images from the same recent reports listed below it, in a fresh random order each visit.
+  // Preserve newest-first report order, with one representative image per scope.
   const recent = allReports ? runs : runs.slice(0, RECENT_REPORTS);
-  const slides = allReports ? [] : shuffle((await Promise.all(recent.map((run) => runSlides(run)))).flat()).slice(0, MAX_SLIDES);
+  const slides = allReports ? [] : (await Promise.all(runs.slice(0, MAX_SLIDES).map((run) => runSlides(run, 720, true)))).flat().slice(0, MAX_SLIDES);
   const reports = await Promise.all(recent.map(async (run) => ({
     ...run,
     images: (await runSlides(run, 240)).slice(0, ROW_IMAGES),
@@ -41,7 +41,7 @@ export async function homeView(allReports = false): Promise<{ reports: HomeRepor
 }
 
 /** Redesigned images worth showing off from one run: ones that passed or only need a second look. */
-async function runSlides(run: ReportRun, width = 720): Promise<HomeSlide[]> {
+async function runSlides(run: ReportRun, width = 720, representative = false): Promise<HomeSlide[]> {
   const resultsPath = path.join(RUNS_DIR, run.listingId, run.id, "results.json");
   if (!existsSync(resultsPath)) return [];
   let photos: PhotoResult[];
@@ -49,6 +49,26 @@ async function runSlides(run: ReportRun, width = 720): Promise<HomeSlide[]> {
     photos = JSON.parse(await readFile(resultsPath, "utf8")) as PhotoResult[];
   } catch {
     return [];
+  }
+  if (representative) {
+    const scopes = [...new Set(photos.flatMap((photo) => photo.tiers.map((t) => t.tier)))];
+    return scopes.flatMap((scope) => {
+      const candidates = photos.flatMap((photo) => photo.tiers
+        .filter((t) => t.tier === scope && t.image && SLIDE_STATUSES.has(t.status))
+        .map((result) => ({ photo, result })));
+      const roomPriority = (photo: PhotoResult) => /kitchen|living|great room|family|dining/i.test(photo.room || photo.inventory?.roomType || "") ? 1 : 0;
+      candidates.sort((a, b) => Number(b.result.status === "verified") - Number(a.result.status === "verified") || roomPriority(b.photo) - roomPriority(a.photo));
+      const chosen = candidates[0];
+      if (!chosen) return [];
+      const room = chosen.photo.room || chosen.photo.inventory?.roomType || "Room";
+      const tier = TIER_LABELS[scope]?.name ?? scope;
+      return [{
+        src: `/thumb/runs/${urlPath(run.listingId, run.id, ...chosen.result.image!.split("/"))}?w=${width}`,
+        alt: `${tier} redesign of the ${room.toLowerCase()} at ${run.listingName}`,
+        caption: `${run.listingName} · ${sentence(room)} · ${tier}`,
+        reportUrl: `${run.reportUrl}?scope=${encodeURIComponent(scope)}`,
+      }];
+    });
   }
   // One image per photo first, so a run's reel shows different rooms before a second tier of the same one.
   const byPhoto = photos.map((photo) =>
@@ -71,11 +91,3 @@ async function runSlides(run: ReportRun, width = 720): Promise<HomeSlide[]> {
 }
 
 const sentence = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
-
-function shuffle<T>(items: T[]): T[] {
-  for (let i = items.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j]!, items[i]!];
-  }
-  return items;
-}

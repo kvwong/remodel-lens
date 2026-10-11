@@ -38,9 +38,24 @@ it("lists the five newest reports across listings and reels their passing redesi
   expect(home.reports[0]).toMatchObject({ listingName: "Lakeview", reportUrl: `/files/runs/${b.id}/b-new/report.html` });
   expect(home.reports[0]!.images.map((i) => i.src)).toEqual([`/thumb/runs/${b.id}/b-new/images/k-c.png?w=240`, `/thumb/runs/${b.id}/b-new/images/b%20c.png?w=240`]);
   expect(home.reports[1]!.images).toEqual([]);
-  expect(home.slides).toHaveLength(2);
-  expect(home.slides).toEqual(expect.arrayContaining([
-    { src: `/thumb/runs/${b.id}/b-new/images/k-c.png?w=720`, alt: "Cosmetic redesign of the kitchen at Lakeview", caption: "Lakeview · Kitchen · Cosmetic", reportUrl: `/files/runs/${b.id}/b-new/report.html` },
-    { src: `/thumb/runs/${b.id}/b-new/images/b%20c.png?w=720`, alt: "Cosmetic redesign of the bathroom at Lakeview", caption: "Lakeview · Bathroom · Cosmetic", reportUrl: `/files/runs/${b.id}/b-new/report.html` },
-  ]));
+  expect(home.slides).toEqual([
+    { src: `/thumb/runs/${b.id}/b-new/images/k-c.png?w=720`, alt: "Cosmetic redesign of the kitchen at Lakeview", caption: "Lakeview · Kitchen · Cosmetic", reportUrl: `/files/runs/${b.id}/b-new/report.html?scope=cosmetic` },
+  ]);
+});
+
+it("orders scope representatives newest first and prefers passing main-room photos", async () => {
+  const listing = await store.createListing({ name: "Scope reel" });
+  const photo = (room: string, tiers: unknown[]) => ({ id: room, room, inventory: { roomType: room }, tiers });
+  await addRun(listing.id, "older", "2026-11-01T10:00:00.000Z", [photo("kitchen", [tier("cosmetic", "verified", "old.png")])]);
+  await addRun(listing.id, "newer", "2026-11-02T10:00:00.000Z", [
+    photo("bathroom", [tier("cosmetic", "verified", "bath.png"), tier("moderate", "review", "bath-m.png")]),
+    photo("kitchen", [tier("cosmetic", "verified", "kitchen.png"), tier("moderate", "verified", "kitchen-m.png"), tier("major", "failed", "failed.png")]),
+  ]);
+  const slides = (await homeView()).slides.filter((s) => s.caption.startsWith("Scope reel"));
+  expect(slides.map((s) => s.src)).toEqual([
+    `/thumb/runs/${listing.id}/newer/kitchen.png?w=720`,
+    `/thumb/runs/${listing.id}/newer/kitchen-m.png?w=720`,
+    `/thumb/runs/${listing.id}/older/old.png?w=720`,
+  ]);
+  expect((await homeView()).slides.filter((s) => s.caption.startsWith("Scope reel"))).toEqual(slides);
 });
