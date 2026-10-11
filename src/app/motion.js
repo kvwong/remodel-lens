@@ -12,7 +12,7 @@
   const cleanups = new Map();
   const tipStates = new WeakMap();
   const foldStates = new WeakMap();
-  const selector = 'button, .btn, a.nav-link, .brand, .mobile-tabs a, .tier, .pick, .pick img, .zoom, .zoom img, .zoom-hint, summary, [role="tab"], .fade, .profile-change .icon, .log-details .icon, .photo-stack img, .ref .remove, .dropzone, .dropzone-quiet, .read-text, .cost-tick, .cost-thumb, .cost-scale, .reel-card, .reel-card a, .reel-card span, .to-top';
+  const selector = 'button, .btn, a.nav-link, .brand, .mobile-tabs a, .tier, .pick, .pick img, .zoom, .zoom img, .zoom-hint, summary, [role="tab"], .fade, .profile-change .icon, .log-details .icon, .photo-stack img, .album-pile img, .ref .remove, .dropzone, .dropzone-quiet, .read-text, .cost-tick, .cost-thumb, .cost-scale, .reel-card, .reel-card a, .reel-card span, .to-top';
   const camel = (name) => name.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 
   function track(controls, targets, keys, finish) {
@@ -83,18 +83,24 @@
       if (nodes.has(el)) continue;
       const css = getComputedStyle(el);
       const properties = new Map();
+      const easings = new Map();
       for (const spec of css.getPropertyValue("--motion").split(/,(?![^()]*\))/)) {
         const [property, time] = spec.trim().split(/\s+/);
         // The reel's bounded bokeh filter is animated through Motion's native CSS
         // path. Avoid animating shadows and layout properties in generic feedback.
         if (!/^(transform|translate|opacity|filter|background(?:-color)?|border-color|outline-color|color)$/.test(property)) continue;
         const duration = parseFloat(time) * (time?.endsWith("ms") ? .001 : 1);
-        properties.set(property === "background" ? "background-color" : property, Number.isFinite(duration) ? duration : .24);
+        const key = property === "background" ? "background-color" : property;
+        properties.set(key, Number.isFinite(duration) ? duration : .24);
+        const bezier = /cubic-bezier\(([^)]+)\)/.exec(spec);
+        const curve = bezier?.[1].split(",").map(Number);
+        if (curve?.length === 4 && curve.every(Number.isFinite) && curve[0] >= 0 && curve[0] <= 1 && curve[2] >= 0 && curve[2] <= 1) easings.set(key, curve);
+        else if (/\blinear\b/.test(spec)) easings.set(key, "linear");
       }
       if (!properties.size) continue;
       const original = new Map([...properties.keys()].map(p => [p, el.style.getPropertyValue(p)]));
       const values = new Map([...properties.keys()].map(p => [p, css.getPropertyValue(p)]));
-      nodes.set(el, { properties, original, values });
+      nodes.set(el, { properties, easings, original, values });
     }
     const spinning = [...root.querySelectorAll(".spinner")];
     if (root.matches(".spinner")) spinning.push(root);
@@ -140,15 +146,18 @@
     restore(el, state);
     if (reduce.matches || el.hidden) return;
     const frames = {};
-    let duration = 0;
+    let duration = 0, easing = ease;
     for (const [p, value] of target) {
       if (current.get(p) === value) continue;
       frames[camel(p)] = [current.get(p), value];
-      duration = Math.max(duration, state.properties.get(p));
+      if (state.properties.get(p) >= duration) {
+        duration = state.properties.get(p);
+        easing = state.easings.get(p) ?? ease;
+      }
     }
     if (!duration) return;
     if (visibility === "hidden") el.style.visibility = "visible";
-    state.controls = animate(el, frames, { duration, onFinish: () => restore(el, state) });
+    state.controls = animate(el, frames, { duration, ease: easing, onFinish: () => restore(el, state) });
   }
 
   let queued = false;
@@ -166,7 +175,7 @@
   }
   function interaction(e) {
     if (!(e.target instanceof Element)) return;
-    const zone = e.target.closest(".reel-track, .photo-stack, .ref, .zoom, .cost-row, .cost-slider, .profile-change, .pick");
+    const zone = e.target.closest(".reel-track, .photo-stack, .album-pile, .ref, .zoom, .cost-row, .cost-slider, .profile-change, .pick");
     if (zone) schedule(zone);
     for (let el = e.target; el; el = el.parentElement) if (nodes.has(el)) pending.add(el);
     schedule(e.target);
