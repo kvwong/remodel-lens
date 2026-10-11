@@ -1308,6 +1308,7 @@ ${appearanceScript}
     .iter { width:auto; flex:1; border-left:0; border-top:1px solid rgba(255,255,255,.1); }
   }
   @media (max-width: 860px) {
+    .viewer, .viewer * { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
     .shot-tools, .viewer .viewer-iter, .viewer .iter, .viewer .viewer-ver, .viewer .vpins { display:none !important; }
     .viewer .viewer-stage { flex:1; aspect-ratio:auto; max-height:none; }
   }
