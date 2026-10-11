@@ -25,7 +25,7 @@ export const Settings = z.object({
       reasoning: ModelId.optional(),
       analysis: z.array(ModelId).min(1).max(4).optional(),
       image: z.string().trim().regex(/^(?:[\w.:-]+|openrouter\/\w[\w.:-]*\/\w[\w.:-]*)$/).max(100).optional(),
-      imageConcurrency: z.number().int().min(1).max(16).optional(),
+      imageConcurrency: z.number().int().min(1).max(150).optional(),
       reasoningEffort: z.enum(EFFORTS).optional(),
       analysisEffort: z.enum(EFFORTS).optional(),
     })

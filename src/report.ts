@@ -627,6 +627,8 @@ export function renderReport(input: {
   /** Link back to the listing in the picker; omitted for static reports opened from disk. */
   backHref?: string | null;
   run?: { startedAt: string; profileName?: string | null; stopped?: boolean };
+  /** Dedicated scope album served by the app. */
+  redesignScope?: Tier | null;
   /** PDF download links; only the app can build PDFs, so static reports omit them. */
   pdf?: { summary: string; full: string } | null;
   /** Shareable single-file HTML download links, served by the app like the PDFs. */
@@ -643,18 +645,18 @@ export function renderReport(input: {
   const feature = pickFeature(photos);
   const started = input.run ? new Date(input.run.startedAt) : null;
   const dateText = started ? new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeStyle: "short" }).format(started) : null;
+  const reportName = input.run?.profileName?.trim() || input.title;
+  const displayTitle = input.redesignScope ? `${reportName} · ${tierName(input.redesignScope)} redesign` : reportName;
   const meta = [
-    dateText,
-    input.run?.profileName ? `${input.run.profileName} profile` : null,
-    input.location?.replace(/\s*\(.*\)$/, ""),
+    input.redesignScope ? TIER_LABELS[input.redesignScope].blurb : tiers.map(tierName).join(" + "),
     `${photos.length} ${photos.length === 1 ? "photo" : "photos"}`,
-    input.changes?.versions.versions.length ? `${input.changes.versions.versions.length} ${input.changes.versions.versions.length === 1 ? "change" : "changes"}` : null,
+    started ? new Intl.DateTimeFormat("en-US", {month:"short",day:"numeric",year:"numeric"}).format(started) : null,
     input.share === "summary" ? "Summary" : input.share === "full" ? "Full scope" : null,
   ].filter(Boolean) as string[];
   const summary = input.share === "summary";
   const preferred = feature ? showcase(feature, null)?.tier ?? null : null;
   const back = input.backHref ? { href: esc(input.backHref), label: `Back to ${esc(input.title)}` } : null;
-  const docTitle = `${input.title}${started ? ` · ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(started)}` : ""} · Whim`;
+  const docTitle = `${displayTitle}${started ? ` · ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(started)}` : ""} · Whim`;
 
   const tally = (tier: Tier) => {
     const list = photos.map((p) => p.tiers.find((t) => t.tier === tier)).filter((t): t is TierResult => !!t);
@@ -662,47 +664,29 @@ export function renderReport(input: {
     return { total: list.length, verified: n("verified"), review: n("review"), failed: n("failed") + n("error") };
   };
 
-  const overview = feature
-    ? `
-  <section class="overview card" aria-labelledby="overview-h">
-    <h2 id="overview-h">What each scope gets you</h2>
-    <p class="lede">The ${esc(roomName(feature).toLowerCase())} at every scope, with the estimate for the whole listing beneath each.</p>
-    <div class="plates" style="--cols:${1 + tiers.length}">
-      <figure class="plate">
-        ${zoomable({ src: feature.original, alt: `Listing photo of the ${roomName(feature).toLowerCase()}`, group: "overview", label: `${roomName(feature)} · Listing photo`, eager: true })}
-        <figcaption>
-          <span class="plate-title">Listing photo</span>
-          <span class="plate-sub">As photographed</span>
-        </figcaption>
-      </figure>
-      ${tiers.map((tier) => {
-        const t = feature.tiers.find((x) => x.tier === tier);
-        const x = totals.get(tier);
-        const c = tally(tier);
-        return `
-      <figure class="plate">
-        ${t?.image
-          ? zoomable({ src: t.image, alt: `${tierName(tier)} redesign of the ${roomName(feature).toLowerCase()}`, group: "overview", label: `${roomName(feature)} · ${tierName(tier)}`, status: t.status, eager: true, ...(input.changes ? { room: feature.id, tier, version: input.changes.versions.picks[pickKey(feature.id, tier)] ?? ORIGINAL } : {}) })
-          : `<div class="no-image">${t ? STATUS[t.status].label : "Not run"}</div>`}
-        <figcaption>
-          <span class="plate-title">${tierName(tier)}</span>
-          <span class="plate-sub">${TIER_LABELS[tier].blurb}</span>
-          ${x ? `<span class="plate-total num">${money(x.range)}</span><span class="plate-sub">Whole listing, ${x.rooms} ${x.rooms === 1 ? "room" : "rooms"}</span>` : ""}
-          <span class="plate-tally">${c.verified} of ${c.total} verified${c.review ? ` · ${c.review} to review` : ""}${c.failed ? ` · ${c.failed} changed structure` : ""}</span>
-        </figcaption>
-      </figure>`;
-      }).join("")}
-    </div>
-    <dl class="legend">
-      ${(["verified", "review", "failed"] as const).map((s) => `<div><dt>${statusTag(s)}</dt><dd>${STATUS[s].meaning}</dd></div>`).join("")}
-    </dl>
-    <details class="fold method">
-      <summary>How these estimates work</summary>
-      <p>Installed costs (materials and labor) for ${esc(input.location ?? "a typical US metro")} in ${new Date().getFullYear()} dollars, from quantities visible in each photo. Most changes are priced from a unit-cost table (Homewyse national figures, adjusted for local construction wages from BLS, material grade, and 20% contractor overhead and permits); the rest, such as furniture and appliances, are the model's own estimate and say so. Rooms photographed from more than one angle are counted once. These are a ballpark for comparing scopes, not a contractor bid. Structural figures exclude engineering and design fees.</p>
-      ${input.profileSummary ? `<p><strong>Taste applied:</strong> ${esc(input.profileSummary)}</p>` : ""}
-    </details>
-  </section>`
-    : "";
+  const overview = tiers.length && !input.share ? `
+  <section class="overview card" aria-label="Redesigns">
+    ${input.redesignScope ? "" : `<h2 id="overview-h">Redesigns</h2><p class="lede">Explore each scope, then open a photo to compare it with the original.</p>`}
+    <div class="scope-albums" style="--cols:${input.redesignScope ? 1 : tiers.length}">
+    ${(input.redesignScope ? tiers.filter(t => t === input.redesignScope) : tiers).map((tier) => {
+      const results = photos.flatMap(p => { const t = p.tiers.find(t => t.tier === tier); return t?.image ? [{ p, t }] : []; });
+      const x = totals.get(tier), c = tally(tier);
+      const direction = input.profileSummary.trim().split(/\s+/).slice(0, 45).join(" ").replace(/[,:;]$/, "");
+      const concept = { cosmetic: "A coordinated refresh through paint, lighting, and furniture, retaining the existing layout and permanent finishes.", moderate: "A cohesive material refresh through cabinetry, counters, floors, and trim, retaining the existing room layout.", major: "A broader architectural reimagining of the rooms, combining material changes with proposed changes to walls, openings, and ceilings." }[tier];
+      const selected = input.redesignScope === tier;
+      return `<section class="scope-album ${selected ? 'redesign-page' : 'scope-link'}">
+        ${selected ? `<div class="album-facts"><div>${x ? `<span class="plate-total num">${money(x.range)}</span>` : ""}<p class="plate-sub">${results.length} photos · ${x?.rooms ?? results.length} rooms${dateText ? ` · ${esc(dateText)}` : ""}</p></div><details class="album-summary"><summary>Design concept</summary><p>${esc(concept)} ${esc(direction)}${direction && !/[.!?]$/.test(direction) ? "." : ""}</p></details></div>` : `<div class="album-cover"><a class="album-pile" href="?scope=${tier}" aria-label="View ${tierName(tier)} redesign">${results.slice(0, 4).map(({p,t}, i) => `<img ${previewAttributes(t.image!, input.previewBase)} alt="${esc(tierName(tier) + ' redesign of ' + roomName(p))}" style="--i:${i}" loading="lazy">`).join("")}</a>
+        <span class="album-copy"><span class="plate-title">${tierName(tier)}</span><span class="plate-sub">${TIER_LABELS[tier].blurb} · ${results.length} photos</span>
+        ${x ? `<span class="plate-total num">${money(x.range)}</span>` : ""}
+        </span><a class="album-open" href="?scope=${tier}">View redesign</a></div>`}
+        ${selected ? `<div class="album-grid">${results.map(({p,t}) => `<figure>
+          <span hidden>${zoomable({src:p.original,alt:roomName(p),group:`album-${tier}-${p.id}`,label:`${roomName(p)} · Listing photo`})}</span>
+          ${zoomable({src:t.image!,alt:`${tierName(tier)} redesign of ${roomName(p)}`,group:`album-${tier}-${p.id}`,label:`${roomName(p)} · ${tierName(tier)}`,status:t.status,...(input.changes ? {room:p.id,tier,version:input.changes.versions.picks[pickKey(p.id,tier)] ?? ORIGINAL} : {})})}
+          <figcaption>${esc(roomName(p))}</figcaption></figure>`).join("")}</div>
+        ` : ""}
+      </section>`;
+    }).join("")}</div>
+  </section>` : "";
 
   const table = `
   <section class="by-room card" aria-labelledby="byroom-h">
@@ -950,6 +934,54 @@ ${appearanceScript}
 
   /* Overview: image-led plates with gallery-label captions */
   .lede { margin:6px 0 20px; color:var(--muted); max-width:65ch; }
+  .scope-albums { display:grid; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); gap:24px; align-items:start; }
+  .scope-album { position:relative; min-width:0; }
+  .scope-album > .album-cover { display:flex; align-items:center; gap:24px; list-style:none; }
+  .scope-album > .album-cover::-webkit-details-marker { display:none; }
+  .scope-link { text-decoration:none; color:inherit; }
+  .album-copy { display:grid; gap:4px; min-width:0; flex:1; }
+  .album-pile { position:relative; display:block; width:42%; max-width:320px; aspect-ratio:4/3; flex:none; margin:12px 8px; }
+  .album-pile { --pile-direction:1; }
+  .scope-link:nth-child(even) .album-pile { --pile-direction:-1; }
+  .album-pile img { --angle:-5deg; --offset:-5%; --lift:3px; position:absolute; width:84%; height:100%; object-fit:cover; border:3px solid var(--surface); border-radius:12px; box-shadow:var(--shadow-hover); left:8%; transform:translateX(calc(var(--offset) * var(--pile-direction))) translateY(var(--lift)) rotate(calc(var(--angle) * var(--pile-direction))); --motion:transform 520ms cubic-bezier(.22,1,.36,1); }
+  .album-pile img:nth-child(2) { --angle:4deg; --offset:5%; --lift:-5px; }
+  .album-pile img:nth-child(3) { --angle:-3deg; --offset:-2.5%; --lift:6px; }
+  .album-pile img:nth-child(4) { --angle:2deg; --offset:2.5%; --lift:0px; }
+  @media (hover:hover) and (prefers-reduced-motion:no-preference) {
+    .album-pile:hover img { --angle:-8deg; --offset:-7%; --lift:-3px; }
+    .album-pile:hover img:nth-child(2) { --angle:7deg; --offset:7%; --lift:-8px; }
+    .album-pile:hover img:nth-child(3) { --angle:-5deg; --offset:-3.5%; --lift:4px; }
+    .album-pile:hover img:nth-child(4) { --angle:3deg; --offset:3.5%; --lift:-1px; }
+  }
+  @media (prefers-reduced-motion:no-preference) {
+    .album-pile:focus-visible img { --offset:calc((var(--i) - 1.5) * 3%); --lift:-3px; }
+  }
+  .album-open { color:var(--primary); font-size:14px; font-weight:500; }
+  .album-close { display:none; }
+  .redesign-page { grid-column:1 / -1; }
+  .redesign-page > summary { padding-right:96px; cursor:default; }
+  .redesign-page .album-pile, .redesign-page .album-open { display:none; }
+
+  .scope-album .plate-total { white-space:normal; overflow-wrap:anywhere; font-size:22px; margin-top:4px; }
+  .album-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr)); gap:16px; margin-top:16px; align-items:start; }
+  .album-grid figure { margin:0; min-width:0; }
+  .album-grid .zoom { aspect-ratio:4/3; }
+  .album-grid .zoom img { width:100%; height:100%; object-fit:cover; }
+  .album-grid figcaption { font-size:13px; margin-top:6px; }
+  .album-facts { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; align-items:start; margin-bottom:24px; }
+  .album-summary { margin:0; padding:0; }
+  @media(max-width:600px) { .album-facts { grid-template-columns:minmax(0,1fr); gap:12px; } }
+  .album-summary > summary { cursor:pointer; font-size:14px; font-weight:500; }
+  .album-summary p { max-width:70ch; color:var(--muted); font-size:14px; }
+  .scope-albums:has(> :nth-child(2)) .scope-link > .album-cover { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
+  .scope-albums:has(> :nth-child(2)) .scope-link .album-pile { width:calc(100% - 16px); max-width:none; aspect-ratio:3/2; }
+  @media(max-width:600px) { .scope-albums { gap:12px; } .scope-album > .album-cover { flex-wrap:wrap; gap:12px; } .album-pile { width:45%; margin:8px 0; } .album-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .scope-album .plate-total { font-size:18px; } .album-open { width:100%; } }
+  @media(max-width:600px) {
+    .scope-albums:has(> :nth-child(3)) { grid-template-columns:minmax(0,1fr); gap:24px; }
+    .scope-albums:has(> :nth-child(3)) .scope-link > .album-cover { grid-template-columns:104px minmax(0,1fr); gap:8px 16px; }
+    .scope-albums:has(> :nth-child(3)) .album-pile { width:96px; aspect-ratio:4/3; grid-row:1 / 3; align-self:start; }
+    .scope-albums:has(> :nth-child(3)) .album-open { grid-column:2; }
+  }
   .plates { display:grid; gap:0 20px; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); }
   /* Each plate spans the same rows, so titles, totals, and tallies line up across all four. */
   .plate { margin:0; min-width:0; display:grid; grid-row:span 7; grid-template-rows:subgrid; align-content:start; }
@@ -989,7 +1021,7 @@ ${appearanceScript}
   /* Sticky controls */
   .toolbar { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; margin:var(--section-gap) calc(-1 * var(--page-gutter)) 0; padding:12px var(--page-gutter); background:color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter:saturate(1.2) blur(10px); border-bottom:1px solid var(--line); }
   .toolbar .crumb { margin-right:auto; }
-  select { font:inherit; font-size:14px; min-height:36px; padding:6px 30px 6px 10px; border-radius:8px; border:1px solid var(--line-strong); color:inherit; background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2366625d' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E") no-repeat right 8px center; appearance:none; }
+  select { max-width:100%; min-width:0; font:inherit; font-size:14px; min-height:36px; padding:6px 30px 6px 10px; border-radius:8px; border:1px solid var(--line-strong); color:inherit; background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2366625d' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E") no-repeat right 8px center; appearance:none; }
   .seg { display:inline-flex; padding:3px; border:1px solid var(--line-strong); border-radius:9px; background:var(--surface); }
   .seg button { font:inherit; font-size:13px; font-weight:500; min-height:32px; padding:4px 12px; border:0; border-radius:6px; background:transparent; color:var(--text); cursor:pointer; touch-action:manipulation; }
   .seg button:hover { background:var(--surface-2); }
@@ -1092,7 +1124,7 @@ ${appearanceScript}
     .seg-label, .toolbar .seg { display:none; } /* each room keeps its own scope tabs on small screens */
     .toolbar select { flex:1; }
     .room-head { align-items:start; }
-    .tabs { width:100%; } .tabs [role="tab"] { flex:1; justify-content:center; }
+    .tabs { width:100%; } .tabs [role="tab"] { flex:1; min-width:0; padding-inline:6px; font-size:12px; justify-content:center; }
   }
 
   .to-top { position:fixed; right:max(16px, env(safe-area-inset-right)); bottom:max(16px, env(safe-area-inset-bottom)); z-index:6; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; border:1px solid var(--line-strong); background:var(--surface); color:inherit; cursor:pointer; opacity:0; transform:translateY(8px); --motion:opacity .25s, transform .25s var(--ease); pointer-events:none; }
@@ -1131,6 +1163,8 @@ ${appearanceScript}
   .viewer-stage.actual img { max-width:none; max-height:none; }
   @media (max-width: 680px) {
     .viewer-bar { grid-template-columns:minmax(0, 1fr) auto auto; grid-template-rows:auto auto; gap:8px 6px; height:auto; padding-block:10px; }
+    .viewer-title .status-meaning { display:none; }
+    .viewer .vbtn, .viewer .seg button, .viewer-tabs button { min-height:44px; }
     .viewer-title { grid-column:1 / 3; grid-row:1; }
     .viewer-actions { display:contents; }
     .viewer-actions > [data-viewer="close"] { grid-column:3; grid-row:1; justify-self:end; }
@@ -1247,8 +1281,8 @@ ${appearanceScript}
 <main id="content">
   ${back ? `<a class="report-brand" href="/" aria-label="Whim home">${brandLockup}</a>` : `<div class="report-brand" role="img" aria-label="Whim">${brandLockup}</div>`}
   ${renderPageHeader({ className: "page-head",
-    back: back ? `<a class="back-link" href="${back.href}" data-back>${icon("arrowLeft")}${esc(input.title)}</a>` : "",
-    title: `<h1 id="top" tabindex="-1">${esc(input.title)}</h1>`,
+    back: input.redesignScope ? `<a class="back-link" href="report.html">${icon("arrowLeft")}Report</a>` : back ? `<a class="back-link" href="${back.href}" data-back>${icon("arrowLeft")}${esc(input.title)}</a>` : "",
+    title: `<h1 id="top" tabindex="-1">${esc(displayTitle)}</h1>`,
     metadata: `<p class="meta">${meta.map((m) => `<span>${esc(m)}</span>`).join("")}</p>`,
     actions: input.pdf || input.html
       ? `<div class="share" role="group" aria-label="Download to share" >
@@ -1268,9 +1302,9 @@ ${appearanceScript}
     notice: input.run?.stopped ? `<p class="notice">This run was stopped early, so some rooms or scopes are missing.</p>` : "",
   })}
   ${overview}
-  ${table}
+  ${input.redesignScope ? "" : table}
 
-  <div class="toolbar">
+  <div class="toolbar" ${input.redesignScope ? "hidden" : ""}>
     ${back ? `<a class="crumb" href="${back.href}" data-back aria-label="${back.label}">${icon("arrowLeft")}<span>${esc(input.title)}</span></a>` : ""}
     <label class="sr-only" for="room-jump">Jump to room</label>
     <select id="room-jump"><option value="">Jump to room…</option>${photos.map((p) => `<option value="${p.id}">${esc(roomName(p))}</option>`).join("")}</select>
@@ -1279,8 +1313,8 @@ ${appearanceScript}
       : ""}
   </div>
 
-  ${rooms}
-  ${decide}
+  ${input.redesignScope ? "" : rooms}
+  ${input.redesignScope ? "" : decide}
 </main>
 
 <button class="to-top" type="button" aria-label="Back to top" tabindex="-1">${icon("arrowUp")}</button>
@@ -1440,6 +1474,8 @@ ${appearanceScript}
     else { stage.scrollLeft = 0; stage.scrollTop = 0; }
   }
   document.addEventListener("click", (e) => {
+    const closeAlbum = e.target.closest("[data-album-close]");
+    if (closeAlbum) { const album = closeAlbum.closest(".scope-album"); album.open = false; album.querySelector("summary").focus(); return; }
     const tab = e.target.closest('[role="tab"]');
     if (tab) return selectTier(tab.dataset.room, tab.dataset.tier, false);
     const all = e.target.closest("[data-all-tier]");
@@ -1496,12 +1532,14 @@ ${appearanceScript}
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       // Next/previous room, same version (Listing/Cosmetic/…), so a scope can be scanned room by room.
       e.preventDefault();
-      const groups = [...new Set([...document.querySelectorAll(".room .zoom")].map((z) => z.dataset.group))];
+      const album = items[index]?.closest(".album-grid");
+      const photos = [...(album ? album.querySelectorAll(".zoom") : document.querySelectorAll(".room .zoom"))];
+      const groups = [...new Set(photos.map((z) => z.dataset.group))];
       const g = groups.indexOf(items[index]?.dataset.group);
       if (g < 0) return;
       const version = items[index].dataset.label.split(" · ").pop();
       const nextGroup = groups[(g + (e.key === "ArrowDown" ? 1 : -1) + groups.length) % groups.length];
-      const next = [...document.querySelectorAll('.zoom[data-group="' + CSS.escape(nextGroup) + '"]')];
+      const next = photos.filter((z) => z.dataset.group === nextGroup);
       const target = next.find((z) => z.dataset.label.endsWith(" · " + version)) ?? next[0];
       if (target) { trigger = target; target.click(); }
     }

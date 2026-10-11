@@ -246,20 +246,22 @@ async function loadReportInput(runDir: string) {
 }
 
 /** Re-render a run's report from its saved results so past runs pick up report improvements. */
-async function freshReport(runDir: string): Promise<string | null> {
+async function freshReport(runDir: string, scope: string | null = null): Promise<string | null> {
   try {
     const input = await loadReportInput(runDir);
     if (!input) return null;
     const runPath = path.relative(RUNS_DIR, runDir).split(path.sep).map(encodeURIComponent).join("/");
+    const scopeQuery = scope === "cosmetic" || scope === "moderate" || scope === "major" ? `&scope=${scope}` : "";
     const pdfBase = `/pdf/runs/${runPath}`;
     const htmlBase = `/html/runs/${runPath}`;
     return renderReport({
       ...input,
+      redesignScope: scope === "cosmetic" || scope === "moderate" || scope === "major" ? scope : null,
       changes: { api: `/api/runs/${runPath}`, originals: input.originals, versions: input.versions },
       previewBase: `/thumb/runs/${runPath}`,
       backHref: `/?listing=${encodeURIComponent(input.listingId)}`,
-      pdf: { summary: `${pdfBase}?detail=summary`, full: `${pdfBase}?detail=full` },
-      html: { summary: `${htmlBase}?detail=summary`, full: `${htmlBase}?detail=full` },
+      pdf: { summary: `${pdfBase}?detail=summary${scopeQuery}`, full: `${pdfBase}?detail=full${scopeQuery}` },
+      html: { summary: `${htmlBase}?detail=summary${scopeQuery}`, full: `${htmlBase}?detail=full${scopeQuery}` },
     });
   } catch {
     return null; // fall back to the static file written at run time
@@ -269,9 +271,13 @@ async function freshReport(runDir: string): Promise<string | null> {
 const attachment = (name: string) => `attachment; filename="${name.replace(/[^\x20-\x7e]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(name)}`;
 
 /** A run's report as a PDF to share: /pdf/runs/<listing>/<run>?detail=summary|full */
-async function sendReportPdf(res: ServerResponse, runDir: string | null, detail: string | null) {
+async function sendReportPdf(res: ServerResponse, runDir: string | null, detail: string | null, scope: string | null = null) {
   const input = runDir ? await loadReportInput(runDir) : null;
   if (!runDir || !input) return send(res, 404, { error: "Report not found" });
+  if (scope === "cosmetic" || scope === "moderate" || scope === "major") {
+    input.photos = input.photos.map(p => ({ ...p, tiers: p.tiers.filter(t => t.tier === scope) })).filter(p => p.tiers.length);
+    input.title += ` · ${scope === "moderate" ? "Finishes" : scope === "major" ? "Structural" : "Cosmetic"}`;
+  }
   const level: PdfDetail = detail === "full" ? "full" : "summary";
   const pdf = await renderReportPdf({ ...input, runDir, detail: level });
   res.writeHead(200, {
@@ -284,9 +290,13 @@ async function sendReportPdf(res: ServerResponse, runDir: string | null, detail:
 }
 
 /** A run's report as one self-contained HTML file to share: /html/runs/<listing>/<run>?detail=summary|full */
-async function sendReportHtml(res: ServerResponse, runDir: string | null, detail: string | null) {
+async function sendReportHtml(res: ServerResponse, runDir: string | null, detail: string | null, scope: string | null = null) {
   const input = runDir ? await loadReportInput(runDir) : null;
   if (!runDir || !input) return send(res, 404, { error: "Report not found" });
+  if (scope === "cosmetic" || scope === "moderate" || scope === "major") {
+    input.photos = input.photos.map(p => ({ ...p, tiers: p.tiers.filter(t => t.tier === scope) })).filter(p => p.tiers.length);
+    input.title += ` · ${scope === "moderate" ? "Finishes" : scope === "major" ? "Structural" : "Cosmetic"}`;
+  }
   const level: PdfDetail = detail === "full" ? "full" : "summary";
   const html = Buffer.from(await renderReportHtml({ ...input, runDir, detail: level }));
   res.writeHead(200, {
@@ -603,7 +613,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   if (req.method === "GET" && parts[0] === "files" && parts[1] === "runs") {
     const file = safeJoin(RUNS_DIR, parts.slice(2).join("/"));
     if (file && path.basename(file) === "report.html") {
-      const fresh = await freshReport(path.dirname(file));
+      const fresh = await freshReport(path.dirname(file), url.searchParams.get("scope"));
       if (fresh) {
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" });
         return res.end(fresh);
@@ -616,10 +626,10 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     return sendThumb(res, safeJoin(RUNS_DIR, parts.slice(2).join("/")), width);
   }
   if (req.method === "GET" && parts[0] === "pdf" && parts[1] === "runs" && parts.length === 4) {
-    return sendReportPdf(res, safeJoin(RUNS_DIR, parts.slice(2).join("/")), url.searchParams.get("detail"));
+    return sendReportPdf(res, safeJoin(RUNS_DIR, parts.slice(2).join("/")), url.searchParams.get("detail"), url.searchParams.get("scope"));
   }
   if (req.method === "GET" && parts[0] === "html" && parts[1] === "runs" && parts.length === 4) {
-    return sendReportHtml(res, safeJoin(RUNS_DIR, parts.slice(2).join("/")), url.searchParams.get("detail"));
+    return sendReportHtml(res, safeJoin(RUNS_DIR, parts.slice(2).join("/")), url.searchParams.get("detail"), url.searchParams.get("scope"));
   }
   if (req.method === "GET" && parts[0] === "thumb" && parts[1] === "listings") {
     const width = Math.min(1600, Math.max(80, Number(url.searchParams.get("w")) || 640));

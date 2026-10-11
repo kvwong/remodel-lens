@@ -167,7 +167,8 @@ describe("a spot change", () => {
     expect(html).toContain('class="iter"');
     expect(html).toContain("const ITER = ");
     expect(html).not.toContain("Change this room");
-    expect(html).toContain("2 changes");
+    expect(html).toContain("12 Maple St");
+    expect(html).toContain('href="?scope=cosmetic"');
 
     const plain = renderReport({ title: "12 Maple St", photos: [photo], profileSummary: "" });
     expect(plain).not.toContain('class="iter"');

@@ -40,10 +40,12 @@
   .layout { display:grid; grid-template-columns:248px minmax(0, 1fr); gap:32px; max-width:var(--page-max); min-height:100dvh; margin:0 auto; padding:var(--page-top) max(var(--page-gutter), env(safe-area-inset-left)) var(--page-top) max(var(--page-gutter), env(safe-area-inset-right)); }
   @media (max-width: 860px) { .layout { grid-template-columns:minmax(0, 1fr); gap:24px; } }
   .side { min-width:0; display:flex; flex-direction:column; gap:24px; align-self:start; position:sticky; top:24px; height:calc(100dvh - 48px); padding:2px 0; }
-  .side-content { display:grid; grid-template-columns:minmax(0, 1fr); gap:24px; overflow-x:hidden; overflow-y:auto; min-width:0; min-height:0; padding:2px 2px 28px; margin:-2px; mask-image:linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
+  .side-content { display:grid; grid-template-columns:minmax(0, 1fr); gap:24px; overflow-x:hidden; overflow-y:auto; min-width:0; min-height:0; padding:2px 2px 28px; margin:0; scrollbar-gutter:stable; height:100%; }
   /* Bottom row: Settings on the left, the display switch on the right. */
   .display-setting { margin-top:auto; padding:0; flex:none; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-  .side-content { flex:1; align-content:start; }
+  .side-scroll-region { position:relative; flex:1; min-height:0; min-width:0; }
+  .side-scroll-region::after { content:""; position:absolute; left:0; right:16px; bottom:0; height:28px; background:linear-gradient(to bottom, transparent, var(--bg)); pointer-events:none; z-index:2; }
+  .side-content { align-content:start; }
   @media (min-width:861px) { .side > .display-setting { margin-top:-16px; } }
   .display-setting .settings-link { margin:0; min-height:32px; }
   .display-toggle { display:grid; place-items:center; width:36px; height:32px; border:0; border-radius:6px; padding:0; background:transparent; color:var(--muted); cursor:pointer; }
@@ -118,7 +120,8 @@
     html { scroll-padding-bottom:112px; }
     .layout { padding:var(--page-top) max(var(--page-gutter), env(safe-area-inset-left)) calc(112px + env(safe-area-inset-bottom)) max(var(--page-gutter), env(safe-area-inset-right)); gap:var(--section-gap); align-content:start; }
     .side { flex-direction:row; align-items:center; gap:8px; padding:0; }
-    .side-content { display:contents; }
+    .side-scroll-region, .side-content { display:contents; }
+    .side-scroll-region::after { display:none; }
     .side-content nav { display:none; }
     .side .brand { padding-left:0; }
     .display-setting { margin:0 0 0 auto; padding:0; }
@@ -667,7 +670,7 @@
 <div id="banner" class="banner" hidden></div>
 <div class="layout">
   <div class="side">
-    <div class="side-content">
+    <div class="side-scroll-region"><div class="side-content">
     <a class="brand" href="/" aria-label="Whim home"><!-- WHIM_LOCKUP --></a>
     <nav aria-label="Listings" id="listings-nav">
       <div class="side-head"><h2><button class="sidebar-toggle" type="button" data-sidebar-toggle="listings" aria-expanded="true" aria-controls="listings">Listings</button></h2><button class="icon-btn icon-plain" type="button" data-action="new-listing" aria-label="New listing" data-tip="New listing"><span data-icon="plus"></span></button></div>
@@ -677,7 +680,7 @@
       <div class="side-head"><h2><button class="sidebar-toggle" type="button" data-sidebar-toggle="profiles-nav" aria-expanded="true" aria-controls="profiles-nav">Taste profiles</button></h2><button class="icon-btn icon-plain" type="button" data-action="new-profile" aria-label="New taste profile" data-tip="New taste profile"><span data-icon="plus"></span></button></div>
       <ul id="profiles-nav"><li class="muted">Loading…</li></ul>
     </nav>
-    </div>
+    </div></div>
     <section class="display-setting" aria-label="Settings and display">
       <a class="settings-link nav-inline" href="?view=settings" data-settings-link><span data-icon="settings"></span>Settings</a>
       <button type="button" class="display-toggle" data-display-toggle aria-label="Switch to dark mode" data-tip="Dark mode"><span data-icon="sun"></span><span data-icon="moon"></span></button>
@@ -2723,7 +2726,7 @@ function renderModels() {
       <div class="setting-row">
         <div class="setting-label"><label for="image-concurrency">Image edits at once</label><p>How many redesigns generate side by side. Higher is faster; lower it if your image provider starts rate-limiting.</p></div>
         <div class="setting-control">
-          <input class="settings-input num-input" type="number" id="image-concurrency" min="1" max="16" step="1" value="${m.imageConcurrency.current}" inputmode="numeric">
+          <input class="settings-input num-input" type="number" id="image-concurrency" min="1" max="150" step="1" value="${m.imageConcurrency.current}" inputmode="numeric">
           <p class="control-note">Default ${m.imageConcurrency.default}</p>
         </div>
       </div>
@@ -2754,7 +2757,7 @@ async function saveModels(reset) {
   if (imageProvider === "openrouter" && !image.startsWith("openrouter/")) image = `openrouter/${image}`;
   if (!reset && imageProvider === "openai" && image.startsWith("openrouter/")) { err.textContent = "Choose OpenRouter to use this image model."; err.hidden = false; return; }
   const concurrency = Number($("#image-concurrency").value);
-  if (!reset && !(Number.isInteger(concurrency) && concurrency >= 1 && concurrency <= 16)) { err.textContent = "Image edits at once must be a whole number from 1 to 16."; err.hidden = false; return; }
+  if (!reset && !(Number.isInteger(concurrency) && concurrency >= 1 && concurrency <= 150)) { err.textContent = "Image edits at once must be a whole number from 1 to 150."; err.hidden = false; return; }
   const effort = (name) => {
     const input = document.querySelector(`#models-form input[name="${name}-effort"]`);
     return input ? EFFORT_LEVELS[Number(input.value)][0] : m.effort.defaults[name];
