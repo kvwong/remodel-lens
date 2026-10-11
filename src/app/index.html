@@ -687,6 +687,24 @@
   @media (prefers-reduced-motion:reduce) {
     .mobile-tabs a, a.nav-link, .sidebar-toggle, .settings-link { transition:none; }
   }
+  /* Stable loading geometry; placeholders never receive focus or pointer events. */
+  .skeleton { background:var(--surface-2); border-radius:6px; position:relative; overflow:hidden; }
+  .skeleton::after { content:""; position:absolute; inset:0; background:linear-gradient(100deg,transparent 20%,var(--surface) 50%,transparent 80%); transform:translateX(-100%); animation:skeleton-sweep 1.6s ease-in-out infinite; opacity:.65; }
+  @keyframes skeleton-sweep { to { transform:translateX(100%); } }
+  .skeleton-line { height:14px; width:70%; }
+  .skeleton-title { height:28px; width:min(240px,70%); margin-bottom:12px; }
+  .skeleton-copy { display:grid; gap:12px; min-width:0; flex:1; }
+  .skeleton-row { display:flex; align-items:center; gap:20px; min-height:112px; padding:20px 0; border-bottom:1px solid var(--line); }
+  .skeleton-row:last-child { border-bottom:0; }
+  .skeleton-thumb { width:88px; aspect-ratio:4/3; flex:none; }
+  .skeleton-photo { aspect-ratio:3/2; width:100%; }
+  .reel-card .skeleton-photo { aspect-ratio:4/3; }
+  .skeleton-fields { display:grid; gap:24px; padding-block:8px; }
+  .skeleton-fields .skeleton-line { height:40px; width:100%; }
+  .skeleton-nav { display:flex; gap:12px; align-items:center; height:60px; padding:8px 10px; }
+  .skeleton-nav .skeleton-thumb { width:48px; }
+  [data-skeleton] { pointer-events:none; }
+  @media(prefers-reduced-motion:reduce) { .skeleton::after { animation:none; } }
 </style>
 </head>
 <body>
@@ -699,11 +717,11 @@
     <a class="brand" href="/" aria-label="Whim home"><!-- WHIM_LOCKUP --></a>
     <nav aria-label="Listings" id="listings-nav">
       <div class="side-head"><h2><button class="sidebar-toggle" type="button" data-sidebar-toggle="listings" aria-expanded="true" aria-controls="listings">Listings</button></h2><button class="icon-btn icon-plain" type="button" data-action="new-listing" aria-label="New listing" data-tip="New listing"><span data-icon="plus"></span></button></div>
-      <ul id="listings"><li class="muted">Loading…</li></ul>
+      <ul id="listings"><li class="skeleton-nav" aria-hidden="true"><span class="skeleton skeleton-thumb"></span><span class="skeleton skeleton-line"></span></li></ul>
     </nav>
     <nav aria-label="Taste profiles">
       <div class="side-head"><h2><button class="sidebar-toggle" type="button" data-sidebar-toggle="profiles-nav" aria-expanded="true" aria-controls="profiles-nav">Taste profiles</button></h2><button class="icon-btn icon-plain" type="button" data-action="new-profile" aria-label="New taste profile" data-tip="New taste profile"><span data-icon="plus"></span></button></div>
-      <ul id="profiles-nav"><li class="muted">Loading…</li></ul>
+      <ul id="profiles-nav"><li class="skeleton-nav" aria-hidden="true"><span class="skeleton skeleton-thumb"></span><span class="skeleton skeleton-line"></span></li></ul>
     </nav>
     </div></div>
     <section class="display-setting" aria-label="Settings and display">
@@ -711,8 +729,8 @@
       <button type="button" class="display-toggle" data-display-toggle aria-label="Switch to dark mode" data-tip="Dark mode"><span data-icon="sun"></span><span data-icon="moon"></span></button>
     </section>
   </div>
-  <main id="content" tabindex="-1">
-    <p class="muted">Loading…</p>
+  <main id="content" tabindex="-1" aria-busy="true" aria-label="App content">
+    <div data-skeleton aria-hidden="true"><section class="reel"><div class="reel-viewport"><ul class="reel-track"><li class="reel-card"><div class="skeleton skeleton-photo"></div></li><li class="reel-card"><div class="skeleton skeleton-photo"></div></li><li class="reel-card"><div class="skeleton skeleton-photo"></div></li></ul></div></section><header class="head collection-head home-head"><div class="skeleton skeleton-title"></div></header><section class="panel"><div class="skeleton-row"><div class="skeleton-copy"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></div><div class="skeleton skeleton-thumb"></div></div></section></div>
   </main>
 </div>
 <nav class="mobile-tabs" aria-label="Main navigation">
@@ -3323,7 +3341,32 @@ document.addEventListener("click", async (event) => {
   }
 });
 
+function loadingKey() { return params().get("view") || (params().get("listing") ? "listing:"+params().get("listing") : params().get("taste") ? "taste:"+params().get("taste") : "home"); }
+function showLoadingScaffold() {
+  const content = $("#content"), key = loadingKey();
+  if (content.dataset.loadedKey === key && !content.querySelector("[data-skeleton]")) return;
+  const line = (width="70%") => `<div class="skeleton skeleton-line" style="width:${width}"></div>`;
+  const rows = Array.from({length:5},()=>`<div class="skeleton-row"><div class="skeleton-copy">${line()}${line("55%")} ${line("85%")}</div><div class="skeleton skeleton-thumb"></div></div>`).join("");
+  const title = `<header class="head collection-head ${key === "home" ? "home-head" : ""}"><div><div class="skeleton skeleton-title"></div>${line("160px")}</div></header>`;
+  const reel = `<section class="reel"><div class="reel-viewport"><ul class="reel-track">${Array.from({length:6},(_,i)=>`<li class="reel-card" style="${reelLook(i)}"><div class="skeleton skeleton-photo"></div></li>`).join("")}</ul></div></section>`;
+  let body;
+  if (key === "home" || key === "reports") body = (key === "home" ? reel : "") + title + `<section class="panel">${rows}</section>`;
+  else if (key === "listings" || key === "tastes") body = title + `<div class="collection-grid">${Array.from({length:6},()=>`<div class="collection-link"><div class="skeleton skeleton-thumb"></div><div class="skeleton-copy">${line()}${line("55%")}</div></div>`).join("")}</div>`;
+  else body = title + `<section class="panel skeleton-fields">${line("40%")}<div class="skeleton skeleton-photo" style="max-width:360px"></div>${line()}${line()}${line()}</section>`;
+  content.setAttribute("aria-busy","true");
+  content.innerHTML = `<div data-skeleton aria-hidden="true">${body}</div>`;
+  announce("Loading content…");
+}
+new MutationObserver(() => {
+  const content = $("#content");
+  if (!content.querySelector("[data-skeleton]")) {
+    content.setAttribute("aria-busy","false");
+    content.dataset.loadedKey = loadingKey();
+  }
+}).observe($("#content"), {childList:true});
+
 async function load() {
+  showLoadingScaffold();
   state.textEdit = null;
   state.job = null;
   clearTimeout(pollTimer);
@@ -3348,7 +3391,7 @@ async function load() {
       renderListings();
       renderProfilesNav();
       renderMobileTabs();
-      if (!state.home) $("#content").innerHTML = `<header class="head collection-head home-head"><h1>Recent reports</h1></header><section class="panel"><p class="muted" role="status">Loading reports…</p></section>`;
+
       await loadHome();
       if (state.view === "home") renderHome();
       return;
@@ -3359,7 +3402,7 @@ async function load() {
       renderProfilesNav();
       renderMobileTabs();
       if (collection === "reports") {
-        $("#content").innerHTML = `<header class="head collection-head"><h1>Reports</h1></header><section class="panel"><p class="muted" role="status">Loading reports…</p></section>`;
+
         await loadReports();
         if (state.view === "reports") renderReports();
       } else renderCollection(collection);
