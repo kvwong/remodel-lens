@@ -344,6 +344,8 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   }
   const appIcons: Record<string, string> = {
     "/apple-touch-icon.png": "icon-180.png",
+    "/apple-touch-icon-precomposed.png": "icon-180.png",
+    "/assets/brand/apple-touch-icon-v2.png": "icon-180.png",
     "/assets/brand/icon-192.png": "icon-192.png",
     "/assets/brand/icon-512.png": "icon-512.png",
   };
