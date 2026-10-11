@@ -913,6 +913,8 @@ ${appearanceScript}
   .share-btn[aria-expanded="true"] { border-color:var(--primary); background:var(--primary-soft); }
   .share-btn[aria-expanded="true"] .dl-caret { rotate:180deg; }
   .dl-menu { position:absolute; z-index:30; top:calc(100% + 6px); right:0; width:min(280px, calc(100vw - 32px)); display:grid; padding:6px; border-radius:10px; background:var(--surface); box-shadow:var(--shadow-hover); }
+  .dl-menu { transform-origin:var(--menu-origin, right) top; }
+  .dl-menu::before { content:""; position:absolute; top:-4px; left:clamp(12px, var(--menu-origin, 50%), calc(100% - 12px)); width:8px; height:8px; background:var(--surface); transform:translateX(-50%) rotate(45deg); }
   .dl-menu[hidden] { display:none; }
   .dl-menu a { display:grid; min-width:0; gap:2px; padding:8px 10px; border-radius:6px; color:var(--text); text-decoration:none; font-size:14px; font-weight:500; white-space:normal; overflow-wrap:anywhere; }
   .dl-menu a:hover, .dl-menu a:focus-visible { background:var(--surface-2); }
@@ -923,8 +925,8 @@ ${appearanceScript}
   .share-status { position:absolute; top:100%; right:0; margin-top:6px; white-space:nowrap; font-size:13px; color:var(--muted); }
   .share-status:empty { display:none; }
   @media (max-width: 900px) {
-    .dl { position:static; }
-    .dl-menu { right:auto; left:0; }
+    .dl { position:relative; }
+    .dl-menu { right:0; left:auto; }
     .share-status { position:static; flex-basis:100%; margin:0; white-space:normal; }
   }
   @media (max-width: 680px) { .dl { flex:1 1 0; } .share-btn { width:100%; justify-content:center; } .dl-menu { width:min(280px, calc(100vw - 32px)); } }
@@ -1197,7 +1199,7 @@ ${appearanceScript}
   .viewer-body { flex:1; min-height:0; display:flex; }
   .viewer-load-status { position:absolute; z-index:4; left:50%; bottom:20px; transform:translateX(-50%); padding:8px 14px; border-radius:20px; background:rgba(0,0,0,.8); color:white; font-size:13px; pointer-events:none; }
   .viewer-stage { background-position:center; background-repeat:no-repeat; background-size:contain; position:relative; flex:1; min-width:0; min-height:0; overflow:auto; overscroll-behavior:contain; touch-action:none; display:flex; cursor:zoom-in; }
-  .viewer-stage img { flex:none; margin:auto; max-width:100%; max-height:100%; object-fit:contain; display:block; user-select:none; -webkit-user-drag:none; }
+  .viewer-stage img { flex:none; margin:auto; max-width:100%; max-height:100%; object-fit:contain; display:block; user-select:none; -webkit-user-drag:none; -webkit-touch-callout:none; }
   .viewer-stage.actual { cursor:grab; } .viewer-stage.actual.dragging { cursor:grabbing; }
   .viewer-stage.actual img { max-width:none; max-height:none; }
   @media (max-width: 680px) {
@@ -1310,6 +1312,13 @@ ${appearanceScript}
     .shot-tools, .viewer .viewer-iter, .viewer .iter, .viewer .viewer-ver, .viewer .vpins { display:none !important; }
     .viewer .viewer-stage { flex:1; aspect-ratio:auto; max-height:none; }
   }
+  .viewer-stage.reeling { overflow:hidden; }
+  .viewer-neighbor { position:absolute; inset:0; background:#0f0f0e; background-position:center; background-repeat:no-repeat; background-size:contain; pointer-events:none; will-change:transform; }
+  .viewer-split { position:absolute; inset:0; z-index:5; pointer-events:none; background-position:center; background-repeat:no-repeat; background-size:contain; }
+  .viewer-divider { position:absolute; top:0; bottom:0; width:2px; z-index:6; background:white; box-shadow:0 0 8px #0008; pointer-events:none; }
+  .viewer-divider::after { content:"↔"; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); display:grid; place-items:center; width:42px; height:42px; border-radius:50%; color:#151514; background:white; box-shadow:0 2px 12px #0006; font:600 24px/1 var(--font); }
+  .viewer-stage.comparing { cursor:ew-resize; overflow:hidden; }
+  .viewer-stage.comparing img { pointer-events:none; }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; } }
 
   /* Motion + depth system */
@@ -1527,7 +1536,7 @@ ${appearanceScript}
   const statusEl = dialog.querySelector("#viewer-status");
   const fitBtn = dialog.querySelector('[data-viewer="fit"]');
   const actualBtn = dialog.querySelector('[data-viewer="actual"]');
-  let items = [], index = 0, trigger = null;
+  let items = [], index = 0, trigger = null, comparedRedesign = 1;
   // Set by the change panel when the app serves this report.
   let iterShow = null, iterPinClick = null;
 
@@ -1554,8 +1563,10 @@ ${appearanceScript}
   }
 
   function show(i, keepZoom) {
+    resetInteraction();
     index = (i + items.length) % items.length;
     const item = items[index];
+    if (item.dataset.status) comparedRedesign = index;
     if (!img.isConnected) stage.append(img);
     const preview = item.querySelector("img");
     loadViewerImage(item.dataset.src || preview.src, preview?.currentSrc || preview?.src);
@@ -1571,6 +1582,7 @@ ${appearanceScript}
     iterShow?.(item);
   }
   function setZoom(actual, point) {
+    resetInteraction();
     const before = img.getBoundingClientRect();
     const ratio = point && before.width && before.height ? {
       x: Math.max(0, Math.min(1, (point.x - before.left) / before.width)),
@@ -1616,59 +1628,174 @@ ${appearanceScript}
     if (e.target.closest('[data-viewer="fit"]')) return setZoom(false);
     if (e.target.closest('[data-viewer="actual"]')) return setZoom(true);
   });
-  function nextPhoto(direction) {
+  function adjacentPhoto(direction) {
     const album = items[index]?.closest(".album-grid");
     const photos = [...(album ? album.querySelectorAll(".zoom") : document.querySelectorAll(".room .zoom"))];
     const groups = [...new Set(photos.map((z) => z.dataset.group))];
     const g = groups.indexOf(items[index]?.dataset.group);
-    if (g < 0) return;
+    if (g < 0 || groups.length < 2) return null;
     const version = items[index].dataset.label.split(" · ").pop();
     const nextGroup = groups[(g + direction + groups.length) % groups.length];
     const next = photos.filter((z) => z.dataset.group === nextGroup);
-    const target = next.find((z) => z.dataset.label.endsWith(" · " + version)) ?? next[0];
-    if (target) { trigger = target; target.click(); }
+    return next.find((z) => z.dataset.label.endsWith(" · " + version)) ?? next[0];
   }
-  let drag = null;
+  function nextPhoto(direction) { adjacentPhoto(direction)?.click(); }
+  const mobileViewer = matchMedia("(max-width: 860px)");
+  let drag = null, holdTimer = null, springFrame = null, reel = null, split = null;
   const pointers = new Set();
+  const imageSource = (item) => item?.dataset.src || item?.querySelector("img")?.src;
+  const previewSource = (item) => item?.querySelector("img")?.currentSrc || item?.querySelector("img")?.src || imageSource(item);
+  function resetInteraction() {
+    clearTimeout(holdTimer); holdTimer = null;
+    cancelAnimationFrame(springFrame); springFrame = null;
+    reel?.before.remove(); reel?.after.remove(); reel = null;
+    split?.layer.remove(); split?.divider.remove(); split = null;
+    img.style.transform = "";
+    stage.style.backgroundPosition = "";
+    stage.classList.remove("reeling", "comparing", "dragging");
+    drag = null;
+  }
+  // Critically damped-ish spring in pixels: velocity carries through the release.
+  function spring(from, to, velocity, update, finish) {
+    cancelAnimationFrame(springFrame);
+    if (motion.reduce.matches) { update(to); finish(); return; }
+    let x = from, v = velocity * 1000, last = performance.now(), started = last;
+    function frame(now) {
+      const dt = Math.min((now - last) / 1000, .032); last = now;
+      v += (-320 * (x - to) - 32 * v) * dt;
+      x += v * dt;
+      update(x);
+      if ((Math.abs(x - to) < .5 && Math.abs(v) < 5) || now - started > 900) {
+        springFrame = null; update(to); finish();
+      } else springFrame = requestAnimationFrame(frame);
+    }
+    springFrame = requestAnimationFrame(frame);
+  }
+  function makeNeighbor(item) {
+    const el = document.createElement("div");
+    el.className = "viewer-neighbor";
+    if (item) el.style.backgroundImage = "url(" + JSON.stringify(previewSource(item)) + ")";
+    stage.append(el);
+    return el;
+  }
+  function startReel() {
+    const previous = adjacentPhoto(-1), next = adjacentPhoto(1);
+    reel = { previous, next, before: makeNeighbor(previous), after: makeNeighbor(next), height: stage.clientHeight, offset: 0 };
+    stage.classList.add("reeling");
+    moveReel(0);
+  }
+  function moveReel(y) {
+    if (!reel) return;
+    reel.offset = y;
+    stage.style.backgroundPosition = "center calc(50% + " + y + "px)";
+    img.style.transform = "translateY(" + y + "px)";
+    reel.before.style.transform = "translateY(" + (y - reel.height) + "px)";
+    reel.after.style.transform = "translateY(" + (y + reel.height) + "px)";
+  }
+  function comparisonIndex() {
+    const original = items.findIndex((it) => !it.dataset.status);
+    return index === original ? (items[comparedRedesign]?.dataset.status ? comparedRedesign : items.findIndex((it) => !!it.dataset.status)) : original;
+  }
+  function moveSplit(x) {
+    if (!split) return;
+    split.x = Math.max(0, Math.min(stage.clientWidth, x));
+    split.layer.style.clipPath = "inset(0 0 0 " + split.x + "px)";
+    split.divider.style.left = split.x + "px";
+  }
+  function startSplit() {
+    if (!drag || drag.moved || drag.actual || !mobileViewer.matches) return;
+    const other = comparisonIndex();
+    if (other < 0 || other === index) return;
+    const layer = document.createElement("div"), divider = document.createElement("div");
+    layer.className = "viewer-split"; divider.className = "viewer-divider";
+    layer.style.backgroundImage = "url(" + JSON.stringify(imageSource(items[other])) + ")";
+    // A loaded preview appears immediately while the full image is fetched.
+    layer.style.backgroundImage += ", url(" + JSON.stringify(previewSource(items[other])) + ")";
+    stage.append(layer, divider);
+    split = { layer, divider, other, x: stage.clientWidth * .75 };
+    drag.axis = "split"; drag.splitStart = split.x;
+    stage.classList.add("comparing");
+    moveSplit(split.x);
+  }
+  stage.addEventListener("contextmenu", (e) => { if (mobileViewer.matches) e.preventDefault(); });
   stage.addEventListener("pointerdown", (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     pointers.add(e.pointerId);
-    if (pointers.size > 1) { drag = null; return; }
+    resetInteraction();
+    if (pointers.size > 1) return;
     drag = { id: e.pointerId, x: e.clientX, y: e.clientY, left: stage.scrollLeft, top: stage.scrollTop,
-      actual: stage.classList.contains("actual"), touch: e.pointerType !== "mouse", moved: false, image: e.target === img };
+      actual: stage.classList.contains("actual"), touch: e.pointerType !== "mouse", moved: false, image: e.target === img,
+      axis: null, time: performance.now(), lastY: e.clientY, velocity: 0 };
     stage.setPointerCapture(e.pointerId);
+    if (drag.touch && mobileViewer.matches && !drag.actual) holdTimer = setTimeout(startSplit, 350);
   });
   stage.addEventListener("pointermove", (e) => {
     if (!drag || drag.id !== e.pointerId) return;
-    if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 8) drag.moved = true;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (drag.axis === "split") { moveSplit(drag.splitStart + dx); return; }
+    if (Math.hypot(dx, dy) > 8) { drag.moved = true; clearTimeout(holdTimer); }
     if (drag.actual && drag.moved) {
       stage.classList.add("dragging");
-      stage.scrollLeft = drag.left - (e.clientX - drag.x);
-      stage.scrollTop = drag.top - (e.clientY - drag.y);
+      stage.scrollLeft = drag.left - dx;
+      stage.scrollTop = drag.top - dy;
+      return;
+    }
+    if (!drag.touch || !mobileViewer.matches || !drag.moved) return;
+    if (!drag.axis) {
+      if (Math.abs(dy) > Math.abs(dx) * 1.2) { drag.axis = "vertical"; startReel(); }
+      else if (Math.abs(dx) > Math.abs(dy) * 1.2) drag.axis = "horizontal";
+    }
+    if (drag.axis === "vertical") {
+      const now = performance.now(), dt = now - drag.time;
+      if (dt > 0) drag.velocity = .65 * ((e.clientY - drag.lastY) / dt) + .35 * drag.velocity;
+      drag.time = now; drag.lastY = e.clientY;
+      const resisted = (!reel.next && dy < 0) || (!reel.previous && dy > 0);
+      moveReel(Math.max(-reel.height, Math.min(reel.height, dy * (resisted ? .25 : 1))));
     }
   });
   stage.addEventListener("pointerup", (e) => {
     pointers.delete(e.pointerId);
+    clearTimeout(holdTimer);
     stage.classList.remove("dragging");
     const gesture = drag;
     drag = null;
     if (!gesture || gesture.id !== e.pointerId) return;
     const dx = e.clientX - gesture.x, dy = e.clientY - gesture.y;
+    if (split) {
+      const other = split.other, chooseOther = split.x < stage.clientWidth / 2;
+      spring(split.x, chooseOther ? 0 : stage.clientWidth, 0, moveSplit, () => {
+        resetInteraction(); if (chooseOther) show(other, false);
+      });
+      return;
+    }
+    if (reel) {
+      const velocity = performance.now() - gesture.time < 100 ? Math.max(-3, Math.min(3, gesture.velocity)) : 0;
+      const projected = reel.offset + velocity * 180;
+      const direction = projected < 0 ? 1 : -1;
+      const target = direction === 1 ? reel.next : reel.previous;
+      const advance = target && Math.abs(projected) > reel.height * .22;
+      spring(reel.offset, advance ? -direction * reel.height : 0, velocity, moveReel, () => {
+        resetInteraction(); if (advance) target.click();
+      });
+      return;
+    }
     if (gesture.touch && !gesture.actual && Math.max(Math.abs(dx), Math.abs(dy)) >= 45) {
       if (Math.abs(dy) > Math.abs(dx) * 1.2) nextPhoto(dy < 0 ? 1 : -1);
       else if (Math.abs(dx) > Math.abs(dy) * 1.2) show(index + (dx < 0 ? 1 : -1), true);
       return;
     }
-    if (!gesture.moved && !matchMedia("(max-width: 860px)").matches && iterPinClick?.(e)) return;
+    if (!gesture.moved && !mobileViewer.matches && iterPinClick?.(e)) return;
     if (!gesture.moved && gesture.image) setZoom(!stage.classList.contains("actual"), { x: e.clientX, y: e.clientY });
   });
   const cancelGesture = (e) => {
     pointers.delete(e.pointerId);
-    if (drag?.id === e.pointerId) drag = null;
-    stage.classList.remove("dragging");
+    // Normal release also loses capture; let the settling spring finish.
+    if (drag?.id === e.pointerId) resetInteraction();
   };
   stage.addEventListener("pointercancel", cancelGesture);
   stage.addEventListener("lostpointercapture", cancelGesture);
+  mobileViewer.addEventListener("change", resetInteraction);
+  window.addEventListener("resize", () => { if (reel || split) resetInteraction(); });
   dialog.addEventListener("keydown", (e) => {
     if (e.target.closest?.("input, textarea, select")) return;
     if (e.key === "ArrowRight") { e.preventDefault(); show(index + 1, true); }
@@ -1676,7 +1803,7 @@ ${appearanceScript}
     if (e.key === "z" || e.key === "Z") { e.preventDefault(); setZoom(!stage.classList.contains("actual")); }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); nextPhoto(e.key === "ArrowDown" ? 1 : -1); }
   });
-  dialog.addEventListener("close", () => { img.remove(); trigger?.focus({ preventScroll: true }); });
+  dialog.addEventListener("close", () => { resetInteraction(); pointers.clear(); img.remove(); trigger?.focus({ preventScroll: true }); });
 
   /* Return to the exact picker state when that's where we came from. */
   try {
@@ -1690,6 +1817,16 @@ ${appearanceScript}
 
   /* Download menus: each button opens its Summary / Full scope choices. */
   const dlButtons = [...document.querySelectorAll(".dl > button")];
+  function positionDownloadMenu(button) {
+    const menu = document.getElementById(button.getAttribute("aria-controls"));
+    menu.style.translate = "";
+    const rect = menu.getBoundingClientRect();
+    const shift = rect.left < 16 ? 16 - rect.left : rect.right > innerWidth - 16 ? innerWidth - 16 - rect.right : 0;
+    menu.style.translate = shift + "px 0";
+    const anchor = button.getBoundingClientRect();
+    menu.style.setProperty("--menu-origin", (anchor.left + anchor.width / 2 - rect.left - shift) + "px");
+  }
+  window.addEventListener("resize", () => dlButtons.forEach((b) => { if (b.getAttribute("aria-expanded") === "true") positionDownloadMenu(b); }));
   const closeMenus = (except) => dlButtons.forEach((b) => {
     if (b === except) return;
     b.setAttribute("aria-expanded", "false");
@@ -1701,7 +1838,7 @@ ${appearanceScript}
     b.setAttribute("aria-expanded", String(open));
     const menu = document.getElementById(b.getAttribute("aria-controls"));
     menu.hidden = !open;
-    if (open) menu.querySelector("a").focus();
+    if (open) { positionDownloadMenu(b); menu.querySelector("a").focus(); }
   }));
   document.addEventListener("click", (e) => { if (!e.target.closest(".dl")) closeMenus(); });
   document.addEventListener("keydown", (e) => {
