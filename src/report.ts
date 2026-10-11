@@ -681,7 +681,7 @@ export function renderReport(input: {
         ${selected ? `<div class="album-facts"><div>${x ? `<span class="plate-total num">${money(x.range)}</span>` : ""}<p class="plate-sub">${results.length} photos · ${x?.rooms ?? results.length} rooms${dateText ? ` · ${esc(dateText)}` : ""}</p></div><details class="album-summary"><summary>Design concept</summary><p>${esc(concept)} ${esc(direction)}${direction && !/[.!?]$/.test(direction) ? "." : ""}</p></details></div>` : `<div class="album-cover"><a class="album-pile" href="?scope=${tier}" aria-label="View ${tierName(tier)} redesign">${results.slice(0, 4).map(({p,t}, i) => `<img ${previewAttributes(t.image!, input.previewBase)} alt="${esc(tierName(tier) + ' redesign of ' + roomName(p))}" style="--i:${i}" loading="lazy">`).join("")}</a>
         <span class="album-copy"><span class="plate-title">${tierName(tier)}</span><span class="plate-sub">${TIER_LABELS[tier].blurb} · ${results.length} photos</span>
         ${x ? `<span class="plate-total num">${money(x.range)}</span>` : ""}
-        </span><a class="album-open" href="?scope=${tier}">View redesign</a></div>`}
+        <a class="album-open" href="?scope=${tier}">View redesign</a></span></div>`}
         ${selected ? `<div class="album-grid">${results.map(({p,t}) => `<figure>
           <span hidden>${zoomable({src:p.original,alt:roomName(p),group:`album-${tier}-${p.id}`,label:`${roomName(p)} · Listing photo`})}</span>
           ${zoomable({src:t.image!,alt:`${tierName(tier)} redesign of ${roomName(p)}`,group:`album-${tier}-${p.id}`,label:`${roomName(p)} · ${tierName(tier)}`,status:t.status,...(input.changes ? {room:p.id,tier,version:input.changes.versions.picks[pickKey(p.id,tier)] ?? ORIGINAL} : {})})}
@@ -988,12 +988,11 @@ ${appearanceScript}
   .album-summary p { max-width:70ch; color:var(--muted); font-size:14px; }
   .scope-albums:has(> :nth-child(2)) .scope-link > .album-cover { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
   .scope-albums:has(> :nth-child(2)) .scope-link .album-pile { width:calc(100% - 16px); max-width:none; aspect-ratio:3/2; }
-  @media(max-width:600px) { .scope-albums { gap:12px; } .scope-album > .album-cover { flex-wrap:wrap; gap:12px; } .album-pile { width:45%; margin:8px 0; } .album-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .scope-album .plate-total { font-size:18px; } .album-open { width:100%; } }
+  @media(max-width:600px) { .scope-albums { gap:12px; } .scope-album > .album-cover { flex-wrap:wrap; gap:12px; } .album-pile { width:45%; margin:8px 0; } .album-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .scope-album .plate-total { font-size:18px; } }
   @media(max-width:600px) {
     .scope-albums:has(> :nth-child(3)) { grid-template-columns:minmax(0,1fr); gap:24px; }
     .scope-albums:has(> :nth-child(3)) .scope-link > .album-cover { grid-template-columns:104px minmax(0,1fr); gap:8px 16px; }
     .scope-albums:has(> :nth-child(3)) .album-pile { width:96px; aspect-ratio:4/3; grid-row:1 / 3; align-self:start; }
-    .scope-albums:has(> :nth-child(3)) .album-open { grid-column:2; }
   }
   .plates { display:grid; gap:0 20px; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); }
   /* Each plate spans the same rows, so titles, totals, and tallies line up across all four. */
