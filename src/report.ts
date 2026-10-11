@@ -1010,9 +1010,10 @@ ${appearanceScript}
   .scope-albums:has(> :nth-child(2)) .scope-link .album-pile { width:calc(100% - 16px); max-width:none; aspect-ratio:3/2; }
   @media(max-width:600px) { .scope-albums { gap:12px; } .scope-album > .album-cover { flex-wrap:wrap; gap:12px; } .album-pile { width:45%; margin:28px 8px; } .album-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .scope-album .plate-total { font-size:18px; } }
   @media(max-width:600px) {
-    .scope-albums:has(> :nth-child(3)) { grid-template-columns:minmax(0,1fr); gap:24px; }
-    .scope-albums:has(> :nth-child(3)) .scope-link > .album-cover { grid-template-columns:104px minmax(0,1fr); gap:8px 16px; }
-    .scope-albums:has(> :nth-child(3)) .album-pile { width:96px; aspect-ratio:4/3; grid-row:1 / 3; align-self:start; }
+    .album-copy .plate-sub { display:none; }
+    .scope-albums:has(> :nth-child(2)) { grid-template-columns:minmax(0,1fr); gap:24px; }
+    .scope-albums:has(> :nth-child(2)) .scope-link > .album-cover { grid-template-columns:104px minmax(0,1fr); gap:8px 16px; }
+    .scope-albums:has(> :nth-child(2)) .album-pile { width:96px; aspect-ratio:4/3; grid-row:1 / 3; align-self:start; }
   }
   .plates { display:grid; gap:0 20px; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); }
   /* Each plate spans the same rows, so titles, totals, and tallies line up across all four. */
