@@ -1341,7 +1341,6 @@ ${appearanceScript}
   .viewer-neighbor { position:absolute; inset:0; background:#0f0f0e; background-position:center; background-repeat:no-repeat; background-size:contain; pointer-events:none; will-change:transform; }
   .viewer-split { position:absolute; inset:0; z-index:5; pointer-events:none; background-position:center; background-repeat:no-repeat; background-size:contain; }
   .viewer-divider { position:absolute; top:0; bottom:0; width:2px; z-index:6; background:white; box-shadow:0 0 8px #0008; pointer-events:none; }
-  .viewer-divider::after { content:"↔"; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); display:grid; place-items:center; width:42px; height:42px; border-radius:50%; color:#151514; background:white; box-shadow:0 2px 12px #0006; font:600 24px/1 var(--font); }
   .viewer-stage.comparing { cursor:ew-resize; overflow:hidden; }
   .viewer-stage.comparing img { pointer-events:none; }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; } }
