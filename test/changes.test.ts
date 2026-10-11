@@ -153,7 +153,7 @@ describe("a spot change", () => {
     await expect(startChange({ runDir, photoId: "photo_01", tier: "moderate", from: "v1", request: { ask: "x", notes: "", pins: [] }, models })).rejects.toThrow(/aren't in this report/);
   });
 
-  it("shows the picked version without design editing controls", async () => {
+  it("keeps desktop iteration controls and hides them on mobile", async () => {
     const file = await readVersions(runDir);
     file.picks["photo_01:cosmetic"] = "v2";
     const photos = applyPicks([photo], file);
@@ -162,11 +162,12 @@ describe("a spot change", () => {
     const html = renderReport({ title: "12 Maple St", photos, profileSummary: "", changes: { api: "/api/runs/l/r", originals: [photo], versions: file } });
     expect(html).toContain('data-room="photo_01" data-tier="cosmetic" data-version="v2"');
     expect(html).toContain("Version 2 · Your change");
-    expect(html).not.toContain('class="iter"');
-    expect(html).not.toContain("const ITER = ");
-    expect(html).not.toContain("data-open-change");
-    expect(html).not.toContain('data-viewer="changes"');
-    expect(html).not.toContain("Open and change");
+    expect(html).toContain('class="iter"');
+    expect(html).toContain("const ITER = ");
+    expect(html).toContain("data-open-change");
+    expect(html).toContain('data-viewer="changes"');
+    expect(html).toContain("(max-width: 860px)");
+    expect(html).toContain("open = open && !mobileIteration.matches");
     expect(html).toContain("12 Maple St");
     expect(html).toContain('href="?scope=cosmetic"');
 

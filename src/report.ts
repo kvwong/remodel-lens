@@ -453,8 +453,11 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
   }
   poll();
 
+  const mobileIteration = matchMedia("(max-width: 860px)");
+  mobileIteration.addEventListener("change", () => { if (mobileIteration.matches) setPanel(false); });
   /* Show or hide the panel. It starts hidden each time the viewer opens. */
   function setPanel(open) {
+    open = open && !mobileIteration.matches;
     dialog.classList.toggle("iter-closed", !open);
     dialog.querySelectorAll('.viewer-iter').forEach((b) => b.setAttribute("aria-pressed", String(open)));
     if (!open) setPinMode(false);
@@ -801,7 +804,7 @@ export function renderReport(input: {
           return `
         <div role="tabpanel" id="${p.id}-img-${t.tier}" aria-labelledby="${p.id}-tab-${t.tier}" data-panel="${p.id}:${t.tier}"${i === 0 ? "" : " hidden"}>
           ${t.image
-            ? `<div class="shot">${zoomable({ src: t.image, alt: `${tierName(t.tier)} redesign of the ${room.toLowerCase()}`, group: p.id, label: `${room} · ${tierName(t.tier)}`, status: t.status, room: ch ? p.id : undefined, tier: t.tier, version: v?.id ?? ORIGINAL, edit: false })}</div>`
+            ? `<div class="shot">${zoomable({ src: t.image, alt: `${tierName(t.tier)} redesign of the ${room.toLowerCase()}`, group: p.id, label: `${room} · ${tierName(t.tier)}`, status: t.status, room: ch ? p.id : undefined, tier: t.tier, version: v?.id ?? ORIGINAL, edit: !!ch })}${ch ? `<div class="shot-tools"><button type="button" class="shot-btn" data-open-change="${p.id}:${t.tier}" aria-label="Change the ${tierName(t.tier)} ${esc(room.toLowerCase())}" title="Change this redesign">${icon("pencil")}</button>${n > 1 ? versionSelect(p, t.tier, v?.id ?? ORIGINAL) : ""}</div>` : ""}</div>`
             : `<div class="no-image">${STATUS[t.status].label}. ${STATUS[t.status].meaning}.</div>`}
           <p class="figcap">${tierName(t.tier)} · ${TIER_LABELS[t.tier].blurb}</p>
         </div>`;
@@ -1268,6 +1271,10 @@ ${appearanceScript}
     .viewer-stage { flex:none; aspect-ratio:3 / 2; max-height:45dvh; }
     .iter { width:auto; flex:1; border-left:0; border-top:1px solid rgba(255,255,255,.1); }
   }
+  @media (max-width: 860px) {
+    .shot-tools, .viewer .viewer-iter, .viewer .iter, .viewer .viewer-ver, .viewer .vpins { display:none !important; }
+    .viewer .viewer-stage { flex:1; aspect-ratio:auto; max-height:none; }
+  }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; } }
 
   /* Motion + depth system */
@@ -1324,7 +1331,8 @@ ${appearanceScript}
   <div class="viewer-bar">
     <div class="viewer-title"><strong id="viewer-title"></strong><span id="viewer-status"></span></div>
     <div class="seg viewer-tabs" role="group" aria-label="Compare versions"></div>
-    <div class="viewer-actions">
+    <div class="viewer-actions">${ch ? `
+      <button class="vbtn viewer-iter" type="button" data-viewer="changes" aria-pressed="false" aria-controls="iter-panel" aria-label="Changes" title="Show or hide changes (C)">${icon("pencil")}</button>` : ""}
       <div class="seg viewer-zoom" role="group" aria-label="Image size">
         <button type="button" data-viewer="fit" aria-pressed="true" title="Fit (Z)">Fit</button>
         <button type="button" data-viewer="actual" aria-pressed="false" title="Actual size (Z)">100%</button>
@@ -1333,7 +1341,26 @@ ${appearanceScript}
     </div>
   </div>
   <div class="viewer-body">
-    <div class="viewer-stage"><div class="vpins"></div></div>
+    <div class="viewer-stage"><div class="vpins"></div></div>${ch ? `
+    <select class="viewer-ver" aria-label="Version on screen" hidden></select>
+    <aside class="iter" id="iter-panel" aria-labelledby="iter-h">
+      <div class="iter-head"><h2 id="iter-h">Changes</h2><span class="iter-sub"></span><button type="button" class="ibtn quiet iter-close" data-viewer="changes" aria-label="Hide changes">${icon("x")}</button></div>
+      <div class="iter-log" role="log" aria-label="Versions of this redesign"></div>
+      <form class="iter-compose">
+        <p class="iter-base"></p>
+        <ol class="iter-pins"></ol>
+        <div class="iter-box">
+          <div class="iter-refs"></div>
+          <textarea name="ask" rows="2" maxlength="2000" writingsuggestions="false" autocorrect="off" placeholder="Describe a change, or pin a spot on the image" aria-label="Describe a change"></textarea>
+          <div class="iter-tools">
+            <button type="button" class="itool" data-iter="pin" aria-pressed="false" title="Pin a note to a spot on the image">${icon("pin")}<span>Pin</span></button>
+            <label class="itool" title="Add up to 3 reference photos">${icon("image")}<span>Photo</span><input type="file" accept="image/*" multiple hidden></label>
+            <button type="submit" class="isend" aria-label="Make this change">${icon("arrowUp")}</button>
+          </div>
+        </div>
+        <p class="iter-status" role="status" aria-live="polite"></p>
+      </form>
+    </aside>` : ""}
   </div>
 </dialog>
 
@@ -1556,6 +1583,7 @@ ${appearanceScript}
       else if (Math.abs(dx) > Math.abs(dy) * 1.2) show(index + (dx < 0 ? 1 : -1), true);
       return;
     }
+    if (!gesture.moved && !matchMedia("(max-width: 860px)").matches && iterPinClick?.(e)) return;
     if (!gesture.moved && gesture.image) setZoom(!stage.classList.contains("actual"), { x: e.clientX, y: e.clientY });
   });
   const cancelGesture = (e) => {
@@ -1661,6 +1689,8 @@ ${appearanceScript}
     document.getElementById("top").focus({ preventScroll: true });
   });
 
+${iterData ? `  const ITER = ${JSON.stringify(iterData).replace(/</g, "\\u003c")};
+  ${ITER_SCRIPT}` : ""}
 })();
 </script>
 </body>
