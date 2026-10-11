@@ -5,14 +5,15 @@
 
   const THRESHOLD = 72; // px of (damped) pull that arms the refresh
   const MAX = 128;
-  const REST = 60; // how far the page stays down while the spinner shows
+  const REST = 72; // how far the page stays down while the spinner shows
   const MIN_SPIN = 600; // ms, so a fast refresh still reads as one
   const FLAG = "whim-pull-refresh";
   // Fields and the photo viewer stage keep their own touches. The photo viewer (split view,
   // pins, zoom) and every other dialog also block pulls while open. The hero reel stays
   // pullable: it only takes sideways drags, and a pull that turns sideways lets go below.
   const OWN_GESTURES = ".viewer-stage, input, textarea, select, [contenteditable], [data-no-pull]";
-  // The page moves down with the pull so the indicator sits in the gap above it, not over the logo.
+  // The page moves down with the pull so the indicator sits in the gap above it, not over the
+  // logo, and low enough to clear iOS's blur under the status bar.
   const SHIFTED = "body > .banner, body > .layout, body > main";
   const reduce = matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -22,7 +23,7 @@
     if (el) return el;
     const style = document.createElement("style");
     style.textContent = `
-      .ptr { position:fixed; z-index:40; top:calc(env(safe-area-inset-top) + 10px); left:50%; width:40px; height:40px; margin-left:-20px; display:grid; place-items:center; border-radius:50%; background:var(--surface, #fff); color:var(--text, #1b1a19); border:1px solid var(--line-strong, rgba(0,0,0,.14)); box-shadow:0 4px 16px rgba(0,0,0,.14); pointer-events:none; opacity:0; transform:translateY(-56px); }
+      .ptr { position:fixed; z-index:40; top:calc(env(safe-area-inset-top) + 28px); left:50%; width:40px; height:40px; margin-left:-20px; display:grid; place-items:center; border-radius:50%; background:var(--surface, #fff); color:var(--text, #1b1a19); border:1px solid var(--line-strong, rgba(0,0,0,.14)); box-shadow:0 4px 16px rgba(0,0,0,.14); pointer-events:none; opacity:0; transform:translateY(-56px); }
       .ptr svg { width:20px; height:20px; transition:transform .18s ease; }
       .ptr[data-armed] svg { transform:rotate(180deg); }
       .ptr[data-busy] svg { display:none; }
