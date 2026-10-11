@@ -453,7 +453,7 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
   }
   poll();
 
-  const mobileIteration = matchMedia("(max-width: 860px)");
+  const mobileIteration = matchMedia("(max-width: 860px), (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 600px)");
   mobileIteration.addEventListener("change", () => { if (mobileIteration.matches) setPanel(false); });
   /* Show or hide the panel. It starts hidden each time the viewer opens. */
   function setPanel(open) {
@@ -1307,7 +1307,8 @@ ${appearanceScript}
     .viewer-stage { flex:none; aspect-ratio:3 / 2; max-height:45dvh; }
     .iter { width:auto; flex:1; border-left:0; border-top:1px solid rgba(255,255,255,.1); }
   }
-  @media (max-width: 860px) {
+  @media (max-width: 860px), (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
+    .viewer .vbtn, .viewer .seg button { min-height:44px; }
     .viewer, .viewer * { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
     .shot-tools, .viewer .viewer-iter, .viewer .iter, .viewer .viewer-ver, .viewer .vpins { display:none !important; }
     .viewer .viewer-stage { flex:1; aspect-ratio:auto; max-height:none; }
@@ -1632,7 +1633,7 @@ ${appearanceScript}
     return next.find((z) => z.dataset.label.endsWith(" · " + version)) ?? next[0];
   }
   function nextPhoto(direction) { adjacentPhoto(direction)?.click(); }
-  const mobileViewer = matchMedia("(max-width: 860px)");
+  const mobileViewer = matchMedia("(max-width: 860px), (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 600px)");
   let drag = null, holdTimer = null, springFrame = null, reel = null, split = null;
   const pointers = new Set();
   const imageSource = (item) => item?.dataset.src || item?.querySelector("img")?.src;
@@ -1846,7 +1847,7 @@ ${appearanceScript}
   stage.addEventListener("pointercancel", cancelGesture);
   stage.addEventListener("lostpointercapture", cancelGesture);
   mobileViewer.addEventListener("change", resetInteraction);
-  window.addEventListener("resize", () => { if (reel || split) resetInteraction(); });
+  window.addEventListener("resize", () => { if (dialog.open) { resetInteraction(); pointers.clear(); } });
   dialog.addEventListener("keydown", (e) => {
     if (e.target.closest?.("input, textarea, select")) return;
     if (e.key === "ArrowRight") { e.preventDefault(); show(index + 1, true); }
