@@ -331,7 +331,7 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
     if (!e || !e.image || e.status === "running") return;
     viewed = id;
     if (!img.isConnected) stage.append(img);
-    img.src = e.image;
+    loadViewerImage(e.image, ITER.thumb + "/" + e.image + "?w=960");
     title.textContent = room().name + " · " + original().name;
     img.alt = title.textContent + (versions().length ? " · " + label(id) : "");
     renderVersionMenu();
@@ -801,7 +801,7 @@ export function renderReport(input: {
           return `
         <div role="tabpanel" id="${p.id}-img-${t.tier}" aria-labelledby="${p.id}-tab-${t.tier}" data-panel="${p.id}:${t.tier}"${i === 0 ? "" : " hidden"}>
           ${t.image
-            ? `<div class="shot">${zoomable({ src: t.image, alt: `${tierName(t.tier)} redesign of the ${room.toLowerCase()}`, group: p.id, label: `${room} · ${tierName(t.tier)}`, status: t.status, room: ch ? p.id : undefined, tier: t.tier, version: v?.id ?? ORIGINAL, edit: !!ch })}${ch ? `<div class="shot-tools"><button type="button" class="shot-btn" data-open-change="${p.id}:${t.tier}" aria-label="Change the ${tierName(t.tier)} ${esc(room.toLowerCase())}" title="Change this redesign">${icon("pencil")}</button>${n > 1 ? versionSelect(p, t.tier, v?.id ?? ORIGINAL) : ""}</div>` : ""}</div>`
+            ? `<div class="shot">${zoomable({ src: t.image, alt: `${tierName(t.tier)} redesign of the ${room.toLowerCase()}`, group: p.id, label: `${room} · ${tierName(t.tier)}`, status: t.status, room: ch ? p.id : undefined, tier: t.tier, version: v?.id ?? ORIGINAL, edit: false })}</div>`
             : `<div class="no-image">${STATUS[t.status].label}. ${STATUS[t.status].meaning}.</div>`}
           <p class="figcap">${tierName(t.tier)} · ${TIER_LABELS[t.tier].blurb}</p>
         </div>`;
@@ -1157,7 +1157,8 @@ ${appearanceScript}
   .vbtn { font:inherit; font-size:13px; min-height:36px; padding:4px 12px; border-radius:8px; border:1px solid rgba(255,255,255,.22); background:transparent; color:inherit; cursor:pointer; }
   .vbtn[aria-pressed="true"] { background:#efede9; color:#0f0f0e; }
   .viewer-body { flex:1; min-height:0; display:flex; }
-  .viewer-stage { position:relative; flex:1; min-width:0; min-height:0; overflow:auto; overscroll-behavior:contain; display:flex; cursor:zoom-in; }
+  .viewer-load-status { position:absolute; z-index:4; left:50%; bottom:20px; transform:translateX(-50%); padding:8px 14px; border-radius:20px; background:rgba(0,0,0,.8); color:white; font-size:13px; pointer-events:none; }
+  .viewer-stage { background-position:center; background-repeat:no-repeat; background-size:contain; position:relative; flex:1; min-width:0; min-height:0; overflow:auto; overscroll-behavior:contain; touch-action:none; display:flex; cursor:zoom-in; }
   .viewer-stage img { flex:none; margin:auto; max-width:100%; max-height:100%; object-fit:contain; display:block; user-select:none; -webkit-user-drag:none; }
   .viewer-stage.actual { cursor:grab; } .viewer-stage.actual.dragging { cursor:grabbing; }
   .viewer-stage.actual img { max-width:none; max-height:none; }
@@ -1323,8 +1324,7 @@ ${appearanceScript}
   <div class="viewer-bar">
     <div class="viewer-title"><strong id="viewer-title"></strong><span id="viewer-status"></span></div>
     <div class="seg viewer-tabs" role="group" aria-label="Compare versions"></div>
-    <div class="viewer-actions">${ch ? `
-      <button class="vbtn viewer-iter" type="button" data-viewer="changes" aria-pressed="false" aria-controls="iter-panel" aria-label="Changes" title="Show or hide changes (C)">${icon("pencil")}</button>` : ""}
+    <div class="viewer-actions">
       <div class="seg viewer-zoom" role="group" aria-label="Image size">
         <button type="button" data-viewer="fit" aria-pressed="true" title="Fit (Z)">Fit</button>
         <button type="button" data-viewer="actual" aria-pressed="false" title="Actual size (Z)">100%</button>
@@ -1333,26 +1333,7 @@ ${appearanceScript}
     </div>
   </div>
   <div class="viewer-body">
-    <div class="viewer-stage"><div class="vpins"></div></div>${ch ? `
-    <select class="viewer-ver" aria-label="Version on screen" hidden></select>
-    <aside class="iter" id="iter-panel" aria-labelledby="iter-h">
-      <div class="iter-head"><h2 id="iter-h">Changes</h2><span class="iter-sub"></span><button type="button" class="ibtn quiet iter-close" data-viewer="changes" aria-label="Hide changes">${icon("x")}</button></div>
-      <div class="iter-log" role="log" aria-label="Versions of this redesign"></div>
-      <form class="iter-compose">
-        <p class="iter-base"></p>
-        <ol class="iter-pins"></ol>
-        <div class="iter-box">
-          <div class="iter-refs"></div>
-          <textarea name="ask" rows="2" maxlength="2000" writingsuggestions="false" autocorrect="off" placeholder="Describe a change, or pin a spot on the image" aria-label="Describe a change"></textarea>
-          <div class="iter-tools">
-            <button type="button" class="itool" data-iter="pin" aria-pressed="false" title="Pin a note to a spot on the image">${icon("pin")}<span>Pin</span></button>
-            <label class="itool" title="Add up to 3 reference photos">${icon("image")}<span>Photo</span><input type="file" accept="image/*" multiple hidden></label>
-            <button type="submit" class="isend" aria-label="Make this change">${icon("arrowUp")}</button>
-          </div>
-        </div>
-        <p class="iter-status" role="status" aria-live="polite"></p>
-      </form>
-    </aside>` : ""}
+    <div class="viewer-stage"><div class="vpins"></div></div>
   </div>
 </dialog>
 
@@ -1421,6 +1402,23 @@ ${appearanceScript}
   // The viewer image element is created on first open, so the closed dialog holds no empty image.
   const img = document.createElement("img");
   img.alt = "";
+  img.decoding = "async";
+  const loadingStatus = document.createElement("div");
+  loadingStatus.className = "viewer-load-status";
+  loadingStatus.setAttribute("role", "status");
+  loadingStatus.hidden = true;
+  stage.parentElement.append(loadingStatus);
+  const finishImage = () => {
+    img.style.visibility = "";
+    stage.style.backgroundImage = "";
+    stage.setAttribute("aria-busy", "false");
+    loadingStatus.hidden = true;
+  };
+  img.addEventListener("error", () => {
+    stage.setAttribute("aria-busy", "false");
+    loadingStatus.textContent = "Full image unavailable. Close and reopen to retry.";
+    loadingStatus.hidden = false;
+  });
   const tabsEl = dialog.querySelector(".viewer-tabs");
   const title = dialog.querySelector("#viewer-title");
   const statusEl = dialog.querySelector("#viewer-status");
@@ -1435,17 +1433,29 @@ ${appearanceScript}
     stage.scrollTop = (stage.scrollHeight - stage.clientHeight) / 2;
   }
   img.addEventListener("load", () => {
+    finishImage();
     if (stage.classList.contains("actual")) centerImage();
   });
   new ResizeObserver(() => {
     if (stage.classList.contains("actual")) centerImage();
   }).observe(stage);
 
+  function loadViewerImage(source, preview) {
+    stage.style.backgroundImage = preview ? "url(" + JSON.stringify(preview) + ")" : "";
+    img.style.visibility = "hidden";
+    stage.setAttribute("aria-busy", "true");
+    loadingStatus.textContent = "Loading full-resolution image…";
+    loadingStatus.hidden = false;
+    img.src = source;
+    if (img.complete && img.naturalWidth) finishImage();
+  }
+
   function show(i, keepZoom) {
     index = (i + items.length) % items.length;
     const item = items[index];
     if (!img.isConnected) stage.append(img);
-    img.src = item.dataset.src || item.querySelector("img").src;
+    const preview = item.querySelector("img");
+    loadViewerImage(item.dataset.src || preview.src, preview?.currentSrc || preview?.src);
     img.alt = item.dataset.label;
     title.textContent = item.dataset.label;
     const s = STATUS[item.dataset.status];
@@ -1503,46 +1513,64 @@ ${appearanceScript}
     if (e.target.closest('[data-viewer="fit"]')) return setZoom(false);
     if (e.target.closest('[data-viewer="actual"]')) return setZoom(true);
   });
-  let drag = null, moved = false;
+  function nextPhoto(direction) {
+    const album = items[index]?.closest(".album-grid");
+    const photos = [...(album ? album.querySelectorAll(".zoom") : document.querySelectorAll(".room .zoom"))];
+    const groups = [...new Set(photos.map((z) => z.dataset.group))];
+    const g = groups.indexOf(items[index]?.dataset.group);
+    if (g < 0) return;
+    const version = items[index].dataset.label.split(" · ").pop();
+    const nextGroup = groups[(g + direction + groups.length) % groups.length];
+    const next = photos.filter((z) => z.dataset.group === nextGroup);
+    const target = next.find((z) => z.dataset.label.endsWith(" · " + version)) ?? next[0];
+    if (target) { trigger = target; target.click(); }
+  }
+  let drag = null;
+  const pointers = new Set();
   stage.addEventListener("pointerdown", (e) => {
-    moved = false;
-    if (!stage.classList.contains("actual")) return;
-    drag = { x: e.clientX, y: e.clientY, left: stage.scrollLeft, top: stage.scrollTop };
-    stage.classList.add("dragging");
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    pointers.add(e.pointerId);
+    if (pointers.size > 1) { drag = null; return; }
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, left: stage.scrollLeft, top: stage.scrollTop,
+      actual: stage.classList.contains("actual"), touch: e.pointerType !== "mouse", moved: false, image: e.target === img };
     stage.setPointerCapture(e.pointerId);
   });
   stage.addEventListener("pointermove", (e) => {
-    if (!drag) return;
-    if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 4) moved = true;
-    stage.scrollLeft = drag.left - (e.clientX - drag.x);
-    stage.scrollTop = drag.top - (e.clientY - drag.y);
+    if (!drag || drag.id !== e.pointerId) return;
+    if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 8) drag.moved = true;
+    if (drag.actual && drag.moved) {
+      stage.classList.add("dragging");
+      stage.scrollLeft = drag.left - (e.clientX - drag.x);
+      stage.scrollTop = drag.top - (e.clientY - drag.y);
+    }
   });
   stage.addEventListener("pointerup", (e) => {
+    pointers.delete(e.pointerId);
     stage.classList.remove("dragging");
-    const wasDrag = moved;
+    const gesture = drag;
     drag = null;
-    if (!wasDrag && iterPinClick?.(e)) return;
-    if (!wasDrag && e.target === img) setZoom(!stage.classList.contains("actual"), { x: e.clientX, y: e.clientY });
+    if (!gesture || gesture.id !== e.pointerId) return;
+    const dx = e.clientX - gesture.x, dy = e.clientY - gesture.y;
+    if (gesture.touch && !gesture.actual && Math.max(Math.abs(dx), Math.abs(dy)) >= 45) {
+      if (Math.abs(dy) > Math.abs(dx) * 1.2) nextPhoto(dy < 0 ? 1 : -1);
+      else if (Math.abs(dx) > Math.abs(dy) * 1.2) show(index + (dx < 0 ? 1 : -1), true);
+      return;
+    }
+    if (!gesture.moved && gesture.image) setZoom(!stage.classList.contains("actual"), { x: e.clientX, y: e.clientY });
   });
+  const cancelGesture = (e) => {
+    pointers.delete(e.pointerId);
+    if (drag?.id === e.pointerId) drag = null;
+    stage.classList.remove("dragging");
+  };
+  stage.addEventListener("pointercancel", cancelGesture);
+  stage.addEventListener("lostpointercapture", cancelGesture);
   dialog.addEventListener("keydown", (e) => {
     if (e.target.closest?.("input, textarea, select")) return;
     if (e.key === "ArrowRight") { e.preventDefault(); show(index + 1, true); }
     if (e.key === "ArrowLeft") { e.preventDefault(); show(index - 1, true); }
     if (e.key === "z" || e.key === "Z") { e.preventDefault(); setZoom(!stage.classList.contains("actual")); }
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      // Next/previous room, same version (Listing/Cosmetic/…), so a scope can be scanned room by room.
-      e.preventDefault();
-      const album = items[index]?.closest(".album-grid");
-      const photos = [...(album ? album.querySelectorAll(".zoom") : document.querySelectorAll(".room .zoom"))];
-      const groups = [...new Set(photos.map((z) => z.dataset.group))];
-      const g = groups.indexOf(items[index]?.dataset.group);
-      if (g < 0) return;
-      const version = items[index].dataset.label.split(" · ").pop();
-      const nextGroup = groups[(g + (e.key === "ArrowDown" ? 1 : -1) + groups.length) % groups.length];
-      const next = photos.filter((z) => z.dataset.group === nextGroup);
-      const target = next.find((z) => z.dataset.label.endsWith(" · " + version)) ?? next[0];
-      if (target) { trigger = target; target.click(); }
-    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); nextPhoto(e.key === "ArrowDown" ? 1 : -1); }
   });
   dialog.addEventListener("close", () => { img.remove(); trigger?.focus({ preventScroll: true }); });
 
@@ -1632,8 +1660,7 @@ ${appearanceScript}
     motion.scroll(0);
     document.getElementById("top").focus({ preventScroll: true });
   });
-${iterData ? `  const ITER = ${JSON.stringify(iterData).replace(/</g, "\\u003c")};
-  ${ITER_SCRIPT}` : ""}
+
 })();
 </script>
 </body>

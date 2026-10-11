@@ -130,7 +130,7 @@
     .collection-head .btn { min-height:44px; }
     .collection-grid { grid-template-columns:minmax(0, 1fr); }
     .collection-link { min-height:108px; }
-    .mobile-tabs { position:fixed; z-index:25; bottom:calc(12px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:4px; padding:6px; border:0; border-radius:24px; background:color-mix(in srgb, var(--surface) 35%, transparent); box-shadow:0 8px 32px rgba(0,0,0,.1); }
+    .mobile-tabs { position:fixed; z-index:25; bottom:max(8px, env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:4px; padding:6px; border:0; border-radius:24px; background:color-mix(in srgb, var(--surface) 35%, transparent); box-shadow:0 8px 32px rgba(0,0,0,.1); }
     .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-height:56px; border-radius:18px; color:var(--muted); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; --motion:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
     .mobile-tabs .icon { width:22px; height:22px; }
     .mobile-tabs a[aria-current="page"] { background:var(--primary); color:var(--primary-text); font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.18); }
@@ -161,6 +161,10 @@
   .grid { display:grid; gap:20px 16px; grid-template-columns:repeat(auto-fill, minmax(min(100%, 230px), 1fr)); }
   .card { min-width:0; }
   .pick { position:relative; display:block; cursor:pointer; aspect-ratio:3 / 2; background:var(--surface-2); border-radius:3px; overflow:hidden; }
+  .pick::after { content:"Loading photo…"; position:absolute; inset:0; display:grid; place-items:center; color:var(--muted); font-size:13px; pointer-events:none; }
+  .pick[data-image-state="ready"]::after { display:none; }
+  .pick[data-image-state="error"]::after { content:"Photo unavailable · reload to retry"; }
+  .pick:not([data-image-state="ready"]) img { visibility:hidden; }
   .pick img { width:100%; height:100%; object-fit:cover; display:block; --motion:opacity .2s, filter .2s; }
   .card[data-selected="false"] .pick img { opacity:.4; filter:grayscale(.7); }
   .pick input { position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; }
@@ -411,7 +415,7 @@
     .savebar { bottom:calc(96px + env(safe-area-inset-bottom)); }
     .toast { bottom:calc(96px + env(safe-area-inset-bottom)); max-width:calc(100% - 32px); }
     /* The floating tab bar would ride above the on-screen keyboard and cover the field being typed in. */
-    body:has(:is(input:not([type="checkbox"]), textarea, select):focus) .mobile-tabs { display:none; }
+    body[data-keyboard-open] .mobile-tabs { display:none; }
 
     /* Detail pages: a back link replaces the hidden sidebar. */
     .back-link { display:inline-flex; align-items:center; gap:2px; min-height:44px; margin:-10px 0 -4px -6px; padding:0 8px 0 2px; border-radius:8px; color:var(--muted); font-size:14px; font-weight:500; text-decoration:none; }
@@ -813,6 +817,60 @@ const icon = (name) => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke
 document.querySelectorAll("[data-icon]").forEach((el) => (el.outerHTML = icon(el.dataset.icon)));
 
 const $ = (sel, root = document) => root.querySelector(sel);
+
+// Focus alone does not mean a software keyboard is open (hardware keyboards,
+// native selects, and dismissed keyboards can all leave a field focused).
+const keyboardViewport = window.visualViewport;
+let restingViewportHeight = window.innerHeight;
+let keyboardFrame;
+function updateKeyboardNavigation() {
+  const editing = document.activeElement?.matches('textarea, select, input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="hidden"])');
+  if (!editing) restingViewportHeight = window.innerHeight;
+  const layoutHeight = Math.max(restingViewportHeight, window.innerHeight, document.documentElement.clientHeight);
+  const visibleHeight = keyboardViewport?.height ?? window.innerHeight;
+  const keyboardOpen = window.innerWidth <= 860 && editing &&
+    (!keyboardViewport || Math.abs(keyboardViewport.scale - 1) < .05) &&
+    layoutHeight - visibleHeight > Math.max(150, layoutHeight * .2);
+  document.body.toggleAttribute("data-keyboard-open", !!keyboardOpen);
+}
+function scheduleKeyboardNavigation() {
+  cancelAnimationFrame(keyboardFrame);
+  keyboardFrame = requestAnimationFrame(updateKeyboardNavigation);
+}
+document.addEventListener("focusin", scheduleKeyboardNavigation);
+document.addEventListener("focusout", scheduleKeyboardNavigation);
+window.addEventListener("resize", scheduleKeyboardNavigation);
+window.addEventListener("pageshow", scheduleKeyboardNavigation);
+window.addEventListener("orientationchange", () => {
+  restingViewportHeight = window.innerHeight;
+  scheduleKeyboardNavigation();
+});
+keyboardViewport?.addEventListener("resize", scheduleKeyboardNavigation);
+updateKeyboardNavigation();
+
+// Preserve reserved photo space and give slow/failed requests a visible state.
+function watchPhotoImages(root) {
+  const images = [...(root.matches?.(".pick img") ? [root] : []), ...(root.querySelectorAll?.(".pick img") ?? [])];
+  images.forEach((img) => {
+    if (img.dataset.watched) return;
+    img.dataset.watched = "true";
+    const update = () => { img.closest(".pick").dataset.imageState = img.naturalWidth ? "ready" : "error"; };
+    img.addEventListener("load", update);
+    img.addEventListener("error", update);
+    if (img.complete) update();
+  });
+}
+new MutationObserver((changes) => changes.forEach((change) => change.addedNodes.forEach((node) => {
+  if (node.nodeType === 1) watchPhotoImages(node);
+}))).observe(document.querySelector("#content"), { childList:true, subtree:true });
+
+function thumbAttributes(src, sizes) {
+  const url = new URL(src, location.href);
+  if (!url.pathname.startsWith("/thumb/")) return `src="${esc(src)}"`;
+  const variant = (width) => { url.searchParams.set("w", width); return esc(url.pathname + url.search); };
+  return `src="${variant(480)}" srcset="${[240, 480, 640, 960].map((w) => `${variant(w)} ${w}w`).join(", ")}" sizes="${sizes}"`;
+}
+
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const fmtDate = (iso) => new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 const nf = new Intl.NumberFormat();
@@ -921,7 +979,7 @@ function renderCollection(view) {
   </header>
   ${items.length ? `<ul class="collection-grid">${items.map(item => {
     const profile = tastes ? state.profiles.find(p => p.id === item.id) : null;
-    const preview = tastes ? profile?.previews?.length ? profilePreview(profile) : icon("image") : item.cover ? `<img src="${esc(item.cover)}" alt="" loading="lazy">` : icon("home");
+    const preview = tastes ? profile?.previews?.length ? profilePreview(profile, "88px") : icon("image") : item.cover ? `<img src="${esc(item.cover)}" alt="" loading="lazy">` : icon("home");
     return `<li><a class="collection-link nav-inline" href="?${tastes ? "taste" : "listing"}=${encodeURIComponent(item.id)}">
       <span class="collection-preview">${preview}</span>
       <span class="collection-copy"><strong>${esc(item.name)}</strong><small class="num">${tastes ? `${item.referenceCount} photos · ${item.built ? `${item.ruleCount} rules` : "no rules yet"}` : `${item.selectedCount} of ${item.photoCount} selected`}</small>
@@ -1191,7 +1249,7 @@ function reelLook(i) {
 
 function reelCard(slide, i, copy = false) {
   return `<li class="reel-card" style="${reelLook(i)}" ${copy ? 'aria-hidden="true"' : ""}><a href="${esc(slide.reportUrl)}" ${copy ? 'tabindex="-1"' : ""}>
-    <img src="${esc(slide.src)}" alt="${copy ? "" : esc(slide.alt)}" loading="${i < 6 ? "eager" : "lazy"}" decoding="async" draggable="false"><span>${esc(slide.caption)}</span>
+    <img ${thumbAttributes(slide.src, "280px")} alt="${copy ? "" : esc(slide.alt)}" loading="${!copy && i < 3 ? "eager" : "lazy"}" decoding="async" draggable="false"><span>${esc(slide.caption)}</span>
   </a></li>`;
 }
 
@@ -1382,10 +1440,10 @@ function thumbTilt(seed, i) {
   return `--tilt:${tilt.toFixed(1)}deg;--lift:${lift.toFixed(1)}px;--fan:${i * 14}px;z-index:${i}`;
 }
 
-function profilePreview(profile) {
+function profilePreview(profile, sizes = "(max-width: 860px) 50vw, 320px") {
   const images = profile.previews ?? [];
   return images.length
-    ? `<span class="profile-preview" data-count="${images.length}">${images.map((src) => `<img src="${esc(src)}" alt="" decoding="async">`).join("")}</span>`
+    ? `<span class="profile-preview" data-count="${images.length}">${images.map((src) => `<img ${thumbAttributes(src, sizes)} alt="" loading="lazy" decoding="async">`).join("")}</span>`
     : `<span class="profile-preview profile-preview-empty">${icon("image")}<span>No reference photos</span></span>`;
 }
 
@@ -1505,7 +1563,7 @@ function renderListing() {
               <div class="card" data-selected="${p.selected}">
                 <label class="pick">
                   <input type="checkbox" data-file="${esc(p.file)}" ${p.selected ? "checked" : ""}>
-                  <img src="${esc(p.thumb)}" alt="" width="640" height="427" loading="${i < 6 ? "eager" : "lazy"}" decoding="async">
+                  <img ${thumbAttributes(p.thumb, "(max-width: 550px) calc(100vw - 64px), (max-width: 860px) 40vw, 25vw")} alt="" width="640" height="427" loading="${!photosHidden && i < 4 ? "eager" : "lazy"}" decoding="async">
                   <span class="check" aria-hidden="true">${icon("check")}</span>
                   <span class="sr-only">Redesign ${esc(label)} (${esc(p.file)})</span>
                 </label>
@@ -1539,7 +1597,7 @@ function renderListing() {
                    <div class="profile-caption"><span id="profile-value">${esc(profile.name)}</span>
                      <span class="profile-tools"><a href="?taste=${encodeURIComponent(profile.id)}" class="profile-edit" aria-label="Edit ${esc(profile.name)} profile">Edit</a><button id="profile" name="profile" type="button" class="profile-change" value="${esc(profile.id)}" aria-haspopup="listbox" aria-expanded="false" aria-controls="profile-options" aria-label="Change taste profile" aria-describedby="profile-value">Change ${icon("chevron")}</button></span></div>
                  </div>
-                 <div id="profile-options" class="profile-menu" role="listbox" aria-labelledby="profile-label" hidden>${state.profiles.map((p) => `<div class="profile-option" role="option" tabindex="-1" aria-selected="${p.id === profile.id}" data-profile-choice="${esc(p.id)}">${icon("check")}${p.previews?.[0] ? `<img class="profile-option-thumb" src="${esc(p.previews[0])}" alt="">` : ""}<span>${esc(p.name)}${p.stale ? " (rules out of date)" : ""}</span></div>`).join("")}<div class="profile-menu-sep" role="separator"></div><div class="profile-option profile-option-new" role="option" tabindex="-1" aria-selected="false" data-profile-new>${icon("plus")}<span>New profile</span></div></div>
+                 <div id="profile-options" class="profile-menu" role="listbox" aria-labelledby="profile-label" hidden>${state.profiles.map((p) => `<div class="profile-option" role="option" tabindex="-1" aria-selected="${p.id === profile.id}" data-profile-choice="${esc(p.id)}">${icon("check")}${p.previews?.[0] ? `<img class="profile-option-thumb" ${thumbAttributes(p.previews[0], "32px")} alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}${p.stale ? " (rules out of date)" : ""}</span></div>`).join("")}<div class="profile-menu-sep" role="separator"></div><div class="profile-option profile-option-new" role="option" tabindex="-1" aria-selected="false" data-profile-new>${icon("plus")}<span>New profile</span></div></div>
                 </div>
                 ${profile.description ? `<p class="profile-description">${esc(profile.description)}</p>` : ""}
                 ${profile.stale ? `<p class="hint" style="color:var(--warn);margin:8px 0">Rules out of date. Edit the profile to rebuild them.</p>` : ""}`

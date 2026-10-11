@@ -46,10 +46,14 @@ import {
 
 const PORT = Number(process.env.PORT ?? 4310);
 // Listen on the LAN so the app can be opened from another device on the same Wi-Fi.
-const HOST = "0.0.0.0";
+const HOST = process.env.HOST ?? "0.0.0.0";
 const INDEX = path.join(path.dirname(new URL(import.meta.url).pathname), "index.html");
 
 function isAllowedRequestHost(host: string): boolean {
+  // Explicit hostnames for private reverse proxies such as Tailscale Serve.
+  const hostname = host.toLowerCase().replace(/:\d+$/, "");
+  const allowedHosts = (process.env.ALLOWED_HOSTS ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+  if (allowedHosts.includes(hostname)) return true;
   if (/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return true;
   const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(:\d+)?$/.exec(host);
   if (!match) return false;

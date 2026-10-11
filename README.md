@@ -356,6 +356,8 @@ and `.env`, in that order. Env files live in the repository root.
 | `IMAGE_CONCURRENCY` | `6` | Maximum image edits in flight per process, shared across app listings. Set 1–16 with **Image edits at once** in Settings; lower it if OpenAI rate-limits. |
 | `EDGE_THRESHOLD` | `0.45` | Minimum edge correlation for a fixed element to pass. See [Tune verification](#tune-verification). |
 | `PORT` | `4310` | Local app port. |
+| `HOST` | `0.0.0.0` | Listener address. Use `127.0.0.1` for localhost-only previews or access exclusively through a local proxy. Set this in the shell when starting the app. |
+| `ALLOWED_HOSTS` | — | Additional exact hostnames accepted by the server, comma-separated, without scheme or port. For Tailscale Serve, add the mini's full `.ts.net` hostname in `.env.local` and restart. |
 
 ## UI motion and layout
 
