@@ -867,6 +867,16 @@ export function renderReport(input: {
     <p class="end-links">${back ? `<a href="${back.href}" data-back>${icon("arrowLeft")}${back.label}</a>` : ""}<a href="#top">${icon("arrowUp")}Back to top</a></p>
   </section>`;
 
+  const downloads = input.pdf || input.html ? `<div class="share"><div class="dl">
+    <button class="share-btn" type="button" aria-label="Download report" title="Download report" aria-expanded="false" aria-controls="dl-report">${icon("download")}</button>
+    <div class="dl-menu" id="dl-report" hidden>${[
+      input.pdf && { label: "PDF", links: input.pdf, kind: "PDF" },
+      input.html && { label: "HTML", links: input.html, kind: "web page" },
+    ].filter((d) => !!d).map((d) => `<div class="dl-format"><span class="dl-heading">${d.label}</span>
+      <a href="${esc(d.links.summary)}" data-download="summary ${d.kind}" aria-label="Download ${d.label} summary" download>Summary</a>
+      <a href="${esc(d.links.full)}" data-download="full scope ${d.kind}" aria-label="Download ${d.label} full scope" download>Full scope</a></div>`).join("")}</div>
+    </div><span class="share-status" role="status" aria-live="polite"></span></div>` : "";
+
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -945,6 +955,16 @@ ${appearanceScript}
   .s-verified { color:var(--ok); } .s-review { color:var(--warn); } .s-failed, .s-error { color:var(--bad); } .s-unchanged { color:var(--muted); }
   .status > span:not(.status-meaning) { color:var(--text); }
 
+  .page-head .detail-title { align-items:center; justify-content:space-between; gap:16px; }
+  .page-head .detail-title h1 { flex:1; }
+  .page-head .detail-title .share { flex:none; }
+  .page-head .detail-title .dl { flex:none; }
+  .page-head .detail-title .share-btn { display:grid; place-items:center; width:44px; height:44px; min-height:44px; padding:0; border:0; border-radius:10px; background:transparent; color:var(--primary); }
+  .page-head .detail-title .share-btn:hover, .page-head .detail-title .share-btn[aria-expanded="true"] { background:var(--surface); }
+  .page-head .detail-title .share-btn .icon { width:20px; height:20px; }
+  .page-head .detail-title .share-status { position:absolute; top:100%; right:0; width:min(280px, calc(100vw - 32px)); margin-top:6px; white-space:normal; }
+  .dl-heading { display:block; padding:6px 10px 2px; color:var(--muted); font-size:12px; font-weight:500; }
+  .dl-format + .dl-format { border-top:1px solid var(--line); margin-top:4px; padding-top:4px; }
   /* Overview: image-led plates with gallery-label captions */
   .lede { margin:6px 0 20px; color:var(--muted); max-width:65ch; }
   .scope-albums { display:grid; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); gap:24px; align-items:start; }
@@ -1033,7 +1053,7 @@ ${appearanceScript}
   tfoot th, tfoot td { border-bottom:0; padding-top:14px; font-weight:600; font-size:15px; }
 
   /* Sticky controls */
-  .toolbar { position:sticky; top:0; z-index:5; display:grid; grid-template-columns:auto minmax(180px, 1fr) auto; gap:12px 16px; align-items:center; margin:var(--section-gap) 0 0; padding:12px 0; background:color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter:saturate(1.2) blur(10px); border-bottom:1px solid var(--line); }
+  .toolbar { position:fixed; top:0; left:var(--toolbar-left, 16px); width:var(--toolbar-width, calc(100% - 32px)); z-index:5; display:grid; grid-template-columns:auto minmax(180px, 1fr) auto; gap:12px 16px; align-items:center; margin:0; padding:12px 0; background:color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter:saturate(1.2) blur(10px); border-bottom:1px solid var(--line); }
   .toolbar .crumb { margin:0; padding:0 8px; min-width:44px; justify-content:center; }
   .toolbar:not(:has(.crumb)) { grid-template-columns:minmax(0, 1fr) auto; }
   .room-picker { position:relative; min-width:0; width:min(100%, 260px); justify-self:start; }
@@ -1334,29 +1354,14 @@ ${appearanceScript}
   ${back ? `<a class="report-brand" href="/" aria-label="Whim home">${brandLockup}</a>` : `<div class="report-brand" role="img" aria-label="Whim">${brandLockup}</div>`}
   ${renderPageHeader({ className: "page-head",
     back: input.redesignScope ? `<a class="back-link" href="report.html">${icon("arrowLeft")}Report</a>` : back ? `<a class="back-link" href="${back.href}" data-back>${icon("arrowLeft")}${esc(input.title)}</a>` : "",
-    title: `<h1 id="top" tabindex="-1">${esc(displayTitle)}</h1>`,
+    title: `<h1 id="top" tabindex="-1">${esc(displayTitle)}</h1>${downloads}`,
     metadata: `<p class="meta">${meta.map((m) => `<span>${esc(m)}</span>`).join("")}</p>`,
-    actions: input.pdf || input.html
-      ? `<div class="share" role="group" aria-label="Download to share" >
-      ${[
-        input.pdf && { id: "pdf", label: "PDF", links: input.pdf, kind: "PDF", hint: { summary: "Costs and a before and after for every room", full: "Every room, scope, and planned change" } },
-        input.html && { id: "html", label: "HTML", links: input.html, kind: "web page", hint: { summary: "One file to open in any browser: a before and after for every room", full: "One file to open in any browser: every room, scope, and planned change" } },
-      ].filter((d) => !!d).map((d) => `<div class="dl">
-        <button class="share-btn" type="button" aria-expanded="false" aria-controls="dl-${d.id}">${icon("download")}${d.label}${icon("chevronDown", "dl-caret")}</button>
-        <div class="dl-menu" id="dl-${d.id}" hidden>
-          <a href="${esc(d.links.summary)}" data-download="summary ${d.kind}" download><span>Summary</span><span class="dl-hint">${d.hint.summary}</span></a>
-          <a href="${esc(d.links.full)}" data-download="full scope ${d.kind}" download><span>Full scope</span><span class="dl-hint">${d.hint.full}</span></a>
-        </div>
-      </div>`).join("")}
-      <span class="share-status" role="status" aria-live="polite"></span>
-    </div>`
-      : "",
     notice: input.run?.stopped ? `<p class="notice">This run was stopped early, so some rooms or scopes are missing.</p>` : "",
   })}
   ${overview}
   ${input.redesignScope ? "" : table}
 
-  <div class="toolbar" ${input.redesignScope ? "hidden" : ""}>
+  <div class="toolbar" hidden>
     ${back ? `<a class="crumb" href="${back.href}" data-back aria-label="${back.label}">${icon("arrowLeft")}<span>${esc(input.title)}</span></a>` : ""}
     <details class="room-picker" id="room-jump">
       <summary aria-label="Jump to room">Jump to room…${icon("chevronDown")}</summary>
@@ -1459,9 +1464,29 @@ ${appearanceScript}
   else syncScopeControls();
 
   const toolbar = document.querySelector(".toolbar");
-  if (toolbar) new ResizeObserver(() => {
-    document.documentElement.style.setProperty("--toolbar-height", toolbar.getBoundingClientRect().height + "px");
-  }).observe(toolbar);
+  const byRoom = document.querySelector(".by-room");
+  function updateToolbar() {
+    if (!toolbar || !byRoom) return;
+    const main = document.getElementById("content"), rect = main.getBoundingClientRect(), css = getComputedStyle(main);
+    const left = parseFloat(css.paddingLeft), right = parseFloat(css.paddingRight);
+    toolbar.style.setProperty("--toolbar-left", (rect.left + left) + "px");
+    toolbar.style.setProperty("--toolbar-width", (rect.width - left - right) + "px");
+    const visible = byRoom.getBoundingClientRect().bottom <= 0;
+    toolbar.hidden = !visible;
+    if (!visible) toolbar.querySelector("details").open = false;
+    if (visible) document.documentElement.style.setProperty("--toolbar-height", toolbar.getBoundingClientRect().height + "px");
+  }
+  let toolbarFrame = null;
+  function scheduleToolbar() {
+    if (toolbarFrame !== null) return;
+    toolbarFrame = requestAnimationFrame(() => { toolbarFrame = null; updateToolbar(); });
+  }
+  window.addEventListener("scroll", scheduleToolbar, { passive:true });
+  window.addEventListener("resize", scheduleToolbar);
+  window.addEventListener("pageshow", scheduleToolbar);
+  if (byRoom) new ResizeObserver(scheduleToolbar).observe(byRoom);
+  if (toolbar) new ResizeObserver(scheduleToolbar).observe(toolbar);
+  updateToolbar();
   const roomPicker = document.getElementById("room-jump");
   function positionRoomMenu() {
     if (!roomPicker?.open) return;
