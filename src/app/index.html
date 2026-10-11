@@ -2597,12 +2597,12 @@ window.addEventListener("beforeunload", (event) => {
   if (pending.size) { flushSave(); event.preventDefault(); }
   if (state.briefDirty || state.rulesDirty || state.textEdit) event.preventDefault();
 });
-// Pull to refresh (home screen app) waits for unsaved edits; iOS ignores beforeunload there.
+// Pull to refresh (home screen app) reloads the view in place, and waits for unsaved
+// edits instead of dropping them (iOS ignores beforeunload there).
 window.addEventListener("whim:refresh", (event) => {
-  if (pending.size || state.briefDirty || state.rulesDirty || state.textEdit) {
-    event.preventDefault();
-    flushSave();
-  }
+  event.preventDefault();
+  if (pending.size || state.briefDirty || state.rulesDirty || state.textEdit) return flushSave();
+  event.detail?.waitUntil(loadWithScroll({ x:0, y:0 }));
 });
 // Restore only after asynchronous views have rendered, so the browser does not
 // clamp a saved position against the previous (often shorter) page.

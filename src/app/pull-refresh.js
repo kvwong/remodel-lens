@@ -5,10 +5,15 @@
 
   const THRESHOLD = 72; // px of (damped) pull that arms the refresh
   const MAX = 128;
+  const REST = 60; // how far the page stays down while the spinner shows
+  const MIN_SPIN = 600; // ms, so a fast refresh still reads as one
+  const FLAG = "whim-pull-refresh";
   // Fields and the photo viewer stage keep their own touches. The photo viewer (split view,
   // pins, zoom) and every other dialog also block pulls while open. The hero reel stays
   // pullable: it only takes sideways drags, and a pull that turns sideways lets go below.
   const OWN_GESTURES = ".viewer-stage, input, textarea, select, [contenteditable], [data-no-pull]";
+  // The page moves down with the pull so the indicator sits in the gap above it, not over the logo.
+  const SHIFTED = "body > .banner, body > .layout, body > main";
   const reduce = matchMedia("(prefers-reduced-motion: reduce)");
 
   let start = null, decided = false, pull = 0, refreshing = false, el = null;
@@ -17,14 +22,14 @@
     if (el) return el;
     const style = document.createElement("style");
     style.textContent = `
-      .ptr { position:fixed; z-index:40; top:calc(env(safe-area-inset-top) + 8px); left:50%; width:40px; height:40px; margin-left:-20px; display:grid; place-items:center; border-radius:50%; background:var(--surface, #fff); color:var(--text, #1b1a19); border:1px solid var(--line-strong, rgba(0,0,0,.14)); box-shadow:0 4px 16px rgba(0,0,0,.14); pointer-events:none; opacity:0; transform:translateY(-56px); }
+      .ptr { position:fixed; z-index:40; top:calc(env(safe-area-inset-top) + 10px); left:50%; width:40px; height:40px; margin-left:-20px; display:grid; place-items:center; border-radius:50%; background:var(--surface, #fff); color:var(--text, #1b1a19); border:1px solid var(--line-strong, rgba(0,0,0,.14)); box-shadow:0 4px 16px rgba(0,0,0,.14); pointer-events:none; opacity:0; transform:translateY(-56px); }
       .ptr svg { width:20px; height:20px; transition:transform .18s ease; }
       .ptr[data-armed] svg { transform:rotate(180deg); }
       .ptr[data-busy] svg { display:none; }
       .ptr[data-busy]::after { content:""; width:18px; height:18px; border-radius:50%; border:2px solid currentColor; border-right-color:transparent; animation:ptr-spin .7s linear infinite; }
-      .ptr.settle { transition:transform .22s ease, opacity .22s ease; }
+      .ptr.settle, .ptr-settle { transition:transform .25s cubic-bezier(.22,1,.36,1), opacity .25s ease; }
       @keyframes ptr-spin { to { transform:rotate(360deg); } }
-      @media (prefers-reduced-motion: reduce) { .ptr svg, .ptr.settle { transition:none; } .ptr[data-busy]::after { animation-duration:2.4s; } }`;
+      @media (prefers-reduced-motion: reduce) { .ptr svg, .ptr.settle, .ptr-settle { transition:none; } .ptr[data-busy]::after { animation-duration:2.4s; } }`;
     document.head.append(style);
     el = document.createElement("div");
     el.className = "ptr";
@@ -36,10 +41,22 @@
 
   function show(distance, settle = false) {
     const node = indicator();
-    node.classList.toggle("settle", settle && !reduce.matches);
-    node.style.transform = `translateY(${Math.round(distance - 56)}px)`;
+    const animate = settle && !reduce.matches;
+    node.classList.toggle("settle", animate);
+    node.style.transform = `translateY(${Math.round(Math.min(0, distance - REST))}px)`;
     node.style.opacity = String(Math.min(1, distance / THRESHOLD));
     node.toggleAttribute("data-armed", distance >= THRESHOLD);
+    for (const part of document.querySelectorAll(SHIFTED)) {
+      part.classList.toggle("ptr-settle", animate);
+      part.style.transform = distance > 0 ? `translateY(${Math.round(distance)}px)` : "";
+    }
+  }
+
+  function busy(on) {
+    indicator().toggleAttribute("data-busy", on);
+    indicator().setAttribute("aria-hidden", on ? "false" : "true");
+    if (on) indicator().setAttribute("aria-label", "Refreshing");
+    refreshing = on;
   }
 
   // A pull inside something that scrolls on its own (a log, a menu) belongs to that element.
@@ -55,6 +72,28 @@
     decided = false;
     if (pull > 0) show(0, true);
     pull = 0;
+  }
+
+  async function refresh() {
+    busy(true);
+    show(REST, true);
+    const began = performance.now();
+    // Pages that can refresh in place call waitUntil (the spinner holds until it settles), or
+    // cancel the event to skip the refresh (e.g. unsaved edits). Otherwise the page reloads.
+    let work = null;
+    const event = new CustomEvent("whim:refresh", { cancelable: true, detail: { waitUntil: (promise) => { work = promise; } } });
+    const proceed = dispatchEvent(event);
+    if (!work && !proceed) { busy(false); show(0, true); return; }
+    if (!work) {
+      try { sessionStorage.setItem(FLAG, "1"); } catch {}
+      await new Promise((resolve) => setTimeout(resolve, 150)); // let the spinner paint first
+      location.reload();
+      return;
+    }
+    try { await work; } catch {}
+    await new Promise((resolve) => setTimeout(resolve, Math.max(0, MIN_SPIN - (performance.now() - began))));
+    busy(false);
+    show(0, true);
   }
 
   addEventListener("touchstart", (e) => {
@@ -84,20 +123,22 @@
 
   addEventListener("touchend", () => {
     if (!start) return;
-    if (pull < THRESHOLD) return reset();
     start = null;
-    // Pages with unsaved edits cancel this; the pull just springs back.
-    if (!dispatchEvent(new Event("whim:refresh", { cancelable: true }))) return reset();
-    refreshing = true;
-    show(THRESHOLD, true);
-    indicator().setAttribute("data-busy", "");
-    location.reload();
+    if (pull < THRESHOLD) return reset();
+    pull = 0;
+    refresh();
   });
   addEventListener("touchcancel", () => { if (start) reset(); });
-  // Coming back from the bfcache after a reload attempt should not leave a spinner behind.
-  addEventListener("pageshow", () => {
-    refreshing = false;
-    pull = 0;
-    if (el) { el.removeAttribute("data-busy"); show(0); }
-  });
+
+  // After a full reload, keep the spinner up until the new page has loaded, then let it go.
+  let reloaded = false;
+  try { reloaded = sessionStorage.getItem(FLAG) === "1"; sessionStorage.removeItem(FLAG); } catch {}
+  if (reloaded) {
+    busy(true);
+    show(REST);
+    const done = () => setTimeout(() => { busy(false); show(0, true); }, 250);
+    if (document.readyState === "complete") done(); else addEventListener("load", done, { once: true });
+  }
+  // Coming back from the bfcache should not leave a spinner behind.
+  addEventListener("pageshow", (e) => { if (e.persisted && refreshing) { busy(false); show(0); } });
 })();
