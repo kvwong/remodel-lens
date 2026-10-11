@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { loadEnv, requireKeys, resolveModels } from "../config.js";
 import { logContext, progressContext, type Progress } from "../files.js";
-import { addListingPhoto, createListing, duplicateListing, deleteListing, restoreListing, updateListingDetails, listingDir, listListings, LISTINGS_DIR, readListing, saveListingOrder, saveSelection, type Listing } from "../listing/listing.js";
+import { addListingPhoto, createListing, duplicateListing, deleteListing, restoreListing, setListingThumbnail, updateListingDetails, listingDir, listListings, LISTINGS_DIR, readListing, saveListingOrder, saveSelection, type Listing } from "../listing/listing.js";
 import { listProfiles, listRuns, loadProfile, runListingRedesign, RUNS_DIR, type RunSummary } from "../redesign/job.js";
 import type { PhotoResult } from "../redesign/run.js";
 import { startChange } from "../redesign/change.js";
@@ -168,6 +168,7 @@ function listingJson(listing: Listing, runs: RunSummary[]) {
     source: listing.source,
     location: listing.location,
     description: listing.description,
+    thumbnail: listing.thumbnail,
     photos: listing.photos.map((p) => ({
       ...p,
       thumb: `/thumb/listings/${listing.id}/${encodeURIComponent(p.file)}?w=640`,
@@ -338,7 +339,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         name: l.name,
         photoCount: l.photos.length,
         selectedCount: l.photos.filter((p) => p.selected).length,
-        cover: l.photos[0] ? `/thumb/listings/${l.id}/${encodeURIComponent(l.photos[0].file)}?w=160` : null,
+        cover: l.thumbnail ? `/thumb/listings/${l.id}/${encodeURIComponent(l.thumbnail)}?w=160` : null,
       })));
     }
     if (req.method === "POST" && parts[1] === "listings" && parts.length === 2) {
@@ -375,6 +376,10 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         const body = z.object({ name: z.string().max(80), location: z.string().max(120).nullable().optional(), description: z.string().max(300).optional() }).parse(await readBody(req));
         await updateListingDetails(dir, body);
         return send(res, 200, listingJson(await readListing(dir), await listRuns(parts[2])));
+      }
+      if (req.method === "PUT" && parts[3] === "thumbnail" && parts.length === 4) {
+        const body = z.object({ file: z.string().max(255) }).parse(await readBody(req));
+        return send(res, 200, listingJson(await setListingThumbnail(dir, body.file), await listRuns(parts[2])));
       }
       if (req.method === "POST" && parts[3] === "photos") {
         if (isRunning("redesign", parts[2])) return send(res, 409, { error: "Wait for the running redesign to finish before adding photos." });

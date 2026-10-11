@@ -15,11 +15,12 @@ const ListingFile = z.object({
   source: z.string().optional(),
   location: z.string().optional(),
   description: z.string().optional(),
+  thumbnail: z.string().optional(),
   photos: z.record(z.string(), z.object({ room: z.string().default(""), selected: z.boolean().default(true) })).default({}),
 });
 
 export type ListingPhoto = { file: string; room: string; selected: boolean };
-export type Listing = { id: string; name: string; source: string | null; location: string | null; description: string; deletedAt: string | null; dir: string; photos: ListingPhoto[] };
+export type Listing = { id: string; name: string; source: string | null; location: string | null; description: string; thumbnail: string | null; deletedAt: string | null; dir: string; photos: ListingPhoto[] };
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9._-]*$/i;
 
@@ -61,6 +62,7 @@ export async function readListing(dir: string): Promise<Listing> {
     source: meta.source ?? null,
     location: meta.location ?? null,
     description: meta.description ?? "",
+    thumbnail: files.includes(meta.thumbnail ?? "") ? meta.thumbnail! : files[0] ?? null,
     dir,
     deletedAt: meta.deletedAt ?? null,
     photos: files.map((file) => ({ file, room: meta.photos[file]?.room ?? "", selected: meta.photos[file]?.selected ?? true })),
@@ -89,6 +91,15 @@ export async function saveSelection(dir: string, photos: Array<{ file: string; r
     ),
   };
   await writeFile(metaPath, `${JSON.stringify(next, null, 2)}\n`);
+  return readListing(dir);
+}
+
+export async function setListingThumbnail(dir: string, file: string): Promise<Listing> {
+  const listing = await readListing(dir);
+  if (!listing.photos.some(photo => photo.file === file)) throw Object.assign(new Error("Choose a photo from this listing."), { status: 400 });
+  const metaPath = path.join(dir, "listing.json");
+  const meta = existsSync(metaPath) ? JSON.parse(await readFile(metaPath, "utf8")) : {};
+  await writeFile(metaPath, `${JSON.stringify({ ...meta, thumbnail: file }, null, 2)}\n`);
   return readListing(dir);
 }
 
