@@ -790,7 +790,7 @@ export function renderReport(input: {
     <div class="room-head">
       <div class="room-title"><h2 id="${p.id}-h">${esc(room)}</h2><span class="file">${esc(p.basename)}</span></div>
       <div class="tabs" role="tablist" aria-label="Scope for ${esc(room)}">
-        ${p.tiers.map((t, i) => `<button role="tab" type="button" id="${p.id}-tab-${t.tier}" data-room="${p.id}" data-tier="${t.tier}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" aria-controls="${p.id}-img-${t.tier} ${p.id}-info-${t.tier}">${tierName(t.tier)}<span class="tab-mark s-${t.status}">${icon(STATUS[t.status].icon)}<span class="sr-only">, ${STATUS[t.status].label}</span></span></button>`).join("")}
+        ${p.tiers.map((t, i) => `<button role="tab" type="button" id="${p.id}-tab-${t.tier}" data-room="${p.id}" data-tier="${t.tier}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" aria-controls="${p.id}-img-${t.tier} ${p.id}-info-${t.tier}">${tierName(t.tier)}<span class="sr-only">, ${STATUS[t.status].label}</span></button>`).join("")}
       </div>
     </div>
     <div class="pair">
@@ -912,9 +912,9 @@ ${appearanceScript}
   .dl-caret { width:14px; height:14px; margin-left:-2px; color:var(--muted) !important; --motion:rotate var(--base) var(--ease); }
   .share-btn[aria-expanded="true"] { border-color:var(--primary); background:var(--primary-soft); }
   .share-btn[aria-expanded="true"] .dl-caret { rotate:180deg; }
-  .dl-menu { position:absolute; z-index:30; top:calc(100% + 6px); right:0; width:280px; display:grid; padding:6px; border-radius:10px; background:var(--surface); box-shadow:var(--shadow-hover); }
+  .dl-menu { position:absolute; z-index:30; top:calc(100% + 6px); right:0; width:min(280px, calc(100vw - 32px)); display:grid; padding:6px; border-radius:10px; background:var(--surface); box-shadow:var(--shadow-hover); }
   .dl-menu[hidden] { display:none; }
-  .dl-menu a { display:grid; gap:2px; padding:8px 10px; border-radius:6px; color:var(--text); text-decoration:none; font-size:14px; font-weight:500; }
+  .dl-menu a { display:grid; min-width:0; gap:2px; padding:8px 10px; border-radius:6px; color:var(--text); text-decoration:none; font-size:14px; font-weight:500; white-space:normal; overflow-wrap:anywhere; }
   .dl-menu a:hover, .dl-menu a:focus-visible { background:var(--surface-2); }
   .dl-menu a[aria-busy="true"] { opacity:.6; cursor:progress; }
   .dl-hint { font-size:13px; font-weight:400; color:var(--muted); }
@@ -923,11 +923,19 @@ ${appearanceScript}
   .share-status { position:absolute; top:100%; right:0; margin-top:6px; white-space:nowrap; font-size:13px; color:var(--muted); }
   .share-status:empty { display:none; }
   @media (max-width: 900px) {
+    .dl { position:static; }
     .dl-menu { right:auto; left:0; }
     .share-status { position:static; flex-basis:100%; margin:0; white-space:normal; }
   }
-  @media (max-width: 680px) { .dl { flex:1 1 0; } .share-btn { width:100%; justify-content:center; } .dl + .dl .dl-menu { left:auto; right:0; } .dl-menu { width:min(280px, calc(100vw - 32px)); } }
+  @media (max-width: 680px) { .dl { flex:1 1 0; } .share-btn { width:100%; justify-content:center; } .dl-menu { width:min(280px, calc(100vw - 32px)); } }
   .page-head > .notice { flex-basis:100%; margin:16px 0 0; }
+  @media (min-width:600px) and (max-width:900px) {
+    .page-head.whim-detail-header .detail-actions { flex-basis:auto; flex-shrink:0; }
+    .page-head.whim-detail-header .detail-actions .share { justify-content:flex-end; flex-wrap:nowrap; }
+    .page-head .dl { position:relative; flex:none; }
+    .page-head .dl-menu { left:auto; right:0; }
+    .page-head .share-status { position:absolute; top:100%; right:0; }
+  }
 
   .status { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; white-space:nowrap; }
   .status .icon { width:14px; height:14px; }
@@ -998,8 +1006,10 @@ ${appearanceScript}
   .legend div { display:grid; gap:4px; align-content:start; } .legend dt, .legend dd { margin:0; line-height:20px; } .legend dt .status { line-height:20px; } .legend dd { color:var(--muted); font-size:13px; }
   .method p { color:var(--muted); font-size:14px; margin:0 0 10px; max-width:72ch; }
   .section-fold { border-bottom:0 !important; }
-  .section-fold > summary { min-height:56px !important; flex-wrap:wrap; gap:4px 14px !important; }
-  .section-fold > summary h2 { scroll-margin-top:72px; }
+  details.fold.section-fold > summary { display:grid; grid-template-columns:minmax(0, 1fr) 16px; min-height:56px; gap:8px 14px; padding:12px 0; }
+  .section-fold > summary h2 { grid-column:1; grid-row:1; margin:0; scroll-margin-top:72px; }
+  .section-fold > summary .fold-meta { grid-column:1; grid-row:2; min-width:0; }
+  details.fold.section-fold > summary::after { grid-column:2; grid-row:1 / 3; margin:0; justify-self:center; align-self:center; }
   .fold-meta { color:var(--muted); font-size:13px; font-weight:400; }
 
   /* Images */
@@ -1022,8 +1032,29 @@ ${appearanceScript}
   tfoot th, tfoot td { border-bottom:0; padding-top:14px; font-weight:600; font-size:15px; }
 
   /* Sticky controls */
-  .toolbar { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; margin:var(--section-gap) calc(-1 * var(--page-gutter)) 0; padding:12px var(--page-gutter); background:color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter:saturate(1.2) blur(10px); border-bottom:1px solid var(--line); }
-  .toolbar .crumb { margin-right:auto; }
+  .toolbar { position:sticky; top:0; z-index:5; display:grid; grid-template-columns:auto minmax(180px, 1fr) auto; gap:12px 16px; align-items:center; margin:var(--section-gap) 0 0; padding:12px 0; background:color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter:saturate(1.2) blur(10px); border-bottom:1px solid var(--line); }
+  .toolbar .crumb { margin:0; padding:0 8px; min-width:44px; justify-content:center; }
+  .toolbar:not(:has(.crumb)) { grid-template-columns:minmax(0, 1fr) auto; }
+  .room-picker { position:relative; min-width:0; width:min(100%, 260px); justify-self:start; }
+  .room-picker > summary { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; min-height:44px; padding:8px 12px; border:1px solid var(--line-strong); border-radius:8px; background:var(--surface); font-size:14px; list-style:none; cursor:pointer; }
+  .room-picker > summary::-webkit-details-marker { display:none; }
+  .room-picker > summary .icon { flex:none; width:16px; height:16px; }
+  .room-picker[open] > summary .icon { rotate:180deg; }
+  .room-menu { position:absolute; z-index:30; top:calc(100% + 6px); left:0; width:max(100%, 360px); max-height:min(360px, 55dvh); overflow-y:auto; overscroll-behavior:contain; padding:6px; margin:0; list-style:none; border:1px solid var(--line-strong); border-radius:10px; background:var(--surface); box-shadow:var(--shadow-hover); }
+  .room-menu button { display:block; width:100%; min-height:44px; padding:10px; border:0; border-radius:6px; font:inherit; font-size:14px; line-height:1.4; text-align:left; white-space:normal; overflow-wrap:anywhere; background:transparent; color:var(--text); cursor:pointer; }
+  .room-menu button:hover, .room-menu button:focus-visible { background:var(--surface-2); }
+  .room-picker[data-placement="above"] .room-menu { top:auto; bottom:calc(100% + 6px); }
+
+  .toolbar-scope { display:flex; align-items:center; gap:12px; min-width:0; }
+  .toolbar-scope .seg { flex:none; }
+  @media (min-width:681px) and (max-width:1100px) {
+    .toolbar { grid-template-columns:minmax(0, auto) minmax(150px, 1fr) auto; gap:12px; }
+    .toolbar .crumb { max-width:190px; justify-content:flex-start; }
+    .toolbar .crumb span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .toolbar-scope { justify-content:flex-end; }
+    .toolbar-scope .seg-label { display:none; }
+    .toolbar-scope .seg button { padding-inline:8px; }
+  }
   select { max-width:100%; min-width:0; font:inherit; font-size:14px; min-height:36px; padding:6px 30px 6px 10px; border-radius:8px; border:1px solid var(--line-strong); color:inherit; background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2366625d' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E") no-repeat right 8px center; appearance:none; }
   .seg { display:inline-flex; padding:3px; border:1px solid var(--line-strong); border-radius:9px; background:var(--surface); }
   .seg button { font:inherit; font-size:13px; font-weight:500; min-height:32px; padding:4px 12px; border:0; border-radius:6px; background:transparent; color:var(--text); cursor:pointer; touch-action:manipulation; }
@@ -1032,16 +1063,17 @@ ${appearanceScript}
   .seg-label { font-size:13px; color:var(--muted); }
 
   /* Rooms */
-  .room { margin-top:var(--section-gap); scroll-margin-top:72px; }
-  .room-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:end; gap:12px 24px; margin-bottom:16px; }
-  .room-title { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .room { margin-top:var(--section-gap); scroll-margin-top:calc(var(--toolbar-height, 56px) + 16px); }
+  .room-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:start; gap:12px 24px; margin-bottom:16px; }
+  .room-title { flex:1 1 360px; min-width:0; }
+  .room-title h2 { margin:0; overflow-wrap:anywhere; }
+  .room-title .file { display:block; margin-top:8px; overflow-wrap:anywhere; }
+  .room-head > .tabs { flex:none; }
   .file { font-size:13px; color:var(--muted); }
   .tabs { display:inline-flex; padding:3px; border:1px solid var(--line-strong); border-radius:9px; background:var(--surface); }
   .tabs [role="tab"] { display:inline-flex; align-items:center; gap:6px; font:inherit; font-size:13px; font-weight:500; min-height:34px; padding:4px 12px; border:0; border-radius:6px; background:transparent; color:var(--text); cursor:pointer; touch-action:manipulation; }
   .tabs [role="tab"]:hover { background:var(--surface-2); }
   .tabs [role="tab"][aria-selected="true"] { background:var(--primary); color:var(--primary-text); font-weight:600; }
-  .tabs [aria-selected="true"] .tab-mark { color:inherit; }
-  .tab-mark { display:inline-flex; } .tab-mark .icon { width:13px; height:13px; }
   .pair { display:grid; gap:12px; grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .frame { margin:0; min-width:0; }
   /* Version dropdowns sit over the bottom-right corner of the image, on the report and in the inspector. */
@@ -1084,12 +1116,12 @@ ${appearanceScript}
   .scope-lines .scope-name { font-weight:500; }
 
   details.fold { border-bottom:1px solid var(--line); }
-  details.fold > summary { display:flex; align-items:center; gap:8px; min-height:44px; padding:0; cursor:pointer; list-style:none; font-weight:500; font-size:14px; }
+  details.fold > summary { display:flex; align-items:center; gap:8px; min-height:48px; padding:12px 0; line-height:20px; cursor:pointer; list-style:none; font-weight:500; font-size:14px; }
   details.fold > summary::-webkit-details-marker { display:none; }
-  details.fold > summary::after { content:""; margin-left:auto; width:7px; height:7px; border-right:1.5px solid var(--muted); border-bottom:1.5px solid var(--muted); transform:translateY(var(--fold-y, -2px)) rotate(var(--fold-angle, 45deg)); --motion:transform .2s; }
+  details.fold > summary::after { content:""; margin-left:auto; margin-right:3px; flex:none; width:7px; height:7px; border-right:1.5px solid var(--muted); border-bottom:1.5px solid var(--muted); transform:translateY(var(--fold-y, -2px)) rotate(var(--fold-angle, 45deg)); --motion:transform .2s; }
   details.fold[open] > summary { --fold-y:2px; --fold-angle:-135deg; }
   details.fold[open] { padding-bottom:14px; }
-  .count { font-size:12px; color:var(--muted); font-weight:500; padding:1px 7px; border-radius:999px; background:var(--surface-2); }
+  .count { flex:none; line-height:18px; font-size:12px; color:var(--muted); font-weight:500; padding:1px 7px; border-radius:999px; background:var(--surface-2); }
   .info-listing p, .checks, .plain { font-size:14px; }
   .info-listing p { margin:0 0 8px; max-width:65ch; }
   .checks, .plain { margin:0; padding-left:18px; display:grid; gap:6px; max-width:70ch; }
@@ -1124,8 +1156,11 @@ ${appearanceScript}
     .pair, .info { grid-template-columns:minmax(0, 1fr); }
     .info-tier, .info-listing { grid-column:1; grid-row:auto; }
     .toolbar .crumb span { display:none; }
-    .seg-label, .toolbar .seg { display:none; } /* each room keeps its own scope tabs on small screens */
-    .toolbar select { flex:1; }
+    .toolbar-scope { display:none; } /* each room keeps its own scope tabs on small screens */
+    .toolbar { grid-template-columns:44px minmax(0, 1fr); gap:12px; }
+    .room-picker, .room-menu { width:100%; }
+    .toolbar:not(:has(.crumb)) { grid-template-columns:minmax(0, 1fr); }
+    .info { row-gap:0; }
     .room-head { align-items:start; }
     .tabs { width:100%; } .tabs [role="tab"] { flex:1; min-width:0; padding-inline:6px; font-size:12px; justify-content:center; }
   }
@@ -1314,10 +1349,12 @@ ${appearanceScript}
 
   <div class="toolbar" ${input.redesignScope ? "hidden" : ""}>
     ${back ? `<a class="crumb" href="${back.href}" data-back aria-label="${back.label}">${icon("arrowLeft")}<span>${esc(input.title)}</span></a>` : ""}
-    <label class="sr-only" for="room-jump">Jump to room</label>
-    <select id="room-jump"><option value="">Jump to room…</option>${photos.map((p) => `<option value="${p.id}">${esc(roomName(p))}</option>`).join("")}</select>
+    <details class="room-picker" id="room-jump">
+      <summary aria-label="Jump to room">Jump to room…${icon("chevronDown")}</summary>
+      <ul class="room-menu" aria-label="Rooms">${photos.map((p) => `<li><button type="button" data-jump-room="${esc(p.id)}">${esc(roomName(p))}</button></li>`).join("")}</ul>
+    </details>
     ${tiers.length > 1 && !summary
-      ? `<span class="seg-label" id="seg-label">Show in every room</span><div class="seg" role="group" aria-labelledby="seg-label">${tiers.map((t) => `<button type="button" data-all-tier="${t}" aria-pressed="false">${tierName(t)}</button>`).join("")}</div>`
+      ? `<div class="toolbar-scope"><span class="seg-label" id="seg-label">Show in every room</span><div class="seg" role="group" aria-labelledby="seg-label">${tiers.map((t) => `<button type="button" data-all-tier="${t}" aria-pressed="false">${tierName(t)}</button>`).join("")}</div></div>`
       : ""}
   </div>
 
@@ -1412,15 +1449,54 @@ ${appearanceScript}
   if (initial) setAll(initial);
   else syncScopeControls();
 
-  document.getElementById("room-jump")?.addEventListener("change", (e) => {
-    const id = e.target.value;
-    if (!id) return;
+  const toolbar = document.querySelector(".toolbar");
+  if (toolbar) new ResizeObserver(() => {
+    document.documentElement.style.setProperty("--toolbar-height", toolbar.getBoundingClientRect().height + "px");
+  }).observe(toolbar);
+  const roomPicker = document.getElementById("room-jump");
+  function positionRoomMenu() {
+    if (!roomPicker?.open) return;
+    const rect = roomPicker.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const top = viewport?.offsetTop ?? 0;
+    const bottom = top + (viewport?.height ?? innerHeight);
+    const below = bottom - rect.bottom - 16, above = rect.top - top - 16;
+    const opensAbove = below < 240 && above > below;
+    roomPicker.dataset.placement = opensAbove ? "above" : "below";
+    roomPicker.querySelector(".room-menu").style.maxHeight = Math.max(44, Math.min(360, opensAbove ? above : below)) + "px";
+  }
+  roomPicker?.addEventListener("toggle", positionRoomMenu);
+  window.addEventListener("resize", positionRoomMenu);
+  window.addEventListener("scroll", positionRoomMenu, { passive:true });
+  roomPicker?.addEventListener("click", (e) => {
+    const choice = e.target.closest("[data-jump-room]");
+    if (!choice) return;
+    const id = choice.dataset.jumpRoom;
+    roomPicker.open = false;
     const room = document.getElementById(id);
     if (room) motion.scroll(scrollY + room.getBoundingClientRect().top - parseFloat(getComputedStyle(room).scrollMarginTop || 0));
     const h = document.getElementById(id + "-h");
     h?.setAttribute("tabindex", "-1");
     h?.focus({ preventScroll: true });
-    e.target.value = "";
+  });
+  roomPicker?.addEventListener("keydown", (e) => {
+    const options = [...roomPicker.querySelectorAll("[data-jump-room]")];
+    const current = options.indexOf(document.activeElement);
+    if (e.key === "Escape") {
+      e.preventDefault(); roomPicker.open = false; roomPicker.querySelector("summary").focus();
+    } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
+      e.preventDefault(); roomPicker.open = true;
+      const next = e.key === "Home" ? 0 : e.key === "End" ? options.length - 1 :
+        current < 0 ? (e.key === "ArrowUp" ? options.length - 1 : 0) :
+        (current + (e.key === "ArrowUp" ? -1 : 1) + options.length) % options.length;
+      options[next]?.focus();
+    }
+  });
+  document.addEventListener("click", (e) => {
+    if (roomPicker && !roomPicker.contains(e.target)) roomPicker.open = false;
+  });
+  roomPicker?.addEventListener("focusout", (e) => {
+    if (!roomPicker.contains(e.relatedTarget)) roomPicker.open = false;
   });
 
   /* Viewer */

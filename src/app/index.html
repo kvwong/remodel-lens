@@ -99,6 +99,13 @@
   .subhead { margin:6px 0 0; color:var(--muted); font-size:14px; }
   .section-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; margin-bottom:14px; }
   .tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  [data-photos-only][data-collapsed="true"] { display:none; }
+  #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]) { flex-wrap:nowrap; }
+  #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]) h2 { min-width:0; }
+  #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]) > .tools { flex:none; }
+  @media (max-width:600px) {
+    #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]) h2 .num { display:block; margin-top:4px; font-size:13px; }
+  }
   .hint { margin:6px 0 0; font-size:13px; color:var(--muted); max-width:68ch; }
 
   /* Collection pages and the mobile navigation shell. */
@@ -425,7 +432,8 @@
     .detail-head .title-row .icon-plain { width:36px; height:36px; }
 
     /* Listing photos: two up, so a 12-photo listing is a few screens instead of a dozen. */
-    #photos-zone .section-head > .tools { width:100%; }
+    #photos-zone .section-head > .tools { width:auto; }
+    #photos-zone .section-head > .tools:has([data-photos-only][data-collapsed="false"]) { width:100%; }
     #photos-zone .section-head > .tools > .btn:last-of-type { margin-left:auto; }
     .grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px 10px; }
     .pick { border-radius:6px; }
@@ -666,6 +674,19 @@
   @media (pointer:fine) { .reel-viewport { cursor:grab; } .reel-viewport a { cursor:inherit; } .reel[data-dragging] .reel-viewport { cursor:grabbing; } }
   .reel[data-still] .reel-viewport { overflow-x:auto; touch-action:auto; scrollbar-width:none; }
   .reel[data-still] .reel-viewport::-webkit-scrollbar { display:none; }
+  /* Navigation keeps a fixed hit area; CSS owns color feedback so nested
+     pointer events do not repeatedly detach native animation effects. */
+  .mobile-tabs a, a.nav-link, .sidebar-toggle, .settings-link {
+    --motion:none;
+    transition:background-color 120ms ease, color 120ms ease;
+  }
+  .mobile-tabs a:active, a.nav-link:active, .sidebar-toggle:active, .settings-link:active { transform:none; }
+  @media (hover:hover) {
+    .mobile-tabs a:hover:not([aria-current="page"]) { background:var(--surface-2); color:var(--text); }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    .mobile-tabs a, a.nav-link, .sidebar-toggle, .settings-link { transition:none; }
+  }
 </style>
 </head>
 <body>
@@ -891,7 +912,7 @@ function params() { return new URL(location.href).searchParams; }
 function setParams(updates, push = false) {
   const url = new URL(location.href);
   for (const [k, v] of Object.entries(updates)) v == null || v === "" ? url.searchParams.delete(k) : url.searchParams.set(k, v);
-  history[push ? "pushState" : "replaceState"](null, "", url);
+  history[push ? "pushState" : "replaceState"](push ? { whimScroll: { x:scrollX, y:scrollY } } : history.state, "", url);
 }
 function selectedTiers() {
   const raw = params().get("tiers");
@@ -2557,13 +2578,34 @@ window.addEventListener("beforeunload", (event) => {
   if (pending.size) { flushSave(); event.preventDefault(); }
   if (state.briefDirty || state.rulesDirty || state.textEdit) event.preventDefault();
 });
-window.addEventListener("popstate", () => load());
+// Restore only after asynchronous views have rendered, so the browser does not
+// clamp a saved position against the previous (often shorter) page.
+history.scrollRestoration = "manual";
+let restoringScroll = true;
+function saveScrollPosition() {
+  if (restoringScroll) return;
+  history.replaceState({ ...history.state, whimScroll:{ x:scrollX, y:scrollY } }, "");
+}
+window.addEventListener("scroll", saveScrollPosition, { passive:true });
+window.addEventListener("pagehide", saveScrollPosition);
+async function loadWithScroll(position) {
+  restoringScroll = true;
+  try {
+    await load();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    scrollTo({ left:position?.x ?? 0, top:position?.y ?? 0, behavior:"instant" });
+  } finally {
+    restoringScroll = false;
+    saveScrollPosition();
+  }
+}
+window.addEventListener("popstate", event => loadWithScroll(event.state?.whimScroll));
 
 function navigate(href) {
-  history.pushState(null, "", href);
+  saveScrollPosition();
+  history.pushState({ whimScroll:{ x:0, y:0 } }, "", href);
   Object.assign(state, { confirming: null, uploads: [], renaming: false, briefDirty: false, rulesDirty: false, textEdit: null, runError: null });
-  return load().then(() => {
-    scrollTo({ top: 0 });
+  return loadWithScroll({ x:0, y:0 }).then(() => {
     $("#content").focus({ preventScroll: true });
   });
 }
@@ -3351,7 +3393,7 @@ async function load() {
     $("#content").innerHTML = `<div class="empty"><h1 style="font-size:20px;margin-bottom:8px;color:var(--text)">Couldn't load</h1><p>${esc(error.message)}</p><p><a class="btn" href="/">Back to listings</a></p></div>`;
   }
 }
-load();
+loadWithScroll(history.state?.whimScroll);
 </script>
 </body>
 </html>
