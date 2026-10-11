@@ -13,28 +13,6 @@
 <style>
   * { --motion:none; }
   /* Gallery system: near-white neutrals, hairlines instead of shadows, color reserved for status and progress. */
-  :root {
-    --bg:#f5f4f1; --surface:#ffffff; --surface-2:#f5f3ef; --text:#1b1a19; --muted:#625e58;
-    --line:rgba(27,26,25,.1); --line-strong:rgba(27,26,25,.22);
-    --control-hover:var(--surface);
-    --ink:#1b1a19; --ink-text:#fafaf9;
-    /* Primary: deep forest green from the taste palette, for primary actions, selection, and progress only. */
-    --primary:#2f5a44; --primary-hover:#244a37; --primary-text:#ffffff; --primary-soft:#e4eee7;
-    --accent:var(--primary); --accent-soft:var(--primary-soft);
-    --ok:#3d6a4c; --warn:#8a6216; --warn-bg:#f7f0e2; --bad:#9a3b2f; --bad-bg:#f7ebe8;
-    --font:"Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    --mono:ui-monospace, "SF Mono", Menlo, monospace;
-  }
-  :root[data-theme="dark"] {
-      --bg:#0e0e0d; --surface:#242321; --surface-2:#302e2b; --text:#ecebe8; --muted:#b5b0a9;
-      --line:rgba(236,235,232,.2); --line-strong:rgba(236,235,232,.42);
-      --control-hover:var(--surface-2);
-      --ink:#ecebe8; --ink-text:#121211;
-      --primary:#8cc3a1; --primary-hover:#a3d1b5; --primary-text:#0d1a12; --primary-soft:#223a2b;
-      --ok:#8fc49f; --warn:#e0bd78; --warn-bg:#2c2414; --bad:#ee9d90; --bad-bg:#321b17;
-  }
-  :root { color-scheme:light; }
-  :root[data-theme="dark"] { color-scheme:dark; }
   * { box-sizing:border-box; }
   [hidden] { display:none !important; } /* author display rules must not resurrect hidden elements */
   html { -webkit-tap-highlight-color:transparent; scrollbar-color:var(--line-strong) transparent; scrollbar-gutter:stable; }
@@ -57,16 +35,16 @@
   /* Shell */
   .top { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px; min-height:52px; padding:0 max(20px, env(safe-area-inset-left)); background:var(--surface); border-bottom:1px solid var(--line); }
   .brand { font-weight:600; text-decoration:none; letter-spacing:-.01em; }
-  #save-status { position:fixed; top:16px; right:max(16px, env(safe-area-inset-right)); max-width:calc(100% - 32px); display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--surface); color:var(--text); border:1px solid var(--line-strong); border-radius:12px; box-shadow:var(--shadow); z-index:30; font-size:14px; overflow-wrap:anywhere; }
-  #save-status:empty { display:none; }
   .banner { margin:16px max(20px, env(safe-area-inset-left)) 0; padding:10px 14px; border-radius:8px; background:var(--warn-bg); color:var(--warn); font-size:14px; }
   .banner code { font-family:var(--mono); font-size:13px; }
-  .layout { display:grid; grid-template-columns:248px minmax(0, 1fr); gap:32px; max-width:1360px; min-height:100dvh; margin:0 auto; padding:24px max(20px, env(safe-area-inset-left)); }
+  .layout { display:grid; grid-template-columns:248px minmax(0, 1fr); gap:32px; max-width:var(--page-max); min-height:100dvh; margin:0 auto; padding:var(--page-top) max(var(--page-gutter), env(safe-area-inset-left)) var(--page-top) max(var(--page-gutter), env(safe-area-inset-right)); }
   @media (max-width: 860px) { .layout { grid-template-columns:minmax(0, 1fr); gap:24px; } }
   .side { min-width:0; display:flex; flex-direction:column; gap:24px; align-self:start; position:sticky; top:24px; height:calc(100dvh - 48px); padding:2px 0; }
   .side-content { display:grid; grid-template-columns:minmax(0, 1fr); gap:24px; overflow-x:hidden; overflow-y:auto; min-width:0; min-height:0; padding:2px 2px 28px; margin:-2px; mask-image:linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
   /* Bottom row: Settings on the left, the display switch on the right. */
-  .display-setting { margin-top:auto; padding:8px 0 0; flex:none; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .display-setting { margin-top:auto; padding:0; flex:none; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .side-content { flex:1; align-content:start; }
+  @media (min-width:861px) { .side > .display-setting { margin-top:-16px; } }
   .display-setting .settings-link { margin:0; min-height:32px; }
   .display-toggle { display:grid; place-items:center; width:36px; height:32px; border:0; border-radius:6px; padding:0; background:transparent; color:var(--muted); cursor:pointer; }
   .display-toggle:hover { background:var(--surface-2); color:var(--text); }
@@ -75,7 +53,6 @@
   .side .brand { display:flex; align-items:center; width:fit-content; padding-left:10px; cursor:pointer; min-height:32px; line-height:32px; }
   /* The logo is the Home link: a pointer on hover, and the same press scale as buttons (below). */
   .side .brand * { cursor:inherit; }
-  .side .whim-lockup { width:116px; height:28px; }
   @media (max-width: 860px) { .side { position:static; height:auto; } .side-content { overflow-x:hidden; overflow-y:auto; } }
   .side ul > li.muted { padding-left:10px; }
   .side-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; min-height:32px; padding-left:10px; }
@@ -90,7 +67,6 @@
   .nav-link:hover:not([aria-current="page"]) { background:var(--surface); }
   .nav-link[aria-current="page"] { background:var(--surface); box-shadow:var(--shadow); }
   .nav-link[aria-current="page"] .nav-name { font-weight:600; }
-  .listing-placeholder { width:48px; height:36px; display:grid; place-items:center; border-radius:6px; background:var(--surface-2); color:var(--muted); flex:none; }
   .nav-link img { width:48px; height:36px; object-fit:cover; border-radius:6px; background:var(--surface-2); flex:none; }
   .nav-link > span { min-width:0; flex:1; overflow-wrap:anywhere; }
   .nav-link small { display:block; color:var(--muted); font-size:13px; }
@@ -102,23 +78,20 @@
   .sidebar-row[data-drop-position="before"]::after { top:-2px; }
   .sidebar-row[data-drop-position="after"]::after { bottom:-2px; }
 
-  main { min-width:0; display:grid; grid-template-columns:minmax(0, 1fr); gap:20px; align-content:start; }
+  main { min-width:0; display:grid; grid-template-columns:minmax(0, 1fr); gap:var(--section-gap); align-content:start; }
   main > * { min-width:0; }
   /* Programmatic focus target after in-page navigation (for screen readers); not a control, so no ring. */
   #content:focus, #content:focus-visible { outline:none; }
-  main > .head + * { margin-top:var(--main-offset, 0px); } /* sections must shrink to the column, not size it */
+  main > .head + * { margin-top:0; } /* sections must shrink to the column, not size it */
   /* Page title matches the brand: same size, same 32px line box, same top offset, so baselines align. */
   /* Rename: small, revealed on hover or keyboard focus; always visible on touch screens. */
   .title-row .icon-plain { width:24px; height:24px; border-radius:6px; opacity:0; }
   .title-row .icon-plain .icon { width:14px; height:14px; }
   .title-row:hover .icon-plain, .title-row .icon-plain:focus-visible { opacity:1; }
   @media (hover: none) { .title-row .icon-plain { opacity:1; } }
-  .head h1 { font-size:17px; line-height:32px; letter-spacing:-.01em; }
-  .title-input { font-size:17px !important; line-height:30px; }
+  .head h1 { font-size:26px; line-height:1.2; letter-spacing:-.01em; }
+  .title-input { font-size:26px !important; line-height:1.2; }
   .head { padding-top:2px; display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:12px; }
-  .detail-head { align-items:start; }
-  .detail-head .title-row { gap:4px; }
-  .detail-head h1 { overflow-wrap:anywhere; min-width:0; }
   .detail-delete { color:var(--bad); }
   .detail-admin { display:grid; gap:12px; }
   .subhead { margin:6px 0 0; color:var(--muted); font-size:14px; }
@@ -128,7 +101,7 @@
 
   /* Collection pages and the mobile navigation shell. */
   .collection-head h1 { font-size:26px; line-height:1.2; }
-  .collection-grid { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap:12px; }
+  .collection-grid { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap:var(--grid-gap); }
   .collection-link { display:flex; gap:16px; align-items:center; min-height:104px; padding:16px; border-radius:12px; background:var(--surface); box-shadow:var(--shadow); text-decoration:none; }
   .collection-link:hover { box-shadow:var(--shadow-hover); }
   .collection-preview { width:88px; height:70px; border-radius:8px; overflow:hidden; flex:none; display:grid; place-items:center; background:var(--surface-2); color:var(--muted); }
@@ -143,7 +116,7 @@
   .mobile-tabs { display:none; }
   @media (max-width:860px) {
     html { scroll-padding-bottom:112px; }
-    .layout { padding:16px max(16px, env(safe-area-inset-left)) calc(112px + env(safe-area-inset-bottom)); gap:20px; align-content:start; }
+    .layout { padding:var(--page-top) max(var(--page-gutter), env(safe-area-inset-left)) calc(112px + env(safe-area-inset-bottom)) max(var(--page-gutter), env(safe-area-inset-right)); gap:var(--section-gap); align-content:start; }
     .side { flex-direction:row; align-items:center; gap:8px; padding:0; }
     .side-content { display:contents; }
     .side-content nav { display:none; }
@@ -157,7 +130,7 @@
     .mobile-tabs { position:fixed; z-index:25; bottom:calc(12px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:4px; padding:6px; border:0; border-radius:24px; background:color-mix(in srgb, var(--surface) 35%, transparent); box-shadow:0 8px 32px rgba(0,0,0,.1); }
     .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-height:56px; border-radius:18px; color:var(--muted); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; --motion:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
     .mobile-tabs .icon { width:22px; height:22px; }
-    .mobile-tabs a[aria-current="page"] { background:var(--primary-soft); color:var(--primary); font-weight:600; }
+    .mobile-tabs a[aria-current="page"] { background:var(--primary); color:var(--primary-text); font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.18); }
     .mobile-tabs a:active { transform:scale(.96); }
     #save-status { top:calc(16px + env(safe-area-inset-top)); }
   }
@@ -166,24 +139,12 @@
   }
 
   /* Controls */
-  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:38px; padding:6px 14px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); cursor:pointer; font-size:14px; font-weight:500; text-decoration:none; white-space:nowrap; }
-  .btn:hover { background:var(--control-hover); border-color:var(--text); box-shadow:var(--shadow-hover); }
-  .btn-primary { background:var(--primary); color:var(--primary-text); border-color:var(--primary); padding:6px 16px; font-weight:600; box-shadow:0 1px 2px rgba(20,40,28,.18); }
-  .btn-primary:hover { background:var(--primary-hover); border-color:var(--primary-hover); }
-  .btn-primary:active { transform:translateY(1px); }
-  .btn-quiet { border-color:transparent; background:transparent; padding-inline:8px; }
-  .btn-quiet:hover { background:var(--surface-2); border-color:transparent; }
-  .btn-small { min-height:32px; padding:4px 10px; font-size:13px; }
-  .btn:disabled { opacity:.45; cursor:not-allowed; }
-  .spinner { width:14px; height:14px; border-radius:50%; border:2px solid currentColor; border-right-color:transparent; }
   select { min-height:40px; padding:6px 32px 6px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2366625d' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E") no-repeat right 10px center; appearance:none; max-width:100%; font-size:16px; }
   textarea { width:100%; font-size:15px; line-height:1.55; background:var(--surface); border:1px solid var(--line-strong); border-radius:8px; padding:10px 12px; resize:vertical; }
   textarea:focus, select:focus, input[type="text"]:focus { outline:2px solid var(--text); outline-offset:1px; }
-  .panel { border:0; border-radius:12px; padding:24px 28px; background:var(--surface); box-shadow:var(--shadow); }
-  @media (max-width: 600px) { .panel { padding:18px 16px; } }
+  .panel { border:0; border-radius:12px; padding:var(--card-padding); background:var(--surface); box-shadow:var(--shadow); }
+
   .zone-divider { height:1px; background:var(--line); margin:24px 0; border:0; }
-  .error { color:var(--bad); margin:0; }
-  .notice { padding:10px 14px; border-radius:8px; background:var(--warn-bg); color:var(--warn); margin:0; font-size:14px; }
   /* A notice with its fix beside it, like the stale rules alert's Rebuild button. */
   .notice-action { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; }
   .notice-action > span { flex:1 1 280px; }
@@ -298,9 +259,6 @@
   .run-main { min-width:0; display:grid; gap:4px; }
   /* A loose, overlapping hand of photos, each at its own slight angle like the Home reel; it fans out on hover. */
   .run-images { margin-left:auto; }
-  .photo-stack { --stack-thumb:96px; --stack-limit:4; --stack-cap:4; --stack-visible:min(var(--stack-count, 1), var(--stack-limit), var(--stack-cap)); display:flex; padding:12px calc(14px + (var(--stack-visible) - 1) * 14px) 16px 8px; overflow:visible; }
-  .photo-stack img { --tilt:0deg; --lift:0px; position:relative; flex:none; width:var(--stack-thumb); aspect-ratio:4 / 3; object-fit:cover; border-radius:7px; background:var(--surface-2); display:block; box-shadow:0 0 0 2px var(--surface), 0 2px 6px rgba(0,0,0,.18), 0 8px 18px rgba(0,0,0,.14); transform:translateY(var(--lift)) rotate(var(--tilt)); --motion:transform var(--slow) var(--ease); }
-  .photo-stack img + img { margin-left:-26px; }
   .photos-area { position:relative; display:flow-root; container:listing-photos / inline-size; } /* measure only the outer height during a swap */
   .photos-area > [data-photos-strip] > div, .photos-area #photo-drop { padding:4px; margin:-4px; } /* room for focus rings */
   .photo-stack:hover img, .photo-stack:focus-visible img { transform:translateX(var(--fan, 0px)) translateY(calc(var(--lift) * .5)) rotate(calc(var(--tilt) * .5)); }
@@ -327,6 +285,7 @@
   .run-meta span + span::before { content:"·"; margin:0 6px; opacity:.6; }
   .statuses { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:13px; }
   .status { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+  .status.s-error { white-space:normal; overflow-wrap:anywhere; min-width:0; }
   .status .icon { width:14px; height:14px; }
   .s-verified { color:var(--ok); } .s-review { color:var(--warn); } .s-failed, .s-error { color:var(--bad); } .s-unchanged { color:var(--muted); }
   .status > span { color:var(--text); }
@@ -426,34 +385,21 @@
   }
   .tag { font-size:12px; color:var(--muted); white-space:nowrap; }
   .tag-weak { color:var(--warn); }
-  .icon-btn { width:32px; height:32px; border-radius:8px; border:0; background:transparent; color:var(--muted); cursor:pointer; display:grid; place-items:center; }
-  .icon-btn:hover, .icon-btn:focus-visible { color:var(--bad); background:var(--bad-bg); }
-  .icon-plain:hover, .icon-plain:focus-visible { color:var(--text); background:var(--surface-2); }
   .sub-label { display:block; font-size:13px; font-weight:500; margin:16px 0 6px; }
 
   .savebar { position:sticky; bottom:16px; z-index:6; display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; padding:10px 10px 10px 18px; border-radius:10px; background:var(--ink); color:var(--ink-text); box-shadow:0 2px 4px rgba(0,0,0,.08), 0 12px 32px rgba(0,0,0,.16); }
   .savebar p { margin:0; flex:1 1 220px; font-size:14px; }
   .savebar .btn { background:transparent; color:var(--ink-text); border-color:color-mix(in srgb, var(--ink-text) 35%, transparent); }
   .savebar .btn-primary { background:var(--ink-text); color:var(--ink); border-color:var(--ink-text); }
-  .toast { position:fixed; left:50%; bottom:max(20px, env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:var(--ink-text); padding:10px 10px 10px 16px; border-radius:10px; display:flex; gap:12px; align-items:center; box-shadow:0 2px 4px rgba(0,0,0,.08), 0 12px 32px rgba(0,0,0,.16); z-index:20; font-size:14px; }
-  .toast button { background:transparent; color:inherit; border:1px solid color-mix(in srgb, currentColor 40%, transparent); border-radius:7px; padding:4px 12px; min-height:32px; font-weight:500; cursor:pointer; }
   dialog.modal { border:1px solid var(--line); border-radius:12px; padding:24px; width:min(440px, calc(100vw - 32px)); background:var(--surface); color:var(--text); box-shadow:0 2px 4px rgba(0,0,0,.06), 0 16px 48px rgba(0,0,0,.16); }
   dialog.modal::backdrop { background:rgba(0,0,0,.4); }
   dialog.modal input[type="text"], dialog.modal select { width:100%; min-height:42px; font-size:16px; padding:8px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); }
 
   /* Motion + depth system */
-  :root { --ease:cubic-bezier(0.22, 1, 0.36, 1); --ease-pop:cubic-bezier(0.35, 1.55, 0.65, 1); --fast:120ms; --base:240ms; --slow:360ms;
-    --shadow:0 1px 2px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.02), 0 0 0 0.5px rgba(0,0,0,0.08);
-    --shadow-hover:0 2px 4px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.08); }
-  :root[data-theme="dark"] {
-    --shadow:0 1px 2px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(255,255,255,0.18);
-    --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.24); }
   /* Every clickable element presses to 98% on the fast duration. */
   button, .btn, a.nav-link, .side .brand, .tier, .pick, .zoom, summary, [role="tab"] { --motion:transform var(--fast) var(--ease), box-shadow var(--base) var(--ease), background-color var(--base) var(--ease), border-color var(--base) var(--ease), color var(--base) var(--ease), opacity var(--base) var(--ease); }
   button:active:not(:disabled), .btn:active, a.nav-link:active, .side .brand:active, .tier:active, .pick:active, .zoom:active, summary:active, [role="tab"]:active { transform:scale(0.98); }
   /* Motion fades and lifts tooltip pseudo-elements through these custom properties. */
-  [data-tip] { position:relative; --tip-opacity:0; --tip-y:4px; }
-  [data-tip]::after { content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 6px); translate:-50% var(--tip-y, 4px); opacity:var(--tip-opacity, 0); pointer-events:none; white-space:nowrap; font-size:12px; font-weight:500; padding:4px 8px; border-radius:6px; background:var(--ink, #1b1a19); color:var(--ink-text, #fafaf9); box-shadow:var(--shadow); --motion:opacity var(--base) var(--ease), translate var(--base) var(--ease), filter var(--base) var(--ease);  z-index:40; }
   /* Keep the plus-button tooltips inside the sidebar scroll area. */
   .side-head [data-tip]::after { left:auto; right:0; translate:0 var(--tip-y, 4px); }
   .display-setting [data-tip]::after { left:auto; right:0; translate:0 var(--tip-y, 4px); }
@@ -707,7 +653,6 @@
   /* The reel's bottom padding (room for a lifted card's shadow to fade out) runs under the heading; keep the heading on top and clickable. */
   .home-head { position:relative; }
   .home-head .btn { margin-left:auto; }
-  .home-head h1 { font-size:17px; line-height:32px; } /* same as the listing and taste page titles */
   @media (max-width:600px) { .reel { --reel-card:200px; } }
   /* Still frames: no drift; the reel scrolls by hand instead. */
   .reel-viewport { touch-action:pan-y; user-select:none; -webkit-user-select:none; }
@@ -724,7 +669,7 @@
   <div class="side">
     <div class="side-content">
     <a class="brand" href="/" aria-label="Whim home"><!-- WHIM_LOCKUP --></a>
-    <nav aria-label="Listings" id="listings-nav" style="margin-top:var(--side-offset, 0px)">
+    <nav aria-label="Listings" id="listings-nav">
       <div class="side-head"><h2><button class="sidebar-toggle" type="button" data-sidebar-toggle="listings" aria-expanded="true" aria-controls="listings">Listings</button></h2><button class="icon-btn icon-plain" type="button" data-action="new-listing" aria-label="New listing" data-tip="New listing"><span data-icon="plus"></span></button></div>
       <ul id="listings"><li class="muted">Loading…</li></ul>
     </nav>
@@ -980,7 +925,6 @@ function renderCollection(view) {
       ${tastes && (item.running || item.stale) ? `<small class="${item.stale ? "stale" : ""}">${item.running ? "Rebuilding…" : "Out of date"}</small>` : ""}</span>
     </a></li>`;
   }).join("")}</ul>` : `<section class="panel"><p class="muted" style="margin:0">${tastes ? "No tastes yet. Create a taste profile to collect your reference photos and brief." : "No listings yet. Create a listing to add photos of a home."}</p></section>`}`;
-  alignSidebar();
 }
 
 async function loadReports() {
@@ -993,6 +937,9 @@ async function loadReports() {
     if (result.status === "rejected") { state.reportErrors.push(listing.name); return []; }
     return result.value.runs.filter(run => run.reportUrl).map(run => ({ ...run, listingId: listing.id, listingName: listing.name }));
   }).sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt) || a.listingName.localeCompare(b.listingName) || a.id.localeCompare(b.id));
+  const previews = await api("/api/reports").catch(() => []);
+  const images = new Map(previews.map(run => [`${run.listingId}/${run.id}`, run.images]));
+  for (const run of state.reports) run.images = images.get(`${run.listingId}/${run.id}`) ?? [];
 }
 
 function renderReports() {
@@ -1000,7 +947,6 @@ function renderReports() {
   $("#content").innerHTML = `<header class="head collection-head"><div><h1>Reports</h1><p class="subhead">${state.reports.length ? `${plural(state.reports.length, "report")} across ${plural(new Set(state.reports.map(run => run.listingId)).size, "listing")} · newest first` : "None yet"}</p></div></header>
     ${state.reportErrors.length ? `<div class="notice" role="alert">Couldn't load reports for ${esc(state.reportErrors.join(", "))}. <button class="btn btn-small" type="button" data-action="retry-reports">Retry</button></div>` : ""}
     <section class="panel">${state.reports.length ? `<ul class="runs">${state.reports.map(run => runRow(run, true)).join("")}</ul>` : `<p class="muted" style="margin:0">${state.reportErrors.length ? "Reports couldn't be loaded. Try again." : "No reports yet. Run a redesign from a listing to create one."}</p>`}</section>`;
-  alignSidebar();
 }
 
 const sidebarItems = (kind) => kind === "listings" ? state.listings : state.tasteProfiles;
@@ -1027,8 +973,7 @@ async function moveSidebarItem(kind, id, targetIndex, focus = false) {
     state.savingOrder = false;
     renderListings();
     renderProfilesNav();
-    alignSidebar();
-    if (focus) {
+      if (focus) {
       const row = [...document.querySelectorAll(".sidebar-row")].find((el) => el.dataset.sidebarId === id && el.dataset.sidebarKind === kind);
       row?.querySelector(".nav-link")?.focus();
     }
@@ -1086,50 +1031,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 /** Line the "Listings" label up with the first metadata line under the page title. */
-function alignSidebar() {
-  const root = document.documentElement;
-  const nav = $("#listings-nav");
-  const label = nav?.querySelector(".side-head h2");
-  const target = $("#content .head .subhead, #content .head .stats");
-  if (!nav || !label) return;
-  if (state.view === "home" && !matchMedia("(max-width: 860px)").matches) {
-    // Home has no title beside the sidebar to line up with. Keep Listings where the last page put it, so going Home never
-    // nudges the sidebar; on a first visit, sit it as close under the brand as the other pages do.
-    root.style.setProperty("--main-offset", "0px");
-    const current = parseFloat(getComputedStyle(nav).marginTop) || 0;
-    if (current) return;
-    const gap = label.getBoundingClientRect().top - $(".side .brand").getBoundingClientRect().bottom;
-    root.style.setProperty("--side-offset", `${Math.round(8 - gap)}px`);
-    return;
-  }
-  if (!target || matchMedia("(max-width: 860px)").matches) {
-    root.style.setProperty("--side-offset", "0px");
-    root.style.setProperty("--main-offset", "0px");
-    return;
-  }
-  const current = parseFloat(getComputedStyle(nav).marginTop) || 0;
-  const mid = (el) => { const r = el.getBoundingClientRect(); return r.top + r.height / 2; };
-  // Match vertical centers of the two text lines (same 14px size, so baselines line up too).
-  const targetMid = target.getBoundingClientRect().top + parseFloat(getComputedStyle(target).lineHeight) / 2;
-  const side = $(".side");
-  const naturalLabelMid = mid(label) - side.getBoundingClientRect().top + $(".layout").getBoundingClientRect().top + scrollY + parseFloat(getComputedStyle($(".layout")).paddingTop);
-  const offset = current + targetMid + scrollY - naturalLabelMid;
-  document.documentElement.style.setProperty("--side-offset", `${Math.round(offset)}px`);
 
-  // Then start the main column's first panel level with the top of the first sidebar item.
-  const link = nav.querySelector(".nav-link");
-  const first = [...$("#content").children].find((el) => !el.classList.contains("head"));
-  if (!link || !first) return;
-  const curMain = parseFloat(getComputedStyle(root).getPropertyValue("--main-offset")) || 0;
-  const naturalTop = first.getBoundingClientRect().top - curMain;
-  const minPanelTop = $("#content .head").getBoundingClientRect().bottom + 8;
-  const naturalLinkTop = () => link.getBoundingClientRect().top - side.getBoundingClientRect().top + $(".layout").getBoundingClientRect().top + parseFloat(getComputedStyle($(".layout")).paddingTop);
-  const clearance = Math.max(0, minPanelTop - naturalLinkTop());
-  if (clearance) root.style.setProperty("--side-offset", `${Math.round(offset) + clearance}px`);
-  const linkTopFinal = naturalLinkTop();
-  root.style.setProperty("--main-offset", `${linkTopFinal - naturalTop}px`);
-}
-addEventListener("resize", () => requestAnimationFrame(alignSidebar));
 
 function renderProfilesNav() {
   const current = state.view === "taste" ? state.taste?.id : null;
@@ -1274,7 +1176,6 @@ function renderHome() {
     <section class="panel">${reports.length ? `<ul class="runs">${reports.map(run => runRow(run, true)).join("")}</ul>` : `${state.listings.length
       ? `<p class="muted" style="margin:0">No reports yet. Open a listing and run a redesign to create one.</p>`
       : `<div class="empty-start"><p class="muted" style="margin:0">Start with a listing: add photos of a home, then run a redesign to get a report.</p><button class="btn btn-primary btn-small" type="button" data-action="new-listing">${icon("plus")}New listing</button></div>`}`}</section>`;
-  alignSidebar();
   startReel();
 }
 
@@ -1501,14 +1402,10 @@ const DETAIL_TYPES = {
 
 function renderDetailHeader({ kind, name, metadata, titleMarkup = "" }) {
   const detail = DETAIL_TYPES[kind];
-  const back = kind === "listing" ? ["listings", "Listings"] : ["tastes", "Tastes"];
-  return `<div class="head detail-head">
-    <div style="min-width:0;flex:1">
-      <a class="back-link nav-inline" href="?view=${back[0]}">${icon("chevron")}${back[1]}</a>
-      ${titleMarkup || `<div class="title-row"><h1>${esc(name)}</h1><button class="icon-btn icon-plain" type="button" data-action="${detail.edit}" aria-label="${detail.editLabel}" data-tip="Edit">${icon("pencil")}</button></div>`}
-      ${metadata}
-    </div>
-  </div>`;
+  return window.renderPageHeader({ className: "head detail-head",
+    title: titleMarkup || `<div class="title-row"><h1>${esc(name)}</h1><button class="icon-btn icon-plain" type="button" data-action="${detail.edit}" aria-label="${detail.editLabel}" data-tip="Edit">${icon("pencil")}</button></div>`,
+    metadata,
+  });
 }
 
 function renderDetailAdmin(kind, running) {
@@ -1683,7 +1580,6 @@ function renderListing() {
   profileCardSizer.disconnect();
   const scopes = $(".scope-setting .tiers");
   if (scopes && $("#profile")) profileCardSizer.observe(scopes);
-  alignSidebar();
 }
 
 let saveTimer;
@@ -1887,7 +1783,6 @@ function renderTaste() {
   document.querySelectorAll("#rules details").forEach((d) => { if (open.has(d.dataset.key)) d.open = true; });
   updateSaveBar();
   renderJob();
-  alignSidebar();
   if (state.renaming) { const input = $("#profile-name"); input.focus(); input.select(); }
 }
 
@@ -2650,7 +2545,6 @@ function renderSettings() {
     <section class="panel settings-panel" id="settings-tuning" aria-labelledby="tuning-h"></section>
     <section class="panel settings-panel" id="settings-costs" aria-labelledby="costs-h"></section>`;
   renderKeys(); renderModels(); renderTuning(); renderCosts();
-  alignSidebar();
 }
 
 function settingsSaved(next, message) {

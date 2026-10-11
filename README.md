@@ -359,6 +359,10 @@ and `.env`, in that order. Env files live in the repository root.
 
 ## UI motion and layout
 
+The app and reports use shared theme tokens and visual primitives in
+`src/ui/design-system.css`, embedded in standalone exports. See the
+[design-system guide](docs/design-system.md) for component ownership and verification.
+
 The app and generated HTML reports use the locally installed
 [Motion](https://motion.dev/docs/animate) bundle. The animation code is embedded
 in generated reports, so it works when the HTML is opened from disk without

@@ -1,0 +1,86 @@
+/* Theme: one palette for app and exported reports. */
+  :root {
+    --bg:#f5f4f1; --surface:#ffffff; --surface-2:#f5f3ef; --text:#1b1a19; --muted:#625e58;
+    --line:rgba(27,26,25,.1); --line-strong:rgba(27,26,25,.22);
+    --control-hover:var(--surface);
+    --ink:#1b1a19; --ink-text:#fafaf9;
+    /* Primary: deep forest green from the taste palette, for primary actions, selection, and progress only. */
+    --primary:#2f5a44; --primary-hover:#244a37; --primary-text:#ffffff; --primary-soft:#e4eee7;
+    --accent:var(--primary); --accent-soft:var(--primary-soft);
+    --ok:#3d6a4c; --warn:#8a6216; --warn-bg:#f7f0e2; --bad:#9a3b2f; --bad-bg:#f7ebe8;
+    --font:"Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  :root[data-theme="dark"] {
+      --bg:#0e0e0d; --surface:#242321; --surface-2:#302e2b; --text:#ecebe8; --muted:#b5b0a9;
+      --line:rgba(236,235,232,.2); --line-strong:rgba(236,235,232,.42);
+      --control-hover:var(--surface-2);
+      --ink:#ecebe8; --ink-text:#121211;
+      --primary:#8cc3a1; --primary-hover:#a3d1b5; --primary-text:#0d1a12; --primary-soft:#223a2b;
+      --ok:#8fc49f; --warn:#e0bd78; --warn-bg:#2c2414; --bad:#ee9d90; --bad-bg:#321b17;
+  }
+  :root { color-scheme:light; }
+  :root[data-theme="dark"] { color-scheme:dark; }
+
+/* Motion and depth tokens */
+  :root { --ease:cubic-bezier(0.22, 1, 0.36, 1); --ease-pop:cubic-bezier(0.35, 1.55, 0.65, 1); --fast:120ms; --base:240ms; --slow:360ms;
+    --shadow:0 1px 2px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.02), 0 0 0 0.5px rgba(0,0,0,0.08);
+    --shadow-hover:0 2px 4px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.08); }
+  :root[data-theme="dark"] {
+    --shadow:0 1px 2px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(255,255,255,0.18);
+    --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.24); }
+
+/* Buttons and busy indicators */
+  .btn, .share-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:38px; padding:6px 14px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); cursor:pointer; font-size:14px; font-weight:500; text-decoration:none; white-space:nowrap; }
+  .btn:hover, .share-btn:hover { background:var(--control-hover); border-color:var(--text); box-shadow:var(--shadow-hover); }
+  .btn-primary { background:var(--primary); color:var(--primary-text); border-color:var(--primary); padding:6px 16px; font-weight:600; box-shadow:0 1px 2px rgba(20,40,28,.18); }
+  .btn-primary:hover { background:var(--primary-hover); border-color:var(--primary-hover); }
+  .btn-primary:active { transform:translateY(1px); }
+  .btn-quiet { border-color:transparent; background:transparent; padding-inline:8px; }
+  .btn-quiet:hover { background:var(--surface-2); border-color:transparent; }
+  .btn-small { min-height:32px; padding:4px 10px; font-size:13px; }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  .spinner { width:14px; height:14px; border-radius:50%; border:2px solid currentColor; border-right-color:transparent; }
+
+.btn[aria-busy="true"], .share-btn[aria-busy="true"] { opacity:.6; cursor:progress; }
+
+/* Icon controls */
+  .icon-btn { width:32px; height:32px; border-radius:8px; border:0; background:transparent; color:var(--muted); cursor:pointer; display:grid; place-items:center; }
+  .icon-btn:hover, .icon-btn:focus-visible { color:var(--bad); background:var(--bad-bg); }
+  .icon-plain:hover, .icon-plain:focus-visible { color:var(--text); background:var(--surface-2); }
+
+/* Undo feedback */
+  .toast { position:fixed; left:50%; bottom:max(20px, env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:var(--ink-text); padding:10px 10px 10px 16px; border-radius:10px; display:flex; gap:12px; align-items:center; box-shadow:0 2px 4px rgba(0,0,0,.08), 0 12px 32px rgba(0,0,0,.16); z-index:20; font-size:14px; }
+  .toast button { background:transparent; color:inherit; border:1px solid color-mix(in srgb, currentColor 40%, transparent); border-radius:7px; padding:4px 12px; min-height:32px; font-weight:500; cursor:pointer; }
+
+  #save-status { position:fixed; top:16px; right:max(16px, env(safe-area-inset-right)); max-width:calc(100% - 32px); display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--surface); color:var(--text); border:1px solid var(--line-strong); border-radius:12px; box-shadow:var(--shadow); z-index:30; font-size:14px; overflow-wrap:anywhere; }
+
+  #save-status:empty { display:none; }
+
+  .notice { padding:10px 14px; border-radius:8px; background:var(--warn-bg); color:var(--warn); margin:0; font-size:14px; }
+
+  .error { color:var(--bad); margin:0; }
+
+  .listing-placeholder { width:48px; height:36px; display:grid; place-items:center; border-radius:6px; background:var(--surface-2); color:var(--muted); flex:none; }
+
+  .photo-stack { --stack-thumb:96px; --stack-limit:4; --stack-cap:4; --stack-visible:min(var(--stack-count, 1), var(--stack-limit), var(--stack-cap)); display:flex; padding:12px calc(14px + (var(--stack-visible) - 1) * 14px) 16px 8px; overflow:visible; }
+
+  .photo-stack img { --tilt:0deg; --lift:0px; position:relative; flex:none; width:var(--stack-thumb); aspect-ratio:4 / 3; object-fit:cover; border-radius:7px; background:var(--surface-2); display:block; box-shadow:0 0 0 2px var(--surface), 0 2px 6px rgba(0,0,0,.18), 0 8px 18px rgba(0,0,0,.14); transform:translateY(var(--lift)) rotate(var(--tilt)); --motion:transform var(--slow) var(--ease); }
+
+  .photo-stack img + img { margin-left:-26px; }
+
+  [data-tip] { position:relative; --tip-opacity:0; --tip-y:4px; }
+
+  [data-tip]::after { content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 6px); translate:-50% var(--tip-y, 4px); opacity:var(--tip-opacity, 0); pointer-events:none; white-space:nowrap; font-size:12px; font-weight:500; padding:4px 8px; border-radius:6px; background:var(--ink, #1b1a19); color:var(--ink-text, #fafaf9); box-shadow:var(--shadow); --motion:opacity var(--base) var(--ease), translate var(--base) var(--ease), filter var(--base) var(--ease);  z-index:40; }
+
+
+/* Semantic size aliases for new components. */
+:root { --space-xs:4px; --space-sm:8px; --space-md:16px; --space-lg:24px; --radius-control:8px; --radius-surface:12px; }
+.btn, .share-btn { color:var(--text); font-family:inherit; }
+.btn-primary { color:var(--primary-text); }
+@media (hover:none) { .btn:hover, .share-btn:hover { box-shadow:none; } }
+
+/* Layout grid: shared by the app shell and standalone reports. */
+:root { --page-max:1360px; --page-gutter:24px; --page-top:24px; --section-gap:24px; --card-padding:24px; --grid-gap:16px; }
+@media (max-width:860px) { :root { --page-gutter:16px; --page-top:16px; } }
+@media (max-width:600px) { :root { --card-padding:16px; } }

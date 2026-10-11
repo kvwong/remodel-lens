@@ -1,3 +1,5 @@
+import { renderPageHeader, detailHeaderStyles } from "./detail-header.js";
+import { designSystemStyles } from "./ui/design-system.js";
 import { readFileSync } from "node:fs";
 
 const asset = (name: string) => readFileSync(new URL(`./app/brand/${name}.svg`, import.meta.url), "utf8").trim();
@@ -17,16 +19,19 @@ export const brandLockup = `<span class="whim-lockup" aria-hidden="true">
   <img class="whim-logo whim-logo-dark" src="${dataUrl(WHIM_LOCKUPS.dark)}" alt="" width="1405" height="340">
 </span>`;
 
-export const brandHead = `<meta name="application-name" content="Whim">
+export const brandHead = `<style data-whim-design-system>${designSystemStyles}
+${detailHeaderStyles}</style>
+<script>window.renderPageHeader = ${renderPageHeader.toString()};</script>
+<meta name="application-name" content="Whim">
 <meta name="apple-mobile-web-app-title" content="Whim">
 <link id="whim-favicon" rel="icon" type="image/svg+xml" sizes="any" href="${favicons.light}" data-light="${favicons.light}" data-dark="${favicons.dark}">
 <style>
-  .whim-lockup { display:block; width:132px; height:32px; }
+  .whim-lockup { display:block; width:116px; height:28px; }
   .whim-logo { display:block; width:100%; height:100%; object-fit:contain; }
   .whim-logo-dark { display:none; }
   :root[data-theme="dark"] .whim-logo-light { display:none; }
   :root[data-theme="dark"] .whim-logo-dark { display:block; }
-  .report-brand { display:block; width:fit-content; margin:0 0 20px; text-decoration:none; }
+  .report-brand { display:block; width:fit-content; margin:0 0 var(--section-gap); text-decoration:none; }
   @media print {
     .whim-logo-light { display:block !important; }
     .whim-logo-dark { display:none !important; }

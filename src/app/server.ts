@@ -332,6 +332,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   }
 
   if (parts[0] === "api") {
+    if (req.method === "GET" && parts[1] === "reports" && parts.length === 2) return send(res, 200, (await homeView(true)).reports);
     if (req.method === "GET" && parts[1] === "listings" && parts.length === 2) {
       const listings = await listListings();
       return send(res, 200, listings.map((l) => ({

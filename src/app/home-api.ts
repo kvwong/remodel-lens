@@ -19,7 +19,7 @@ type ReportRun = RunSummary & { reportUrl: string; listingId: string; listingNam
 export type HomeSlide = { src: string; alt: string; caption: string; reportUrl: string };
 export type HomeReport = ReportRun & { images: HomeSlide[] };
 
-export async function homeView(): Promise<{ reports: HomeReport[]; totalReports: number; slides: HomeSlide[] }> {
+export async function homeView(allReports = false): Promise<{ reports: HomeReport[]; totalReports: number; slides: HomeSlide[] }> {
   const listings = await listListings();
   const runs = (await Promise.all(listings.map(async (listing) =>
     (await listRuns(listing.id)).filter((run) => run.report).map((run) => ({
@@ -31,8 +31,8 @@ export async function homeView(): Promise<{ reports: HomeReport[]; totalReports:
   ))).flat().sort((a, b) => b.startedAt.localeCompare(a.startedAt) || a.listingName.localeCompare(b.listingName));
 
   // The reel mixes images from the same recent reports listed below it, in a fresh random order each visit.
-  const recent = runs.slice(0, RECENT_REPORTS);
-  const slides = shuffle((await Promise.all(recent.map((run) => runSlides(run)))).flat()).slice(0, MAX_SLIDES);
+  const recent = allReports ? runs : runs.slice(0, RECENT_REPORTS);
+  const slides = allReports ? [] : shuffle((await Promise.all(recent.map((run) => runSlides(run)))).flat()).slice(0, MAX_SLIDES);
   const reports = await Promise.all(recent.map(async (run) => ({
     ...run,
     images: (await runSlides(run, 240)).slice(0, ROW_IMAGES),

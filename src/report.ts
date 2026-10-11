@@ -1,3 +1,4 @@
+import { renderPageHeader } from "./detail-header.js";
 import { motionScript } from "./motion.js";
 import { planCost, type ChangePlan, type CostRange } from "./redesign/plan.js";
 import { appearanceScript, brandHead, brandLockup } from "./branding.js";
@@ -893,20 +894,6 @@ ${appearanceScript}
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   * { --motion:none; }
-  :root {
-    --bg:#f5f4f1; --surface:#ffffff; --surface-2:#f3f1ed; --text:#1b1a19; --muted:#625e58;
-    --line:rgba(27,26,25,.1); --line-strong:rgba(27,26,25,.22);
-    --primary:#2f5a44; --primary-text:#ffffff; --primary-soft:#e4eee7; --accent:var(--primary);
-    --ok:#3d6a4c; --warn:#8a6216; --bad:#9a3b2f;
-    --font:"Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    color-scheme:light;
-  }
-  :root[data-theme="dark"] { color-scheme:dark;
-    --bg:#0e0e0d; --surface:#1b1a19; --surface-2:#242321; --text:#ecebe8; --muted:#a39f99;
-    --line:rgba(236,235,232,.1); --line-strong:rgba(236,235,232,.22);
-    --primary:#8cc3a1; --primary-text:#0d1a12; --primary-soft:#1b2a21; --accent:var(--primary);
-    --ok:#8fc49f; --warn:#e0bd78; --bad:#ee9d90;
-  }
   * { box-sizing:border-box; }
   [hidden] { display:none !important; }
   html { -webkit-tap-highlight-color:transparent; scrollbar-color:var(--line-strong) transparent; scrollbar-gutter:stable; }
@@ -918,23 +905,21 @@ ${appearanceScript}
   .num { font-variant-numeric:tabular-nums; white-space:nowrap; }
   .icon { width:16px; height:16px; flex:none; }
   h1, h2, h3 { margin:0; line-height:1.2; font-weight:600; scroll-margin-top:72px; text-wrap:balance; }
-  h1 { font-size:clamp(28px, 4vw, 36px); letter-spacing:-.02em; }
+  h1 { font-size:24px; line-height:1.25; letter-spacing:-.01em; }
   h2 { font-size:20px; letter-spacing:-.01em; }
   h3 { font-size:15px; }
   h3.sub { font-size:13px; margin:16px 0 4px; color:var(--muted); font-weight:500; }
-  main { max-width:1320px; margin:0 auto; padding:28px max(20px, env(safe-area-inset-left)) 120px; }
+  main { max-width:var(--page-max); margin:0 auto; padding:var(--page-top) max(var(--page-gutter), env(safe-area-inset-left)) 120px max(var(--page-gutter), env(safe-area-inset-right)); }
   .skip { position:absolute; left:-999px; } .skip:focus { left:16px; top:16px; background:var(--surface); padding:8px 12px; z-index:9; }
 
-  .crumb { display:inline-flex; align-items:center; gap:6px; min-height:32px; font-size:14px; color:var(--muted); text-decoration:none; }
+  .crumb { display:inline-flex; align-items:center; gap:2px; min-height:44px; margin:-10px 0 -4px -6px; padding:0 8px 0 2px; border-radius:8px; font-size:14px; font-weight:500; color:var(--muted); text-decoration:none; }
   .crumb:hover { color:var(--text); }
-  .page-head { margin:8px 0 28px; display:grid; grid-template-columns:minmax(0, 1fr) auto; column-gap:32px; }
-  .page-head > * { grid-column:1; }
-  .card { background:var(--surface); border:0; border-radius:12px; box-shadow:var(--shadow); padding:28px; }
-  @media (max-width: 680px) { .card { padding:18px 16px; border-radius:10px; } }
+  .page-head { margin:0 0 var(--section-gap); }
+  .card { background:var(--surface); border:0; border-radius:12px; box-shadow:var(--shadow); padding:var(--card-padding); }
+
   .meta { margin:8px 0 0; color:var(--muted); font-size:14px; }
   .meta span + span::before { content:"·"; margin:0 8px; opacity:.6; }
   /* Downloads sit at the right, PDFs above HTML, their bottom edge on the title's baseline row (the row is set inline: 2 under a back link, else 1). */
-  .page-head > .share { grid-column:2; align-self:end; margin-bottom:4px; }
   .share { position:relative; display:flex; justify-content:flex-end; align-items:center; gap:10px; }
   .dl { position:relative; }
   .dl-caret { width:14px; height:14px; margin-left:-2px; color:var(--muted) !important; --motion:rotate var(--base) var(--ease); }
@@ -946,20 +931,16 @@ ${appearanceScript}
   .dl-menu a:hover, .dl-menu a:focus-visible { background:var(--surface-2); }
   .dl-menu a[aria-busy="true"] { opacity:.6; cursor:progress; }
   .dl-hint { font-size:13px; font-weight:400; color:var(--muted); }
-  .share-btn { font:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:6px 14px 6px 12px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); text-decoration:none; color:var(--text); font-size:14px; font-weight:500; white-space:nowrap; }
-  .share-btn:hover { border-color:var(--primary); background:var(--primary-soft); }
   .share-btn .icon { color:var(--primary); }
-  .share-btn[aria-busy="true"] { opacity:.6; cursor:progress; }
   /* Below the buttons without taking space, so the buttons stay on the baseline while a PDF is prepared. */
   .share-status { position:absolute; top:100%; right:0; margin-top:6px; white-space:nowrap; font-size:13px; color:var(--muted); }
   .share-status:empty { display:none; }
   @media (max-width: 900px) {
-    .page-head > .share { grid-column:1; grid-row:auto !important; margin:18px 0 0; justify-content:flex-start; flex-wrap:wrap; }
     .dl-menu { right:auto; left:0; }
     .share-status { position:static; flex-basis:100%; margin:0; white-space:normal; }
   }
   @media (max-width: 680px) { .dl { flex:1 1 0; } .share-btn { width:100%; justify-content:center; } .dl + .dl .dl-menu { left:auto; right:0; } .dl-menu { width:min(280px, calc(100vw - 32px)); } }
-  .notice { margin:16px 0 0; font-size:14px; color:var(--warn); }
+  .page-head > .notice { flex-basis:100%; margin:16px 0 0; }
 
   .status { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; white-space:nowrap; }
   .status .icon { width:14px; height:14px; }
@@ -993,8 +974,9 @@ ${appearanceScript}
   .no-image { aspect-ratio:3 / 2; display:grid; place-items:center; border-radius:3px; border:1px dashed var(--line-strong); color:var(--muted); font-size:13px; text-align:center; padding:16px; }
 
   /* By room */
-  .by-room { margin-top:20px; padding-top:4px; padding-bottom:4px; }
-  .table-scroll { margin-top:8px; overflow-x:auto; }
+  .by-room { margin-top:var(--section-gap); padding-top:4px; padding-bottom:4px; }
+  .table-scroll { margin-top:8px; overflow-x:auto; width:100%; min-width:0; max-width:100%; }
+  .by-room details { min-width:0; max-width:100%; overflow:hidden; }
   table { width:100%; min-width:560px; border-collapse:collapse; font-size:14px; }
   th, td { text-align:left; vertical-align:top; padding:12px 16px 12px 0; border-bottom:1px solid var(--line); }
   thead th { font-weight:500; color:var(--muted); font-size:13px; padding-bottom:8px; }
@@ -1005,7 +987,7 @@ ${appearanceScript}
   tfoot th, tfoot td { border-bottom:0; padding-top:14px; font-weight:600; font-size:15px; }
 
   /* Sticky controls */
-  .toolbar { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; margin:20px -20px 0; padding:10px 20px; background:color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter:saturate(1.2) blur(10px); border-bottom:1px solid var(--line); }
+  .toolbar { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; margin:var(--section-gap) calc(-1 * var(--page-gutter)) 0; padding:12px var(--page-gutter); background:color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter:saturate(1.2) blur(10px); border-bottom:1px solid var(--line); }
   .toolbar .crumb { margin-right:auto; }
   select { font:inherit; font-size:14px; min-height:36px; padding:6px 30px 6px 10px; border-radius:8px; border:1px solid var(--line-strong); color:inherit; background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2366625d' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E") no-repeat right 8px center; appearance:none; }
   .seg { display:inline-flex; padding:3px; border:1px solid var(--line-strong); border-radius:9px; background:var(--surface); }
@@ -1015,7 +997,7 @@ ${appearanceScript}
   .seg-label { font-size:13px; color:var(--muted); }
 
   /* Rooms */
-  .room { margin-top:20px; scroll-margin-top:72px; }
+  .room { margin-top:var(--section-gap); scroll-margin-top:72px; }
   .room-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:end; gap:12px 24px; margin-bottom:16px; }
   .room-title { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
   .file { font-size:13px; color:var(--muted); }
@@ -1254,30 +1236,22 @@ ${appearanceScript}
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; } }
 
   /* Motion + depth system */
-  :root { --ease:cubic-bezier(0.22, 1, 0.36, 1); --ease-pop:cubic-bezier(0.35, 1.55, 0.65, 1); --fast:120ms; --base:240ms; --slow:360ms;
-    --shadow:0 1px 2px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.02), 0 0 0 0.5px rgba(0,0,0,0.08);
-    --shadow-hover:0 2px 4px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.08); }
-  :root[data-theme="dark"] { color-scheme:dark;
-    --shadow:0 1px 2px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(255,255,255,0.08);
-    --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.12); }
   /* Every clickable element presses to 98% on the fast duration. */
   button, .btn, a.nav-link, .tier, .pick, .zoom, summary, [role="tab"] { --motion:transform var(--fast) var(--ease), box-shadow var(--base) var(--ease), background-color var(--base) var(--ease), border-color var(--base) var(--ease), color var(--base) var(--ease), opacity var(--base) var(--ease); }
   button:active:not(:disabled), .btn:active, a.nav-link:active, .tier:active, .pick:active, .zoom:active, summary:active, [role="tab"]:active { transform:scale(0.98); }
   /* Motion fades and lifts tooltip pseudo-elements through these custom properties. */
-  [data-tip] { position:relative; --tip-opacity:0; --tip-y:4px; }
-  [data-tip]::after { content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 6px); translate:-50% var(--tip-y, 4px); opacity:var(--tip-opacity, 0); pointer-events:none; white-space:nowrap; font-size:12px; font-weight:500; padding:4px 8px; border-radius:6px; background:var(--ink, #1b1a19); color:var(--ink-text, #fafaf9); box-shadow:var(--shadow); --motion:opacity var(--base) var(--ease), translate var(--base) var(--ease), filter var(--base) var(--ease);  z-index:40; }
 </style>
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <main id="content">
   ${back ? `<a class="report-brand" href="/" aria-label="Whim home">${brandLockup}</a>` : `<div class="report-brand" role="img" aria-label="Whim">${brandLockup}</div>`}
-  <header class="page-head">
-    ${back ? `<a class="crumb" href="${back.href}" data-back>${icon("arrowLeft")}${back.label}</a>` : ""}
-    <h1 id="top" tabindex="-1">${esc(input.title)}</h1>
-    <p class="meta">${meta.map((m) => `<span>${esc(m)}</span>`).join("")}</p>
-    ${input.pdf || input.html
-      ? `<div class="share" role="group" aria-label="Download to share" style="grid-row:${back ? 2 : 1}">
+  ${renderPageHeader({ className: "page-head",
+    back: back ? `<a class="back-link" href="${back.href}" data-back>${icon("arrowLeft")}${esc(input.title)}</a>` : "",
+    title: `<h1 id="top" tabindex="-1">${esc(input.title)}</h1>`,
+    metadata: `<p class="meta">${meta.map((m) => `<span>${esc(m)}</span>`).join("")}</p>`,
+    actions: input.pdf || input.html
+      ? `<div class="share" role="group" aria-label="Download to share" >
       ${[
         input.pdf && { id: "pdf", label: "PDF", links: input.pdf, kind: "PDF", hint: { summary: "Costs and a before and after for every room", full: "Every room, scope, and planned change" } },
         input.html && { id: "html", label: "HTML", links: input.html, kind: "web page", hint: { summary: "One file to open in any browser: a before and after for every room", full: "One file to open in any browser: every room, scope, and planned change" } },
@@ -1290,9 +1264,9 @@ ${appearanceScript}
       </div>`).join("")}
       <span class="share-status" role="status" aria-live="polite"></span>
     </div>`
-      : ""}
-    ${input.run?.stopped ? `<p class="notice">This run was stopped early, so some rooms or scopes are missing.</p>` : ""}
-  </header>
+      : "",
+    notice: input.run?.stopped ? `<p class="notice">This run was stopped early, so some rooms or scopes are missing.</p>` : "",
+  })}
   ${overview}
   ${table}
 
