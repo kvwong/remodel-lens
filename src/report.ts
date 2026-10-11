@@ -953,7 +953,7 @@ ${appearanceScript}
   .scope-album > .album-cover::-webkit-details-marker { display:none; }
   .scope-link { text-decoration:none; color:inherit; }
   .album-copy { display:grid; gap:4px; min-width:0; flex:1; }
-  .album-pile { position:relative; display:block; width:42%; max-width:320px; aspect-ratio:4/3; flex:none; margin:12px 8px; }
+  .album-pile { position:relative; display:block; width:42%; max-width:320px; aspect-ratio:4/3; flex:none; margin:32px 16px; }
   .album-pile { --pile-direction:1; }
   .scope-link:nth-child(even) .album-pile { --pile-direction:-1; }
   .album-pile img { --angle:-5.5deg; --offset:-5%; --lift:3px; position:absolute; width:84%; height:100%; object-fit:cover; border:3px solid var(--surface); border-radius:12px; box-shadow:var(--shadow-hover); left:8%; transform:translateX(calc(var(--offset) * var(--pile-direction))) translateY(var(--lift)) rotate(calc(var(--angle) * var(--pile-direction))); --motion:transform 300ms cubic-bezier(0,.18,.16,2); }
@@ -988,7 +988,7 @@ ${appearanceScript}
   .album-summary p { max-width:70ch; color:var(--muted); font-size:14px; }
   .scope-albums:has(> :nth-child(2)) .scope-link > .album-cover { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
   .scope-albums:has(> :nth-child(2)) .scope-link .album-pile { width:calc(100% - 16px); max-width:none; aspect-ratio:3/2; }
-  @media(max-width:600px) { .scope-albums { gap:12px; } .scope-album > .album-cover { flex-wrap:wrap; gap:12px; } .album-pile { width:45%; margin:8px 0; } .album-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .scope-album .plate-total { font-size:18px; } }
+  @media(max-width:600px) { .scope-albums { gap:12px; } .scope-album > .album-cover { flex-wrap:wrap; gap:12px; } .album-pile { width:45%; margin:28px 8px; } .album-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .scope-album .plate-total { font-size:18px; } }
   @media(max-width:600px) {
     .scope-albums:has(> :nth-child(3)) { grid-template-columns:minmax(0,1fr); gap:24px; }
     .scope-albums:has(> :nth-child(3)) .scope-link > .album-cover { grid-template-columns:104px minmax(0,1fr); gap:8px 16px; }
