@@ -137,6 +137,8 @@
     .side-content nav { display:none; }
     .side .brand { padding-left:0; }
     .display-setting { margin:0 0 0 auto; padding:0; }
+    /* Only Home keeps the logo and display toggle on top; every other page starts with its own heading. */
+    body:not([data-view="home"]) .side { display:none; }
     main > .head + * { margin-top:0; }
     .collection-head { align-items:center; }
     .collection-head .btn { min-height:44px; }
@@ -815,6 +817,7 @@
 (() => {
   const q = new URLSearchParams(location.search);
   const key = q.get("view") || (q.get("listing") ? "listing:" + q.get("listing") : q.get("taste") ? "taste:" + q.get("taste") : "home");
+  document.body.dataset.view = key.split(":")[0];
   const tab = key.startsWith("listing") ? "listings" : key.startsWith("taste") ? "tastes" : key;
   document.querySelector(`[data-mobile-tab="${tab}"]`)?.setAttribute("aria-current", "page");
   let html = null;
@@ -4078,6 +4081,7 @@ async function loadView() {
   clearTimeout(pollTimer); clearTimeout(runningTimer); stopReel?.();
   const view = route.get("view") || (route.get("taste") ? "taste" : route.get("listing") ? "listing" : "home");
   state.view = view;
+  document.body.dataset.view = view;
   renderMobileTabs();
   renderListings(); renderProfilesNav();
   // Start the route request immediately, alongside any shell revalidation.
