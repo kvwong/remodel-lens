@@ -1067,6 +1067,7 @@ ${appearanceScript}
   .room-picker > summary::-webkit-details-marker { display:none; }
   .room-picker > summary .icon { flex:none; width:16px; height:16px; }
   .room-picker[open] > summary .icon { rotate:180deg; }
+  .room-menu { transform-origin:left top; }
   .room-menu { position:absolute; z-index:30; top:calc(100% + 6px); left:0; width:max(100%, 360px); max-height:min(360px, 55dvh); overflow-y:auto; overscroll-behavior:contain; padding:6px; margin:0; list-style:none; border:1px solid var(--line-strong); border-radius:14px; background:var(--surface); box-shadow:var(--shadow-hover); }
   .room-menu button { display:block; width:100%; min-height:44px; padding:10px; border:0; border-radius:9px; font:inherit; font-size:14px; line-height:1.4; text-align:left; white-space:normal; overflow-wrap:anywhere; background:transparent; color:var(--text); cursor:pointer; }
   .room-menu button:hover, .room-menu button:focus-visible { background:var(--surface-2); }
@@ -1447,7 +1448,7 @@ ${back ? `${mobileTabsCss}
   </div>
 </dialog>
 
-${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` : ""}<script>${motionScript}</script>${input.changes ? `\n<script src="/assets/pull-refresh.js"></script>` : ""}
+${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` : ""}<script>${motionScript}</script>${back ? `\n<script src="/assets/smooth.js"></script>` : ""}${input.changes ? `\n<script src="/assets/pull-refresh.js"></script>` : ""}
 <script>
 (() => {
   const motion = window.whimMotion;
