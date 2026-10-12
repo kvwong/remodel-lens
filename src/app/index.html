@@ -689,24 +689,34 @@
   @media (prefers-reduced-motion:reduce) {
     .mobile-tabs a, a.nav-link, .sidebar-toggle, .settings-link { transition:none; }
   }
-  /* Stable loading geometry; placeholders never receive focus or pointer events. */
+  /* Sidebar placeholders (desktop) until the lists load. */
   .skeleton { background:var(--surface-2); border-radius:6px; position:relative; overflow:hidden; }
   .skeleton::after { content:""; position:absolute; inset:0; background:linear-gradient(100deg,transparent 20%,var(--surface) 50%,transparent 80%); transform:translateX(-100%); animation:skeleton-sweep 1.6s ease-in-out infinite; opacity:.65; }
   @keyframes skeleton-sweep { to { transform:translateX(100%); } }
   .skeleton-line { height:14px; width:70%; }
-  .skeleton-title { height:28px; width:min(240px,70%); margin-bottom:12px; }
-  .skeleton-copy { display:grid; gap:12px; min-width:0; flex:1; }
-  .skeleton-row { display:flex; align-items:center; gap:20px; min-height:112px; padding:20px 0; border-bottom:1px solid var(--line); }
-  .skeleton-row:last-child { border-bottom:0; }
-  .skeleton-thumb { width:88px; aspect-ratio:4/3; flex:none; }
-  .skeleton-photo { aspect-ratio:3/2; width:100%; }
-  .reel-card .skeleton-photo { aspect-ratio:4/3; }
-  .skeleton-fields { display:grid; gap:24px; padding-block:8px; }
-  .skeleton-fields .skeleton-line { height:40px; width:100%; }
+  .skeleton-thumb { width:48px; aspect-ratio:4/3; flex:none; }
   .skeleton-nav { display:flex; gap:12px; align-items:center; height:60px; padding:8px 10px; }
-  .skeleton-nav .skeleton-thumb { width:48px; }
-  [data-skeleton] { pointer-events:none; }
-  @media(prefers-reduced-motion:reduce) { .skeleton::after { animation:none; } }
+  /* Page skeletons are the page's own markup with text and photos blanked out
+     (see skeletonize), so they take exactly the space the loaded page will. */
+  :root { --skeleton:color-mix(in srgb, var(--text) 9%, var(--surface)); --skeleton-soft:color-mix(in srgb, var(--text) 4%, var(--surface)); } /* opaque, so overlapping photos stay distinct */
+  [data-skeleton] { pointer-events:none; user-select:none; -webkit-user-select:none; }
+  main > [data-skeleton] { display:contents; } /* its sections sit in main's grid like the page's own */
+  main > [data-skeleton] > * { min-width:0; }
+  main > [data-skeleton] > .head + * { margin-top:0; }
+  [data-skeleton] .ghost { color:transparent; background:var(--skeleton); border-radius:4px; }
+  [data-skeleton] *::before, [data-skeleton] *::after, [data-skeleton] svg { visibility:hidden; }
+  [data-skeleton] img { background:var(--skeleton); box-shadow:none; }
+  [data-skeleton] .photo-stack img { box-shadow:0 0 0 2px var(--surface); }
+  [data-skeleton] .btn, [data-skeleton] input, [data-skeleton] textarea, [data-skeleton] select, [data-skeleton] .pill { color:transparent; background:var(--skeleton); border-color:transparent; box-shadow:none; }
+  [data-skeleton] .btn .ghost, [data-skeleton] .pill .ghost { background:none; }
+  [data-skeleton] .btn-quiet, [data-skeleton] .icon-plain { background:none; }
+  [data-skeleton] .reel-card a { background:none; box-shadow:none; }
+  [data-skeleton] .reel-card span, [data-skeleton] .reel-toggle, [data-skeleton] .ref .name, [data-skeleton] .ref .remove, [data-skeleton] .check { visibility:hidden; }
+  [data-skeleton] .ghost, [data-skeleton] img, [data-skeleton] .btn, [data-skeleton] input, [data-skeleton] textarea, [data-skeleton] .pill { animation:skeleton-pulse 1.4s ease-in-out infinite alternate; }
+  @keyframes skeleton-pulse { to { background-color:var(--skeleton-soft); } }
+  @media(prefers-reduced-motion:reduce) { .skeleton::after, [data-skeleton] * { animation:none !important; } }
+  /* Tab icons are drawn by script; hold their space so the labels don't drop when they arrive. */
+  .mobile-tabs [data-icon] { display:block; width:22px; height:22px; }
 </style>
 </head>
 <body>
@@ -731,9 +741,7 @@
       <button type="button" class="display-toggle" data-display-toggle aria-label="Switch to dark mode" data-tip="Dark mode"><span data-icon="sun"></span><span data-icon="moon"></span></button>
     </section>
   </div>
-  <main id="content" tabindex="-1" aria-busy="true" aria-label="App content">
-    <div data-skeleton aria-hidden="true"><section class="reel"><div class="reel-viewport"><ul class="reel-track"><li class="reel-card"><div class="skeleton skeleton-photo"></div></li><li class="reel-card"><div class="skeleton skeleton-photo"></div></li><li class="reel-card"><div class="skeleton skeleton-photo"></div></li></ul></div></section><header class="head collection-head home-head"><div class="skeleton skeleton-title"></div></header><section class="panel"><div class="skeleton-row"><div class="skeleton-copy"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></div><div class="skeleton skeleton-thumb"></div></div></section></div>
-  </main>
+  <main id="content" tabindex="-1" aria-busy="true" aria-label="App content"><div data-skeleton aria-hidden="true"></div></main>
 </div>
 <nav class="mobile-tabs" aria-label="Main navigation">
   <a href="/" class="mobile-tab" data-mobile-tab="home"><span data-icon="home"></span><span>Home</span></a>
@@ -742,6 +750,21 @@
   <a href="?view=reports" class="mobile-tab" data-mobile-tab="reports"><span data-icon="report"></span><span>Reports</span></a>
   <a href="?view=settings" class="mobile-tab" data-mobile-tab="settings"><span data-icon="settings"></span><span>Settings</span></a>
 </nav>
+<script>
+/* Before the first paint: show this page's skeleton from its last visit and light its tab. */
+(() => {
+  const q = new URLSearchParams(location.search);
+  const key = q.get("view") || (q.get("listing") ? "listing:" + q.get("listing") : q.get("taste") ? "taste:" + q.get("taste") : "home");
+  const tab = key.startsWith("listing") ? "listings" : key.startsWith("taste") ? "tastes" : key;
+  document.querySelector(`[data-mobile-tab="${tab}"]`)?.setAttribute("aria-current", "page");
+  let html = null;
+  try { html = localStorage.getItem("whim-skeleton:" + key); } catch {}
+  if (!html) return;
+  const content = document.getElementById("content");
+  content.innerHTML = `<div data-skeleton aria-hidden="true" inert>${html}</div>`;
+  content.dataset.skeletonKey = key;
+})();
+</script>
 <div id="progress-live" class="sr-only" aria-live="polite"></div>
 
 <dialog class="modal" id="new-listing-dialog" aria-labelledby="new-listing-h">
@@ -995,27 +1018,30 @@ function renderListings() {
 }
 
 /* Collection routes work at every size; the tab bar is mobile-only. */
-function renderMobileTabs() {
-  const active = state.view === "home" ? "home" : state.view === "taste" || state.view === "tastes" ? "tastes" : state.view === "reports" ? "reports" : state.view === "settings" ? "settings" : "listings";
+function renderMobileTabs(view = state.view) {
+  const active = view === "home" ? "home" : view === "taste" || view === "tastes" ? "tastes" : view === "reports" ? "reports" : view === "settings" ? "settings" : "listings";
   document.querySelectorAll("[data-mobile-tab]").forEach(link => {
     if (link.dataset.mobileTab === active) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   });
   const settingsLink = $("[data-settings-link]");
-  if (state.view === "settings") settingsLink.setAttribute("aria-current", "page");
+  if (view === "settings") settingsLink.setAttribute("aria-current", "page");
   else settingsLink.removeAttribute("aria-current");
   const homeLink = $(".side .brand");
-  if (state.view === "home") homeLink.setAttribute("aria-current", "page");
+  if (view === "home") homeLink.setAttribute("aria-current", "page");
   else homeLink.removeAttribute("aria-current");
 }
-addEventListener("resize", renderMobileTabs);
+addEventListener("resize", () => renderMobileTabs());
 
 function renderCollection(view) {
+  document.title = `${view === "tastes" ? "Tastes" : "Listings"} · Whim`;
+  $("#content").innerHTML = collectionMarkup(view, view === "tastes" ? state.tasteProfiles : state.listings);
+}
+
+function collectionMarkup(view, items) {
   const tastes = view === "tastes";
-  const items = tastes ? state.tasteProfiles : state.listings;
   const label = tastes ? "Tastes" : "Listings";
-  document.title = `${label} · Whim`;
-  $("#content").innerHTML = `<header class="head collection-head">
+  return `<header class="head collection-head">
     <div><h1>${label}</h1><p class="subhead">${items.length} ${tastes ? "taste profile" : "listing"}${items.length === 1 ? "" : "s"}</p></div>
     <button class="btn btn-small" type="button" data-action="${tastes ? "new-profile" : "new-listing"}" aria-label="${tastes ? "New taste profile" : "New listing"}">${icon("plus")}New ${tastes ? "taste" : "listing"}</button>
   </header>
@@ -1047,9 +1073,13 @@ async function loadReports() {
 
 function renderReports() {
   document.title = "Reports · Whim";
-  $("#content").innerHTML = `<header class="head collection-head"><div><h1>Reports</h1><p class="subhead">${state.reports.length ? `${plural(state.reports.length, "report")} across ${plural(new Set(state.reports.map(run => run.listingId)).size, "listing")} · newest first` : "None yet"}</p></div></header>
-    ${state.reportErrors.length ? `<div class="notice" role="alert">Couldn't load reports for ${esc(state.reportErrors.join(", "))}. <button class="btn btn-small" type="button" data-action="retry-reports">Retry</button></div>` : ""}
-    <section class="panel">${state.reports.length ? `<ul class="runs">${state.reports.map(run => runRow(run, true)).join("")}</ul>` : `<p class="muted" style="margin:0">${state.reportErrors.length ? "Reports couldn't be loaded. Try again." : "No reports yet. Run a redesign from a listing to create one."}</p>`}</section>`;
+  $("#content").innerHTML = reportsMarkup(state.reports, state.reportErrors);
+}
+
+function reportsMarkup(reports, errors) {
+  return `<header class="head collection-head"><div><h1>Reports</h1><p class="subhead">${reports.length ? `${plural(reports.length, "report")} across ${plural(new Set(reports.map(run => run.listingId)).size, "listing")} · newest first` : "None yet"}</p></div></header>
+    ${errors.length ? `<div class="notice" role="alert">Couldn't load reports for ${esc(errors.join(", "))}. <button class="btn btn-small" type="button" data-action="retry-reports">Retry</button></div>` : ""}
+    <section class="panel">${reports.length ? `<ul class="runs">${reports.map(run => runRow(run, true)).join("")}</ul>` : `<p class="muted" style="margin:0">${errors.length ? "Reports couldn't be loaded. Try again." : "No reports yet. Run a redesign from a listing to create one."}</p>`}</section>`;
 }
 
 const sidebarItems = (kind) => kind === "listings" ? state.listings : state.tasteProfiles;
@@ -1262,8 +1292,12 @@ async function loadHome() {
 }
 
 function renderHome() {
-  const { reports, totalReports, slides } = state.home;
   document.title = "Whim";
+  $("#content").innerHTML = homeMarkup(state.home, state.listings.length > 0);
+  startReel();
+}
+
+function homeMarkup({ reports, totalReports, slides }, hasListings) {
   const reel = slides.length
     ? `<section class="reel" aria-label="Recent redesigns" aria-roledescription="carousel">
         <div class="reel-viewport"><ul class="reel-track">${slides.map((slide, i) => reelCard(slide, i)).join("")}</ul></div>
@@ -1273,13 +1307,12 @@ function renderHome() {
         <div class="reel-viewport"><ul class="reel-track" aria-hidden="true">${Array.from({ length: 8 }, (_, i) => `<li class="reel-card" style="${reelLook(i)}"><div></div></li>`).join("")}</ul></div>
         <p><span>Redesigned photos from your reports will drift by here.</span></p>
       </section>`;
-  $("#content").innerHTML = `${reel}
+  return `${reel}
     <header class="head collection-head home-head"><div><h1>Recent reports</h1><p class="subhead">${!totalReports ? "None yet" : `${totalReports > reports.length ? `Latest ${reports.length} of ${totalReports}` : `${totalReports} ${totalReports === 1 ? "report" : "reports"}`} · newest first`}</p></div>
       ${totalReports > reports.length ? `<a class="btn btn-small nav-inline" href="?view=reports">All reports</a>` : ""}</header>
-    <section class="panel">${reports.length ? `<ul class="runs">${reports.map(run => runRow(run, true)).join("")}</ul>` : `${state.listings.length
+    <section class="panel">${reports.length ? `<ul class="runs">${reports.map(run => runRow(run, true)).join("")}</ul>` : `${hasListings
       ? `<p class="muted" style="margin:0">No reports yet. Open a listing and run a redesign to create one.</p>`
       : `<div class="empty-start"><p class="muted" style="margin:0">Start with a listing: add photos of a home, then run a redesign to get a report.</p><button class="btn btn-primary btn-small" type="button" data-action="new-listing">${icon("plus")}New listing</button></div>`}`}</section>`;
-  startReel();
 }
 
 /** A card's size, tilt, lift and stacking, fixed by its position so each photo and its loop copy always match. */
@@ -2616,15 +2649,20 @@ function saveScrollPosition() {
 }
 window.addEventListener("scroll", saveScrollPosition, { passive:true });
 window.addEventListener("pagehide", saveScrollPosition);
+let loadSeq = 0;
 async function loadWithScroll(position) {
+  const seq = ++loadSeq;
   restoringScroll = true;
   try {
-    await load();
+    await load(position);
     await new Promise(resolve => requestAnimationFrame(resolve));
-    scrollTo({ left:position?.x ?? 0, top:position?.y ?? 0, behavior:"instant" });
+    // A newer navigation owns the scroll position now.
+    if (seq === loadSeq) scrollTo({ left:position?.x ?? 0, top:position?.y ?? 0, behavior:"instant" });
   } finally {
-    restoringScroll = false;
-    saveScrollPosition();
+    if (seq === loadSeq) {
+      restoringScroll = false;
+      saveScrollPosition();
+    }
   }
 }
 window.addEventListener("popstate", event => loadWithScroll(event.state?.whimScroll));
@@ -2669,13 +2707,17 @@ async function loadSettingsPage() {
 
 function renderSettings() {
   document.title = "Settings · Whim";
-  $("#content").innerHTML = `<header class="head detail-head"><div><h1>Settings</h1>
+  $("#content").innerHTML = settingsShell();
+  renderKeys(); renderModels(); renderTuning(); renderCosts();
+}
+
+function settingsShell(keys = "") {
+  return `<header class="head detail-head"><div><h1>Settings</h1>
       <p class="subhead">API keys, models, tuning, and cost assumptions · saved on this computer</p></div></header>
-    <section class="panel settings-panel" id="settings-keys" aria-labelledby="keys-h"></section>
+    <section class="panel settings-panel" id="settings-keys" aria-labelledby="keys-h">${keys}</section>
     <section class="panel settings-panel" id="settings-models" aria-labelledby="models-h"></section>
     <section class="panel settings-panel" id="settings-tuning" aria-labelledby="tuning-h"></section>
     <section class="panel settings-panel" id="settings-costs" aria-labelledby="costs-h"></section>`;
-  renderKeys(); renderModels(); renderTuning(); renderCosts();
 }
 
 function settingsSaved(next, message) {
@@ -2687,7 +2729,10 @@ function settingsSaved(next, message) {
 /* API keys */
 
 function renderKeys() {
-  const s = state.settings;
+  $("#settings-keys").innerHTML = keysMarkup(state.settings);
+}
+
+function keysMarkup(s) {
   const needsAnthropic = [s.models.current.reasoning, ...s.models.current.analysis].some((m) => m.startsWith("anthropic/"));
   const row = (id) => {
     const k = s.keys[id];
@@ -2711,7 +2756,7 @@ function renderKeys() {
       </div>
     </form>`;
   };
-  $("#settings-keys").innerHTML = `<div class="panel-head"><h2 id="keys-h">API keys</h2>
+  return `<div class="panel-head"><h2 id="keys-h">API keys</h2>
     <p class="hint">Keys stay on this computer and are sent only to their own provider. Once saved, only the last four characters are shown. Everything on this page is stored in <code>.settings.json</code> and replaces the same value in <code>.env.local</code>.</p></div>
     ${s.keysError ? `<p class="notice">${esc(s.keysError.replace(/ Add (it|them) on.*$/, ""))}</p>` : ""}
     ${row("openai")}${row("anthropic")}${row("openrouter")}`;
@@ -3351,32 +3396,141 @@ document.addEventListener("click", async (event) => {
   }
 });
 
+/* ---------- Loading skeletons ---------- */
+// A view's skeleton is its last render on this device with the text and photos
+// blanked out, so it takes exactly the space the loaded page will. A view not
+// shown here before gets an approximation built from the same markup.
+const SKELETON_PREFIX = "whim-skeleton:";
+const SKELETON_KEEP = 24;
+const BLANK_IMAGE = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+const SKELETON_DROP_ATTRIBUTES = ["href", "srcset", "sizes", "title", "data-tip", "tabindex", "loading", "decoding", "for", "name", "value", "placeholder", "aria-label", "aria-labelledby", "aria-describedby", "aria-controls", "role", "aria-live"];
+
 function loadingKey() { return params().get("view") || (params().get("listing") ? "listing:"+params().get("listing") : params().get("taste") ? "taste:"+params().get("taste") : "home"); }
-function showLoadingScaffold() {
+const keyView = (key) => key.split(":")[0];
+
+/** Blank out rendered markup: text becomes placeholder bars, photos empty frames, nothing stays linked. */
+function skeletonize(html) {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const root = template.content;
+  root.querySelectorAll("[hidden]").forEach((el) => el.replaceChildren());
+  root.querySelectorAll(".reel-track").forEach((track) => track.removeAttribute("style"));
+  root.querySelectorAll('.reel-card[aria-hidden="true"]').forEach((copy) => copy.remove()); // the loop's repeats
+  root.querySelectorAll("*").forEach((el) => {
+    SKELETON_DROP_ATTRIBUTES.forEach((name) => el.removeAttribute(name));
+    if (el.localName === "img") el.setAttribute("src", BLANK_IMAGE);
+    if (el.localName === "textarea" || el.localName === "select") el.replaceChildren();
+  });
+  const texts = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) if (walker.currentNode.data.trim() && !walker.currentNode.parentElement?.closest("svg")) texts.push(walker.currentNode);
+  for (const text of texts) {
+    const ghost = document.createElement("span");
+    ghost.className = "ghost";
+    text.replaceWith(ghost);
+    ghost.append(text);
+  }
+  return template.innerHTML.replace(/>\s+</g, "> <");
+}
+
+function rememberSkeleton(key) {
+  const content = $("#content");
+  if (key !== loadingKey() || content.querySelector("[data-skeleton]")) return;
+  const html = skeletonize(content.innerHTML);
+  try {
+    let keys = JSON.parse(localStorage.getItem(SKELETON_PREFIX + "keys") || "[]").filter((k) => k !== key);
+    keys.unshift(key);
+    for (const old of keys.splice(SKELETON_KEEP)) localStorage.removeItem(SKELETON_PREFIX + old);
+    for (;;) {
+      try { localStorage.setItem(SKELETON_PREFIX + key, html); break; }
+      catch (error) {
+        // Storage full: drop the oldest views until this one fits.
+        const old = keys.pop();
+        if (!old || old === key) throw error;
+        localStorage.removeItem(SKELETON_PREFIX + old);
+      }
+    }
+    localStorage.setItem(SKELETON_PREFIX + "keys", JSON.stringify(keys));
+  } catch {}
+}
+
+function storedSkeleton(key) {
+  try { return localStorage.getItem(SKELETON_PREFIX + key); } catch { return null; }
+}
+
+/** First-visit stand-ins, rendered from each view's own markup with typical content. */
+function fallbackSkeleton(key) {
+  const view = keyView(key);
+  const run = { listingId: "", listingName: "Listing name", startedAt: "2026-01-01T10:00:00Z", finishedAt: "2026-01-01T10:10:00Z", tiers: ["cosmetic", "moderate"], photos: [1, 2, 3, 4], profileName: "Taste name", images: [{ src: "", caption: "" }], reportUrl: "#" };
+  const runs = (n) => Array.from({ length: n }, () => run);
+  const listing = { id: "", name: "Listing name", selectedCount: 6, photoCount: 8, cover: "#" };
+  const photoStack = (n) => `<button class="photo-stack" style="--stack-count:${n}" type="button">${Array.from({ length: n }, (_, i) => `<img alt="" style="${thumbTilt(String(i), i)}">`).join("")}</button>`;
+  let html;
+  if (view === "home") html = homeMarkup({ reports: runs(5), totalReports: 9, slides: Array.from({ length: 8 }, () => ({ src: "", alt: "", caption: "", reportUrl: "#" })) }, true);
+  else if (view === "reports") html = reportsMarkup(runs(6), []);
+  else if (view === "listings") html = collectionMarkup("listings", [listing, listing, listing]);
+  else if (view === "tastes") html = collectionMarkup("tastes", [{ ...listing, referenceCount: 12, ruleCount: 30, built: true }, { ...listing, referenceCount: 12, ruleCount: 30, built: true }]);
+  else if (view === "settings") {
+    const key = { name: "Provider", url: "#", source: "environment", hint: "…" };
+    html = settingsShell(keysMarkup({ keys: { openai: key, anthropic: key, openrouter: key }, models: { current: { reasoning: "openai/x", analysis: [] } }, keysError: null }));
+  } else if (view === "listing") html = `${renderDetailHeader({ kind: "listing", name: "Listing name", metadata: `<p class="stats"><span>City, State</span><span>A short description</span></p>` })}
+    <section class="panel zone" id="photos-zone">
+      <div class="section-head"><h2>Listing photos <span class="muted num" style="font-weight:400">· 6 of 8</span></h2><div class="tools"><span class="tools fade" data-photos-only data-collapsed="true"></span><button class="btn btn-small" type="button">${icon("plus")}Add photos</button></div></div>
+      <div class="photos-area"><div data-photos-strip><div>${photoStack(6)}</div></div></div>
+      <hr class="zone-divider">
+      <div class="run-form"><h2>Redesign</h2><div class="redesign-settings">
+        <section class="taste-setting"><span class="field-label">Taste profile</span><div class="profile-dropdown"><div class="profile-card">${profilePreview({ previews: ["", "", ""] })}<div class="profile-caption"><span>Taste name</span><span class="profile-tools"><a class="profile-edit">Edit</a><button type="button" class="profile-change">Change ${icon("chevron")}</button></span></div></div></div></section>
+        <fieldset class="scope-setting"><legend>Scope</legend><div class="tiers">${TIERS.map((t) => `<label class="tier"><input type="checkbox"><span><strong>${t.name}</strong><small>${t.blurb}</small></span></label>`).join("")}</div></fieldset>
+      </div></div>
+    </section>`;
+  else html = `${renderDetailHeader({ kind: "taste", name: "Taste name", metadata: `<p class="stats num"><span>Taste profile</span><span>12 reference photos</span><span>30 rules</span></p>` })}
+    <section class="panel"><div class="section-head"><h2>Reference photos <span class="muted num" style="font-weight:400">· 12</span></h2><div class="tools"><button class="btn btn-small" type="button">${icon("plus")}Add photos</button></div></div>
+      <div class="dropzone" id="dropzone"><div class="ref-grid">${Array.from({ length: 12 }, () => `<div class="ref"><img alt=""></div>`).join("")}</div><p class="hint" style="margin-top:12px">Whole rooms and close-ups of materials both help.</p></div></section>
+    <section class="panel"><div class="section-head" style="margin-bottom:6px"><h2>Brief</h2></div><p class="hint" style="margin:0 0 12px">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal and use the photos to confirm and sharpen it.</p></section>`;
+  return skeletonize(html);
+}
+
+function showLoadingScaffold(position) {
   const content = $("#content"), key = loadingKey();
-  if (content.dataset.loadedKey === key && !content.querySelector("[data-skeleton]")) return;
-  const line = (width="70%") => `<div class="skeleton skeleton-line" style="width:${width}"></div>`;
-  const rows = Array.from({length:5},()=>`<div class="skeleton-row"><div class="skeleton-copy">${line()}${line("55%")} ${line("85%")}</div><div class="skeleton skeleton-thumb"></div></div>`).join("");
-  const title = `<header class="head collection-head ${key === "home" ? "home-head" : ""}"><div><div class="skeleton skeleton-title"></div>${line("160px")}</div></header>`;
-  const reel = `<section class="reel"><div class="reel-viewport"><ul class="reel-track">${Array.from({length:6},(_,i)=>`<li class="reel-card" style="${reelLook(i)}"><div class="skeleton skeleton-photo"></div></li>`).join("")}</ul></div></section>`;
-  let body;
-  if (key === "home" || key === "reports") body = (key === "home" ? reel : "") + title + `<section class="panel">${rows}</section>`;
-  else if (key === "listings" || key === "tastes") body = title + `<div class="collection-grid">${Array.from({length:6},()=>`<div class="collection-link"><div class="skeleton skeleton-thumb"></div><div class="skeleton-copy">${line()}${line("55%")}</div></div>`).join("")}</div>`;
-  else body = title + `<section class="panel skeleton-fields">${line("40%")}<div class="skeleton skeleton-photo" style="max-width:360px"></div>${line()}${line()}${line()}</section>`;
-  content.setAttribute("aria-busy","true");
-  content.innerHTML = `<div data-skeleton aria-hidden="true">${body}</div>`;
-  announce("Loading content…");
+  if (content.dataset.loadedKey === key && !content.querySelector("[data-skeleton]")) return; // refreshing in place
+  if (content.dataset.skeletonKey !== key || !content.querySelector("[data-skeleton]")) {
+    content.innerHTML = `<div data-skeleton aria-hidden="true" inert>${storedSkeleton(key) ?? fallbackSkeleton(key)}</div>`;
+    content.dataset.skeletonKey = key;
+  }
+  content.setAttribute("aria-busy", "true");
+  content.inert = false;
+  $("#progress-live").textContent = "Loading…";
+  // The skeleton is as tall as the page, so a saved position can be restored right away.
+  if (position) scrollTo({ left: position.x, top: position.y, behavior: "instant" });
 }
 new MutationObserver(() => {
   const content = $("#content");
   if (!content.querySelector("[data-skeleton]")) {
     content.setAttribute("aria-busy","false");
     content.dataset.loadedKey = loadingKey();
+    delete content.dataset.skeletonKey;
   }
 }).observe($("#content"), {childList:true});
 
-async function load() {
-  showLoadingScaffold();
+async function load(position) {
+  const key = loadingKey(), content = $("#content");
+  renderMobileTabs(keyView(key));
+  // Moving between views keeps the old page (inert) for a moment, so a quick
+  // load swaps straight to the new page instead of flashing its skeleton.
+  const leaving = content.dataset.loadedKey && content.dataset.loadedKey !== key;
+  if (leaving) content.inert = true;
+  const scaffold = setTimeout(() => showLoadingScaffold(position), leaving ? 120 : 0);
+  if (!leaving) { clearTimeout(scaffold); showLoadingScaffold(position); }
+  try {
+    if (await loadView()) requestAnimationFrame(() => rememberSkeleton(key));
+  } finally {
+    clearTimeout(scaffold);
+    content.inert = false;
+  }
+}
+
+/** Fetches and renders the current view; true when it rendered a page worth remembering as a skeleton. */
+async function loadView() {
   state.textEdit = null;
   state.job = null;
   clearTimeout(pollTimer);
@@ -3391,7 +3545,8 @@ async function load() {
       renderListings();
       renderProfilesNav();
       renderMobileTabs();
-      return loadSettingsPage();
+      await loadSettingsPage();
+      return true;
     }
     updateBanner(status.keysError);
 
@@ -3404,7 +3559,7 @@ async function load() {
 
       await loadHome();
       if (state.view === "home") renderHome();
-      return;
+      return state.view === "home";
     }
     if (["listings", "tastes", "reports"].includes(collection)) {
       state.view = collection;
@@ -3416,7 +3571,7 @@ async function load() {
         await loadReports();
         if (state.view === "reports") renderReports();
       } else renderCollection(collection);
-      return;
+      return state.view === collection;
     }
     const tasteId = params().get("taste");
     if (tasteId) {
@@ -3427,7 +3582,8 @@ async function load() {
       renderListings();
       renderProfilesNav();
       renderTaste();
-      return pollJob();
+      pollJob();
+      return true;
     }
 
     state.view = "listing";
@@ -3442,6 +3598,7 @@ async function load() {
     renderListings();
     renderListing();
     pollJob();
+    return true;
   } catch (error) {
     $("#content").innerHTML = `<div class="empty"><h1 style="font-size:20px;margin-bottom:8px;color:var(--text)">Couldn't load</h1><p>${esc(error.message)}</p><p><a class="btn" href="/">Back to listings</a></p></div>`;
   }
