@@ -63,7 +63,7 @@ const C = {
   line: "#e2dfda",
   soft: "#f3f1ed",
   primary: "#2f5a44",
-  primarySoft: "#e4eee7",
+  primarySoft: "#ebe7e1",
   verified: "#3d6a4c",
   review: "#8a6216",
   failed: "#9a3b2f",

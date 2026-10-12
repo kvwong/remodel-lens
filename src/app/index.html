@@ -571,7 +571,7 @@
   .panel-foot .error { margin-right:auto; }
   .pill { display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:999px; background:var(--surface-2); color:var(--muted); font-size:12.5px; font-weight:500; }
   .pill .icon { width:13px; height:13px; }
-  .pill-ok { background:var(--primary-soft); color:var(--primary); }
+  .pill-ok { background:color-mix(in srgb, var(--ok) 14%, transparent); color:var(--ok); }
   .settings-input { height:38px; padding:0 10px; border-radius:12px; border:1px solid var(--line-strong); background:var(--surface); color:var(--text); font-size:15px; min-width:0; }
   .settings-input::placeholder { color:var(--muted); opacity:.8; }
   .settings-input:focus { outline:2px solid var(--text); outline-offset:1px; }
@@ -810,7 +810,7 @@
   .splash { position:fixed; inset:0; z-index:200; display:grid; place-items:center; background:var(--bg); transition:opacity .5s ease; }
   .splash.done { opacity:0; pointer-events:none; }
   .splash svg { width:min(30vw, 128px); height:auto; }
-  .splash .base { fill:var(--primary); }
+  .splash .base { fill:var(--brand); }
   .splash .sweep { animation:splash-sweep 1.7s cubic-bezier(.45,0,.55,1) infinite; }
   @keyframes splash-sweep { from { transform:translateX(0); } 75%, to { transform:translateX(1000px); } }
 </style>
@@ -2411,6 +2411,7 @@ function renderTaste() {
   const t = state.taste;
   const refsHidden = params().get("refs") === "hidden", briefHidden = params().get("brief") === "hidden", rulesHidden = params().get("rules") === "hidden";
   const briefLine = (state.briefDraft ?? "").trim().replace(/\s+/g, " ");
+  const ruleCount = t.profile ? t.profile.categories.reduce((n, c) => n + c.rules.length, 0) : 0;
   const categoryCount = t.profile?.categories.length ?? 0;
   const previews = {
     brief: briefLine ? `<span class="clamp">${esc(briefLine)}</span>` : `<span class="clamp">No brief yet. Open this to describe your taste.</span>`,
@@ -2421,7 +2422,6 @@ function renderTaste() {
   document.title = `${t.meta.name} · Taste profile · Whim`;
   const running = state.job?.status === "running";
   const lb = t.meta.lastBuild;
-  const ruleCount = t.profile ? t.profile.categories.reduce((n, c) => n + c.rules.length, 0) : 0;
   const cost = Math.max(1, Math.round(t.references.length * 0.08 + 0.4));
   const minutes = Math.max(2, Math.round(t.references.length * 0.25 + 1));
   const open = new Set([...document.querySelectorAll("#rules details[open]")].map((d) => d.dataset.key));
