@@ -144,7 +144,7 @@
     .collection-head .btn { min-height:44px; }
     .collection-grid { grid-template-columns:minmax(0, 1fr); }
     .collection-link { min-height:108px; }
-    .mobile-tabs { position:fixed; z-index:25; bottom:max(8px, env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:4px; padding:6px; border:0; border-radius:999px; background:color-mix(in srgb, var(--surface) 94%, transparent); box-shadow:0 8px 32px rgba(0,0,0,.12), 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent); }
+    .mobile-tabs { position:fixed; z-index:25; bottom:max(8px, env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:4px; padding:6px; border:0; border-radius:999px; background:color-mix(in srgb, var(--surface) 94%, transparent); box-shadow:0 8px 32px rgba(0,0,0,.12), 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent); }
     .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:0; min-height:52px; border-radius:999px; color:var(--muted); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; --motion:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
     .mobile-tabs .icon { width:24px; height:24px; }
     .mobile-tabs a[aria-current="page"] { background:var(--primary); color:var(--primary-text); font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.18); }
@@ -153,7 +153,7 @@
     .mobile-tabs { transform-origin:50% 100%; transform:translateX(-50%) scale(var(--nav-scale, 1)); will-change:transform; }
     #save-status { top:calc(16px + env(safe-area-inset-top)); }
     /* Home screen app: iOS blurs the strip under the status bar, so keep the logo clear of it. */
-    @media (display-mode: standalone) { .layout { padding-top:44px; } }
+    @media (display-mode: standalone) { .layout { padding-top:var(--standalone-top); } }
   }
   @supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
     .mobile-tabs { background:color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter:blur(28px) saturate(1.6); -webkit-backdrop-filter:blur(28px) saturate(1.6); }
@@ -525,7 +525,12 @@
   .settings-link { display:flex; align-items:center; gap:10px; min-height:40px; margin:0 0 12px; padding:6px 10px; border-radius:12px; color:var(--muted); font-size:14px; font-weight:500; text-decoration:none; }
   .settings-link:hover { background:var(--surface); color:var(--text); }
   .settings-link[aria-current="page"] { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
-  @media (max-width:860px) { .settings-link { display:none; } }
+  /* On a phone Settings is a gear at the top right of Home (the display toggle moved into Settings). */
+  @media (max-width:860px) {
+    .display-setting .display-toggle { display:none; }
+    .display-setting .settings-link { width:36px; height:32px; min-height:32px; padding:0; justify-content:center; border-radius:9px; }
+    .display-setting .settings-link .settings-label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  }
   .settings-panel { display:grid; gap:0; }
   .settings-panel code { font-family:var(--mono); font-size:13px; }
   .panel-head { display:grid; gap:6px; padding-bottom:20px; }
@@ -732,6 +737,11 @@
     .lpick:last-child .lpick-menu { left:auto; right:0; } /* the scope pill sits near the right edge */
   }
   @media (max-width:600px) { .reel { --reel-card:200px; } }
+  /* On a phone the reel bleeds to both window edges and the first photo keeps the page margin; set here so a skeleton lines up before the live measurement runs. */
+  @media (max-width:860px) {
+    .reel { margin-left:calc(-1 * max(var(--page-gutter), env(safe-area-inset-left))); margin-right:calc(-1 * max(var(--page-gutter), env(safe-area-inset-right))); }
+    .reel-track { padding-left:max(var(--page-gutter), env(safe-area-inset-left)); padding-right:max(var(--page-gutter), env(safe-area-inset-right)); }
+  }
   /* Swiping is by hand; with reduced motion the strip scrolls natively and snaps instead. */
   .reel-viewport { touch-action:pan-y; user-select:none; -webkit-user-select:none; }
   @media (pointer:fine) { .reel-viewport { cursor:grab; } .reel-viewport a { cursor:inherit; } .reel[data-dragging] .reel-viewport { cursor:grabbing; } }
@@ -799,7 +809,7 @@
     </nav>
     </div></div>
     <section class="display-setting" aria-label="Settings and display">
-      <a class="settings-link nav-inline" href="?view=settings" data-settings-link><span data-icon="settings"></span>Settings</a>
+      <a class="settings-link nav-inline" href="?view=settings" data-settings-link aria-label="Settings"><span data-icon="settings"></span><span class="settings-label">Settings</span></a>
       <button type="button" class="display-toggle" data-display-toggle aria-label="Switch to dark mode" data-tip="Dark mode"><span data-icon="sun"></span><span data-icon="moon"></span></button>
     </section>
   </div>
@@ -810,7 +820,6 @@
   <a href="?view=listings" class="mobile-tab" data-mobile-tab="listings" aria-label="Listings"><span data-icon="list"></span></a>
   <a href="?view=tastes" class="mobile-tab" data-mobile-tab="tastes" aria-label="Tastes"><span data-icon="sparkles"></span></a>
   <a href="?view=reports" class="mobile-tab" data-mobile-tab="reports" aria-label="Reports"><span data-icon="report"></span></a>
-  <a href="?view=settings" class="mobile-tab" data-mobile-tab="settings" aria-label="Settings"><span data-icon="settings"></span></a>
 </nav>
 <script>
 /* Before the first paint: show this page's skeleton from its last visit and light its tab. */
@@ -890,6 +899,13 @@
 <script type="module">
 const motion = window.whimMotion;
 document.addEventListener('click', event => {
+  const choice = event.target.closest('[data-appearance]');
+  if (choice) {
+    try { choice.dataset.appearance === 'system' ? sessionStorage.removeItem('remodel-lens-display') : sessionStorage.setItem('remodel-lens-display', choice.dataset.appearance); } catch {}
+    dispatchEvent(new Event('display-change'));
+    document.querySelectorAll('[data-appearance]').forEach(b => b.setAttribute('aria-pressed', String(b === choice)));
+    return;
+  }
   const button = event.target.closest('[data-display-toggle]');
   if (!button) return;
   const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
@@ -1903,13 +1919,13 @@ function startReel() {
   reel.addEventListener("keydown", event => {
     if (event.key === "ArrowRight" || event.key === "ArrowLeft") { go(event.key === "ArrowRight" ? 1 : -1); event.preventDefault(); }
   }, { signal });
-  // Full bleed: the reel runs out to the window edge on the right, and on a phone (one column) on the left too; the first photo keeps the page margin.
+  // Full bleed: the reel runs out to the window edge on the right (measured here); on a phone it bleeds both edges from the stylesheet. The first photo keeps the page margin.
   const bleed = () => {
     reel.style.marginLeft = reel.style.marginRight = track.style.paddingLeft = track.style.paddingRight = "";
+    if (matchMedia("(max-width:860px)").matches) return; // the stylesheet bleeds both edges on a phone
     const box = reel.getBoundingClientRect(), right = document.documentElement.clientWidth - box.right;
     reel.style.marginRight = `${-right}px`;
     track.style.paddingRight = "12px";
-    if (matchMedia("(max-width:860px)").matches) { reel.style.marginLeft = `${-box.left}px`; track.style.paddingLeft = track.style.paddingRight = `${box.left}px`; }
   };
   const update = () => {
     reel.toggleAttribute("data-still", still());
@@ -3243,9 +3259,20 @@ function renderSettings() {
   renderKeys(); renderModels(); renderTuning(); renderCosts();
 }
 
+/** Light or dark for this tab; "Match system" clears the override. */
+function displayMarkup() {
+  const saved = (() => { try { return sessionStorage.getItem("remodel-lens-display"); } catch { return null; } })();
+  const current = saved === "light" || saved === "dark" ? saved : "system";
+  return `<div class="panel-head"><h2 id="display-h">Display</h2>
+    <p class="hint">Applies to this browser tab. Match system follows your device's light or dark setting.</p></div>
+    <div class="setting-row"><div class="setting-label"><span class="label-text" id="appearance-label">Appearance</span></div>
+      <div class="setting-control"><div class="seg" role="group" aria-labelledby="appearance-label">${[["system", "Match system"], ["light", "Light"], ["dark", "Dark"]].map(([id, label]) => `<button type="button" data-appearance="${id}" aria-pressed="${id === current}">${label}</button>`).join("")}</div></div></div>`;
+}
+
 function settingsShell(keys = "") {
   return `<header class="head detail-head"><div><h1>Settings</h1>
-      <p class="subhead">API keys, models, tuning, and cost assumptions · saved on this computer</p></div></header>
+      <p class="subhead">Display, API keys, models, tuning, and cost assumptions · saved on this computer</p></div></header>
+    <section class="panel settings-panel" id="settings-display" aria-labelledby="display-h">${displayMarkup()}</section>
     <section class="panel settings-panel" id="settings-keys" aria-labelledby="keys-h">${keys}</section>
     <section class="panel settings-panel" id="settings-models" aria-labelledby="models-h"></section>
     <section class="panel settings-panel" id="settings-tuning" aria-labelledby="tuning-h"></section>
@@ -4060,7 +4087,7 @@ async function load(position) {
   // load swaps straight to the new page instead of flashing its skeleton.
   const leaving = content.dataset.loadedKey && content.dataset.loadedKey !== key;
   if (leaving) content.inert = true;
-  const scaffold = setTimeout(() => { if (seq === loadSeq) showLoadingScaffold(position); }, leaving ? 120 : 0);
+  const scaffold = setTimeout(() => { if (seq === loadSeq && state.paintedSeq !== seq) showLoadingScaffold(position); }, leaving ? 120 : 0);
   if (!leaving) { clearTimeout(scaffold); showLoadingScaffold(position); }
   try {
     if (await loadView()) queueSkeleton(key, seq);
@@ -4094,17 +4121,36 @@ async function loadView() {
   // Handle rejection immediately, even if a collection is waiting for shell data.
   const result = routeData.then(data => ({ data }), error => ({ error }));
   const shell = refreshShell();
-  try {
-    if (["listings", "tastes", "listing", "home"].includes(view)) await shell;
-    else shell.catch(() => {});
-    const { data, error } = await result;
-    if (!current()) return false;
-    if (error) throw error;
+  // Top-level pages show what this tab last saw right away, then swap in fresh data only if it differs.
+  const top = ["home", "reports", "settings"].includes(view), collection = ["listings", "tastes"].includes(view);
+  const showTop = (data) => {
     if (view === "settings") { state.settings = data; renderSettings(); }
     else if (view === "home") { [state.home, state.running] = data; renderHome(); }
-    else if (view === "reports") {
-      [state.reports, state.running] = data; state.reportErrors = []; renderReports();
-    } else if (["listings", "tastes"].includes(view)) renderCollection(view);
+    else { [state.reports, state.running] = data; state.reportErrors = []; renderReports(); }
+  };
+  const seen = (state.viewCache ??= new Map());
+  const cached = top ? seen.get(view) : undefined;
+  const paintNow = cached !== undefined || (collection && (state.listings.length > 0 || state.tasteProfiles.length > 0));
+  if (paintNow) {
+    if (cached !== undefined) showTop(cached); else renderCollection(view);
+    state.paintedSeq = seq;
+    const content = $("#content");
+    content.inert = false;
+    content.dataset.loadedKey = route.get("view") || (route.get("taste") ? "taste:" + route.get("taste") : route.get("listing") ? "listing:" + route.get("listing") : "home");
+  }
+  try {
+    if (["listings", "tastes", "listing", "home"].includes(view) && !paintNow) await shell;
+    else shell.catch(() => {});
+    const { data, error } = await result;
+    if (top && !error) seen.set(view, data); // remembered even if the visitor already moved on
+    if (!current()) return false;
+    if (error) throw error;
+    if (top) {
+      if (!(cached !== undefined && JSON.stringify(cached) === JSON.stringify(data))) showTop(data);
+    } else if (collection) {
+      if (paintNow) { await shell.catch(() => {}); if (!current()) return false; }
+      renderCollection(view);
+    }
     else if (view === "taste") {
       state.taste = data;
       state.rulesDraft = data.profile ? structuredClone(data.profile) : null;
@@ -4118,6 +4164,7 @@ async function loadView() {
     return true;
   } catch (error) {
     if (!current()) return false;
+    if (state.paintedSeq === seq) return false; // keep the page already shown rather than replacing it with an error
     $("#content").innerHTML = `<div class="empty"><h1 style="font-size:20px;margin-bottom:8px;color:var(--text)">Couldn't load</h1><p>${esc(error.message)}</p><p><a class="btn nav-inline" href="/">Back to listings</a></p></div>`;
     return false;
   }
