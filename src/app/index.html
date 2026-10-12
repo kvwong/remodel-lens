@@ -2122,10 +2122,10 @@ function renderListing() {
       </div>`}
       <ul class="upload-list" aria-live="polite">${state.uploads.map((u) => `<li class="${u.ok ? "" : "bad"}">${esc(u.text)}</li>`).join("")}</ul>
 
-      <hr class="zone-divider">
+      ${state.redesignOpen ? `<hr class="zone-divider">` : ""}
 
       <form class="run-form" id="run-form" novalidate>
-        <h2 id="run-h" tabindex="-1">Redesign</h2>
+        <h2 id="run-h" tabindex="-1"${state.redesignOpen ? "" : ' class="sr-only"'}>Redesign</h2>
         ${state.redesignOpen ? `<div id="redesign-options" class="redesign-options">
         <div class="redesign-settings">
           <section class="taste-setting" aria-labelledby="profile-label">
@@ -2165,8 +2165,8 @@ function renderListing() {
                 : !l.photos.length ? "Add photos to get started." : !tiers.length ? "Choose at least one scope to run." : "Select at least one photo."}</span>
             </div>`}
         </div>` : `<div class="run-row">
-          <button class="btn btn-primary" type="button" data-action="open-redesign" aria-expanded="false" aria-controls="redesign-options" aria-describedby="run-help" ${running || !l.photos.length ? "disabled" : ""}>${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Redesign</button>
-          <span id="run-help" class="estimate num">${!l.photos.length ? "Add photos to get started." : `<strong>${nf.format(selected)} ${selected === 1 ? "photo" : "photos"}</strong> selected`}</span>
+          <button class="btn btn-primary" type="button" data-action="open-redesign" aria-expanded="false" aria-controls="redesign-options" ${running || !l.photos.length ? "disabled" : ""}>${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Redesign</button>
+          ${l.photos.length ? "" : `<span id="run-help" class="estimate num">Add photos to get started.</span>`}
         </div>`}
         <p id="run-error" class="error" role="alert" ${state.runError ? "" : "hidden"}>${esc(state.runError)}</p>
       </form>
@@ -2239,8 +2239,6 @@ function updateSelection(files, selected) {
   else {
     const open = $('[data-action="open-redesign"]');
     if (open) open.disabled = running || !state.listing.photos.length;
-    const help = $("#run-help");
-    if (help) help.innerHTML = `<strong>${nf.format(count)} ${count === 1 ? "photo" : "photos"}</strong> selected`;
   }
 }
 
