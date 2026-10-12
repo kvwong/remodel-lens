@@ -1158,8 +1158,8 @@ async function refreshShell(force = false) {
     Object.assign(state, { listings, profiles, tasteProfiles });
     shellFetchedAt = Date.now();
     updateBanner(status.keysError);
-    renderListings(); renderProfilesNav();
-    try { localStorage.setItem(SHELL_CACHE, JSON.stringify({ listings, tasteProfiles, savedAt: shellFetchedAt })); } catch {}
+    renderListings(); renderProfilesNav(); fillHomeLinkPicker();
+    try { localStorage.setItem(SHELL_CACHE, JSON.stringify({ listings, profiles, tasteProfiles, savedAt: shellFetchedAt })); } catch {}
   })().finally(() => {
     shellRequest = null;
     if (revision !== shellRevision) {
@@ -1174,6 +1174,8 @@ try {
   const cached = JSON.parse(localStorage.getItem(SHELL_CACHE) || "null");
   if (cached && Date.now() - cached.savedAt < 86400000 && Array.isArray(cached.listings) && Array.isArray(cached.tasteProfiles)) {
     state.listings = cached.listings; state.tasteProfiles = cached.tasteProfiles;
+    // Home can paint from its saved copy before the shell loads, and its link box needs the profiles for its taste picker.
+    if (Array.isArray(cached.profiles)) state.profiles = cached.profiles;
     renderListings(); renderProfilesNav();
   }
 } catch {}
@@ -1739,6 +1741,19 @@ function homeLinkMarkup() {
 }
 
 let homeLinkListeners = null;
+
+/** Home painted before the taste profiles arrived (first load after an update): add its taste picker now, keeping any typed link. */
+function fillHomeLinkPicker() {
+  const form = document.getElementById("home-link-form");
+  if (!form || !state.profiles.length || form.querySelector("#lpick-taste")) return;
+  const input = form.querySelector("#home-link"), value = input?.value ?? "", focused = document.activeElement === input;
+  const fresh = document.createElement("template");
+  fresh.innerHTML = homeLinkMarkup().trim();
+  form.replaceWith(fresh.content);
+  const next = $("#home-link");
+  if (next) { next.value = value; if (focused) next.focus({ preventScroll: true }); }
+  startHomeLink();
+}
 
 /** Wires the always-visible pickers; submitting a valid link imports photos and starts the redesign. */
 function startHomeLink() {

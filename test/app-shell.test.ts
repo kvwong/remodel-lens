@@ -60,7 +60,7 @@ describe("app shell navigation", () => {
     const api = vi.fn(async path => { await held.promise; return path === "/api/status" ? { keysError: null } : []; });
     const ctx = vm.createContext({ api, state: {}, Date, Promise, setTimeout, clearTimeout,
       loadProfiles: vi.fn(async () => []), updateBanner: vi.fn(), renderListings: vi.fn(),
-      renderProfilesNav: vi.fn(), localStorage: { setItem: vi.fn() } });
+      renderProfilesNav: vi.fn(), fillHomeLinkPicker: vi.fn(), localStorage: { setItem: vi.fn() } });
     vm.runInContext(shellSource, ctx);
     const one = vm.runInContext("refreshShell()", ctx), two = vm.runInContext("refreshShell()", ctx);
     held.resolve(undefined); await Promise.all([one, two]);
