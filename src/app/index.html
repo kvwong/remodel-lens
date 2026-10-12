@@ -2213,13 +2213,14 @@ function closeProfileDropdown(focus = false) {
   $("#profile")?.setAttribute("aria-expanded", "false");
   if (focus) $("#profile")?.focus();
 }
-function openProfileDropdown() {
+function openProfileDropdown({ focus = true } = {}) {
   const menu = $("#profile-options");
   if (!menu) return;
   menu.hidden = false;
   $("#profile").setAttribute("aria-expanded", "true");
-  menu.querySelector('[aria-selected="true"]')?.focus();
+  if (focus) menu.querySelector('[aria-selected="true"]')?.focus();
 }
+let profileToggledAt = 0;
 function chooseProfile(id) {
   setParams({ profile: id });
   renderListing();
@@ -2227,8 +2228,12 @@ function chooseProfile(id) {
 }
 document.addEventListener("click", (event) => {
   if (event.target.closest?.("#profile")) {
+    // iOS can deliver a second click for one tap, which would close and reopen the menu at once.
+    if (event.timeStamp - profileToggledAt < 400) return;
+    profileToggledAt = event.timeStamp;
     if ($("#profile").getAttribute("aria-expanded") === "true") closeProfileDropdown(true);
-    else openProfileDropdown();
+    // A tap or mouse click leaves focus on Change so the next tap closes the menu; keyboard opens move into the list.
+    else openProfileDropdown({ focus: event.detail === 0 });
     return;
   }
   const option = event.target.closest?.("[data-profile-choice]");
