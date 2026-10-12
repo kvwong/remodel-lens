@@ -1210,6 +1210,7 @@ document.addEventListener("pointerup", (e) => {
 
 /* Collection routes work at every size; the tab bar is mobile-only. */
 function renderMobileTabs(view = state.view) {
+  document.body.dataset.view = view;
   const active = view === "home" ? "home" : view === "taste" || view === "tastes" ? "tastes" : view === "reports" ? "reports" : view === "settings" ? "settings" : "listings";
   document.querySelectorAll("[data-mobile-tab]").forEach(link => {
     if (link.dataset.mobileTab === active) link.setAttribute("aria-current", "page");
@@ -4081,7 +4082,6 @@ async function loadView() {
   clearTimeout(pollTimer); clearTimeout(runningTimer); stopReel?.();
   const view = route.get("view") || (route.get("taste") ? "taste" : route.get("listing") ? "listing" : "home");
   state.view = view;
-  document.body.dataset.view = view;
   renderMobileTabs();
   renderListings(); renderProfilesNav();
   // Start the route request immediately, alongside any shell revalidation.
