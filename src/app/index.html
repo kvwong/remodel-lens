@@ -655,7 +655,11 @@
   /* Home: the Listing photos stack spread across the page; swipe or drag it, and it springs to the next photo. */
   .reel { position:relative; margin:-12px 0 -62px; }
   /* Room above and below for the tilt and the hover lift's deep shadow to fade out before the clip edge, without pushing the reports down. */
-  .reel-viewport { overflow:hidden; padding:24px 0 96px; -webkit-mask-image:linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); mask-image:linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+  .reel-viewport { overflow:hidden; padding:24px 0 96px; }
+  /* The last card links to every report. */
+  .reel-card.reel-more a { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; text-align:center; color:var(--text); background:var(--surface-2); font-weight:600; font-size:17px; }
+  .reel-more small { color:var(--muted); font-weight:500; font-size:13px; }
+  .reel-more .icon { width:22px; height:22px; transform:rotate(-90deg); margin-top:4px; }
   .reel-track { list-style:none; margin:0; padding:0 0 0 12px; display:flex; align-items:center; width:max-content; will-change:transform; }
   /* Same hand as the Listing photos: equal photos, each at its own slight angle, overlapping, with a surface ring; later ones sit on top. */
   .reel-card { --tilt:0deg; --lift:0px; position:relative; flex:none; width:var(--reel-card, 250px); transform:translateY(var(--lift)) rotate(var(--tilt)); --motion:transform var(--slow) var(--ease), filter var(--slow) var(--ease), opacity var(--slow) var(--ease); }
@@ -1535,7 +1539,7 @@ function renderHome() {
 function homeMarkup({ reports, totalReports, slides }, hasListings) {
   const reel = slides.length
     ? `<section class="reel" aria-label="Recent redesigns" aria-roledescription="carousel">
-        <div class="reel-viewport"><ul class="reel-track">${slides.map((slide, i) => reelCard(slide, i)).join("")}</ul></div>
+        <div class="reel-viewport"><ul class="reel-track">${slides.map((slide, i) => reelCard(slide, i)).join("")}${reelMore(slides.length, totalReports)}</ul></div>
       </section>`
     : `<section class="reel reel-empty" aria-label="Recent redesigns">
         <div class="reel-viewport"><ul class="reel-track" aria-hidden="true">${Array.from({ length: 8 }, (_, i) => `<li class="reel-card" style="${reelLook(i)}"><div></div></li>`).join("")}</ul></div>
@@ -1746,6 +1750,11 @@ function reelLook(i, seed = String(i)) {
   return `--tilt:${tilt.toFixed(1)}deg;--lift:${lift.toFixed(1)}px;z-index:${i + 1}`;
 }
 
+/** The reel's last card: opens the full list of reports. */
+function reelMore(i, totalReports) {
+  return `<li class="reel-card reel-more" style="${reelLook(i, "all-reports")}"><a class="nav-inline" href="?view=reports">All reports<small>${totalReports} in all</small>${icon("chevron")}</a></li>`;
+}
+
 function reelCard(slide, i) {
   return `<li class="reel-card" style="${reelLook(i, slide.src)}"><a href="${esc(slide.reportUrl)}">
     <img ${thumbAttributes(slide.src, "280px")} alt="${esc(slide.alt)}" loading="${i < 4 ? "eager" : "lazy"}" decoding="async" draggable="false"><span>${esc(slide.caption)}</span>
@@ -1867,8 +1876,17 @@ function startReel() {
   reel.addEventListener("keydown", event => {
     if (event.key === "ArrowRight" || event.key === "ArrowLeft") { go(event.key === "ArrowRight" ? 1 : -1); event.preventDefault(); }
   }, { signal });
+  // Full bleed: the reel runs out to the window edge on the right, and on a phone (one column) on the left too; the first photo keeps the page margin.
+  const bleed = () => {
+    reel.style.marginLeft = reel.style.marginRight = track.style.paddingLeft = track.style.paddingRight = "";
+    const box = reel.getBoundingClientRect(), right = document.documentElement.clientWidth - box.right;
+    reel.style.marginRight = `${-right}px`;
+    track.style.paddingRight = "12px";
+    if (matchMedia("(max-width:860px)").matches) { reel.style.marginLeft = `${-box.left}px`; track.style.paddingLeft = track.style.paddingRight = `${box.left}px`; }
+  };
   const update = () => {
     reel.toggleAttribute("data-still", still());
+    bleed();
     measure();
     halt();
     offset = Math.min(offset, max);
@@ -3877,7 +3895,7 @@ function skeletonize(html) {
   template.innerHTML = html;
   const root = template.content;
   root.querySelectorAll("[hidden]").forEach((el) => el.replaceChildren());
-  root.querySelectorAll(".reel-track").forEach((track) => track.removeAttribute("style"));
+  root.querySelectorAll(".reel, .reel-track").forEach((el) => el.removeAttribute("style")); // the bleed is measured live
   root.querySelectorAll("*").forEach((el) => {
     SKELETON_DROP_ATTRIBUTES.forEach((name) => el.removeAttribute(name));
     if (el.localName === "img") el.setAttribute("src", BLANK_IMAGE);
