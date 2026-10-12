@@ -34,7 +34,7 @@
     --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.24); }
 
 /* Buttons and busy indicators */
-  .btn, .share-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:38px; padding:6px 14px; border-radius:8px; border:1px solid transparent; background:var(--btn-fill); cursor:pointer; font-size:14px; font-weight:500; text-decoration:none; white-space:nowrap; }
+  .btn, .share-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:38px; padding:6px 14px; border-radius:12px; border:1px solid transparent; background:var(--btn-fill); cursor:pointer; font-size:14px; font-weight:500; text-decoration:none; white-space:nowrap; }
   .btn:hover, .share-btn:hover { background:var(--btn-fill-hover); }
   .btn-primary { background:var(--primary); color:var(--primary-text); border-color:var(--primary); padding:6px 16px; font-weight:600; box-shadow:0 1px 2px rgba(20,40,28,.18); }
   .btn-primary:hover { background:var(--primary-hover); border-color:var(--primary-hover); }
@@ -48,33 +48,33 @@
 .btn[aria-busy="true"], .share-btn[aria-busy="true"] { opacity:.6; cursor:progress; }
 
 /* Icon controls */
-  .icon-btn { width:32px; height:32px; border-radius:8px; border:0; background:transparent; color:var(--muted); cursor:pointer; display:grid; place-items:center; }
+  .icon-btn { width:32px; height:32px; border-radius:12px; border:0; background:transparent; color:var(--muted); cursor:pointer; display:grid; place-items:center; }
   .icon-btn:hover, .icon-btn:focus-visible { color:var(--bad); background:var(--bad-bg); }
   .icon-plain:hover, .icon-plain:focus-visible { color:var(--text); background:var(--surface-2); }
 
 /* Undo feedback */
-  .toast { position:fixed; left:50%; bottom:max(20px, env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:var(--ink-text); padding:10px 10px 10px 16px; border-radius:10px; display:flex; gap:12px; align-items:center; box-shadow:0 2px 4px rgba(0,0,0,.08), 0 12px 32px rgba(0,0,0,.16); z-index:20; font-size:14px; }
-  .toast button { background:transparent; color:inherit; border:1px solid color-mix(in srgb, currentColor 40%, transparent); border-radius:7px; padding:4px 12px; min-height:32px; font-weight:500; cursor:pointer; }
+  .toast { position:fixed; left:50%; bottom:max(20px, env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:var(--ink-text); padding:10px 10px 10px 16px; border-radius:14px; display:flex; gap:12px; align-items:center; box-shadow:0 2px 4px rgba(0,0,0,.08), 0 12px 32px rgba(0,0,0,.16); z-index:20; font-size:14px; }
+  .toast button { background:transparent; color:inherit; border:1px solid color-mix(in srgb, currentColor 40%, transparent); border-radius:10px; padding:4px 12px; min-height:32px; font-weight:500; cursor:pointer; }
 
-  #save-status { position:fixed; top:16px; right:max(16px, env(safe-area-inset-right)); max-width:calc(100% - 32px); display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--surface); color:var(--text); border:1px solid var(--line-strong); border-radius:12px; box-shadow:var(--shadow); z-index:30; font-size:14px; overflow-wrap:anywhere; }
+  #save-status { position:fixed; top:16px; right:max(16px, env(safe-area-inset-right)); max-width:calc(100% - 32px); display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--surface); color:var(--text); border:1px solid var(--line-strong); border-radius:16px; box-shadow:var(--shadow); z-index:30; font-size:14px; overflow-wrap:anywhere; }
 
   #save-status:empty { display:none; }
 
-  .notice { padding:10px 14px; border-radius:8px; background:var(--warn-bg); color:var(--warn); margin:0; font-size:14px; }
+  .notice { padding:10px 14px; border-radius:12px; background:var(--warn-bg); color:var(--warn); margin:0; font-size:14px; }
 
   .error { color:var(--bad); margin:0; }
 
-  .listing-placeholder { width:48px; height:36px; display:grid; place-items:center; border-radius:6px; background:var(--surface-2); color:var(--muted); flex:none; }
+  .listing-placeholder { width:48px; height:36px; display:grid; place-items:center; border-radius:9px; background:var(--surface-2); color:var(--muted); flex:none; }
 
   .photo-stack { --stack-thumb:96px; --stack-limit:4; --stack-cap:4; --stack-visible:min(var(--stack-count, 1), var(--stack-limit), var(--stack-cap)); display:flex; padding:12px calc(14px + (var(--stack-visible) - 1) * 14px) 16px 8px; overflow:visible; }
 
-  .photo-stack img { --tilt:0deg; --lift:0px; position:relative; flex:none; width:var(--stack-thumb); aspect-ratio:4 / 3; object-fit:cover; border-radius:7px; background:var(--surface-2); display:block; box-shadow:0 0 0 2px var(--surface), 0 2px 6px rgba(0,0,0,.18), 0 8px 18px rgba(0,0,0,.14); transform:translateY(var(--lift)) rotate(var(--tilt)); --motion:transform var(--slow) var(--ease); }
+  .photo-stack img { --tilt:0deg; --lift:0px; position:relative; flex:none; width:var(--stack-thumb); aspect-ratio:4 / 3; object-fit:cover; border-radius:10px; background:var(--surface-2); display:block; box-shadow:0 0 0 2px var(--surface), 0 2px 6px rgba(0,0,0,.18), 0 8px 18px rgba(0,0,0,.14); transform:translateY(var(--lift)) rotate(var(--tilt)); --motion:transform var(--slow) var(--ease); }
 
   .photo-stack img + img { margin-left:-26px; }
 
   [data-tip] { position:relative; --tip-opacity:0; --tip-y:4px; }
 
-  [data-tip]::after { content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 6px); translate:-50% var(--tip-y, 4px); opacity:var(--tip-opacity, 0); pointer-events:none; white-space:nowrap; font-size:12px; font-weight:500; padding:4px 8px; border-radius:6px; background:var(--ink, #1b1a19); color:var(--ink-text, #fafaf9); box-shadow:var(--shadow); --motion:opacity var(--base) var(--ease), translate var(--base) var(--ease), filter var(--base) var(--ease);  z-index:40; }
+  [data-tip]::after { content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 6px); translate:-50% var(--tip-y, 4px); opacity:var(--tip-opacity, 0); pointer-events:none; white-space:nowrap; font-size:12px; font-weight:500; padding:4px 8px; border-radius:9px; background:var(--ink, #1b1a19); color:var(--ink-text, #fafaf9); box-shadow:var(--shadow); --motion:opacity var(--base) var(--ease), translate var(--base) var(--ease), filter var(--base) var(--ease);  z-index:40; }
 
 
 /* Semantic size aliases for new components. */
