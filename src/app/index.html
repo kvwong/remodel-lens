@@ -114,6 +114,11 @@
   .head-count { color:var(--muted); font-weight:400; }
   .head-count::before { content:"· "; }
   @media (max-width:860px) { .head-count { display:block; margin-top:2px; font-size:13px; } .head-count::before { content:none; } }
+  .panel-preview { margin:8px 0 0; font-size:14px; line-height:1.45; color:var(--muted); overflow-wrap:anywhere; }
+  .panel-preview .clamp { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .panel-preview .clamp + .clamp { margin-top:2px; }
+  .panel-preview .num { font-size:13px; }
+  .panel-preview[hidden] { display:none; }
   .panel-body[hidden] { display:none; }
   .tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   [data-photos-only][data-collapsed="true"] { display:none; }
@@ -2336,6 +2341,8 @@ function setPanelHidden(key, hidden) {
   $(`[data-toggle-panel="${key}"]`)?.setAttribute("aria-expanded", String(!hidden));
   const body = $(`#${key}-body`);
   if (body) body.hidden = hidden;
+  const preview = $(`#${key}-preview`);
+  if (preview) preview.hidden = !hidden;
 }
 
 /**
@@ -2403,6 +2410,13 @@ async function loadTaste(id) {
 function renderTaste() {
   const t = state.taste;
   const refsHidden = params().get("refs") === "hidden", briefHidden = params().get("brief") === "hidden", rulesHidden = params().get("rules") === "hidden";
+  const briefLine = (state.briefDraft ?? "").trim().replace(/\s+/g, " ");
+  const categoryCount = t.profile?.categories.length ?? 0;
+  const previews = {
+    brief: briefLine ? `<span class="clamp">${esc(briefLine)}</span>` : `<span class="clamp">No brief yet. Open this to describe your taste.</span>`,
+    rules: t.profile ? `<span class="clamp num">${plural(ruleCount, "rule")} in ${categoryCount} ${categoryCount === 1 ? "category" : "categories"}</span>${t.profile.summary ? `<span class="clamp">${esc(t.profile.summary)}</span>` : ""}` : `<span class="clamp">No rules yet. Rebuild to create them.</span>`,
+  };
+  const panelPreview = (key, hidden) => `<div class="panel-preview" id="${key}-preview" ${hidden ? "" : "hidden"}>${previews[key]}</div>`;
   const panelHead = (key, id, title, hidden) => `<button class="panel-toggle" type="button" data-toggle-panel="${key}" aria-expanded="${!hidden}" aria-controls="${key}-body"><h2 id="${id}">${title}</h2></button>`;
   document.title = `${t.meta.name} · Taste profile · Whim`;
   const running = state.job?.status === "running";
@@ -2459,6 +2473,7 @@ function renderTaste() {
 
     <section class="panel" aria-labelledby="brief-h">
       <div class="section-head">${panelHead("brief", "brief-h", "Brief", briefHidden)}</div>
+      ${panelPreview("brief", briefHidden)}
       <div class="panel-body" id="brief-body" ${briefHidden ? "hidden" : ""}>
       <p class="hint" style="margin:0 0 12px">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal and use the photos to confirm and sharpen it. Select the text to edit.</p>
       ${renderTextField("brief", "brief", "Brief", state.briefDraft, { brief: true, rows: 10, placeholder: "Add a brief describing your taste…" })}
@@ -2485,6 +2500,7 @@ function renderTaste() {
 
     <section class="panel" aria-labelledby="rules-h">
       <div class="section-head">${panelHead("rules", "rules-h", "Rules", rulesHidden)}</div>
+      ${panelPreview("rules", rulesHidden)}
       <div class="panel-body" id="rules-body" ${rulesHidden ? "hidden" : ""}><div id="rules">${renderRulesBody()}</div></div>
     </section>
 
