@@ -1618,18 +1618,27 @@ function startHomeLink() {
     // On a phone, a pasted listing link drops the keyboard so the pickers and send button are in view.
     if (pasted && listingSite(input.value) && matchMedia("(pointer: coarse)").matches) input.blur();
   });
+  // Preserve the press-time state: Safari may move focus outside before click arrives.
+  let pickerPress = null;
+  form.addEventListener("pointerdown", (event) => {
+    const button = event.target.closest("[data-lpick]");
+    pickerPress = button && event.button === 0 ? { button, open: button.getAttribute("aria-expanded") === "true" } : null;
+  });
+  form.addEventListener("pointercancel", () => { pickerPress = null; });
   form.addEventListener("click", (event) => {
     // Picking a taste (even the current one) is one choice, so its menu closes; scopes stay open for more than one.
     if (event.target.matches('input[name="home-taste"]')) { closeMenus(); form.querySelector('[aria-controls="lpick-taste"]').focus(); return; }
     const toggle = event.target.closest("[data-lpick]");
     if (!toggle) return;
     const menu = $(`#${toggle.getAttribute("aria-controls")}`);
-    const open = toggle.getAttribute("aria-expanded") !== "true";
+    const open = pickerPress?.button === toggle ? !pickerPress.open : toggle.getAttribute("aria-expanded") !== "true";
+    pickerPress = null;
     closeMenus();
-    if (!open) return;
+    if (!open) { toggle.focus({ preventScroll:true }); return; }
     menu.hidden = false;
     toggle.setAttribute("aria-expanded", "true");
-    if (!matchMedia("(pointer: coarse)").matches) ($("input:checked", menu) ?? $("input", menu))?.focus();
+    if (event.detail === 0) ($("input:checked", menu) ?? $("input", menu))?.focus();
+    else toggle.focus({ preventScroll:true });
   });
   form.addEventListener("change", (event) => {
     if (!event.target.matches('input[name="home-taste"], input[name="home-tier"]')) return;
