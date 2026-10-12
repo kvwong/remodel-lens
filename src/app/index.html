@@ -23,6 +23,7 @@
   :focus-visible { outline:2px solid var(--text); outline-offset:2px; border-radius:6px; }
   .skip { position:absolute; left:-9999px; top:8px; z-index:10; background:var(--surface); padding:8px 12px; border-radius:12px; }
   .skip:focus { left:8px; }
+  @media (max-width:860px) { .btn-label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; } .btn:has(> .btn-label) { padding-inline:9px; } }
   .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
   .muted { color:var(--muted); }
   .num { font-variant-numeric:tabular-nums; }
@@ -2075,7 +2076,7 @@ function renderListing() {
             <button class="btn btn-small" type="button" data-action="none" ${selected === 0 ? "disabled" : ""}>Clear</button>
             <button class="btn btn-small" type="button" data-toggle="photos" data-photos-done aria-expanded="${!photosHidden}" aria-controls="photos-body">Done</button>
           </span>
-          <button class="btn btn-small" type="button" data-action="pick-photos" ${running ? "disabled" : ""}>${icon("plus")}Add photos</button>
+          <button class="btn btn-small" type="button" data-action="pick-photos" aria-label="Add photos" title="Add photos" ${running ? "disabled" : ""}>${icon("plus")}<span class="btn-label">Add photos</span></button>
           <input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp,image/tiff" multiple hidden>
         </div>
       </div>
@@ -2338,7 +2339,7 @@ function renderTaste() {
       <div class="section-head">
         <h2 id="refs-h">Reference photos <span class="muted num" style="font-weight:400">· ${t.references.length}</span></h2>
         <div class="tools">
-          <button class="btn btn-small" type="button" data-action="pick-files" ${running ? "disabled" : ""}>${icon("plus")}Add photos</button>
+          <button class="btn btn-small" type="button" data-action="pick-files" aria-label="Add photos" title="Add photos" ${running ? "disabled" : ""}>${icon("plus")}<span class="btn-label">Add photos</span></button>
           <input id="ref-input" type="file" accept="image/jpeg,image/png,image/webp,image/tiff" multiple hidden>
         </div>
       </div>
@@ -4006,7 +4007,7 @@ function fallbackSkeleton(key) {
     html = settingsShell(keysMarkup({ keys: { openai: key, anthropic: key, openrouter: key }, models: { current: { reasoning: "openai/x", analysis: [] } }, keysError: null }));
   } else if (view === "listing") html = `${renderDetailHeader({ kind: "listing", name: "Listing name", metadata: `<p class="stats"><span>City, State</span><span>A short description</span></p>` })}
     <section class="panel zone" id="photos-zone">
-      <div class="section-head"><h2>Listing photos <span class="muted num" style="font-weight:400">· 6 of 8</span></h2><div class="tools"><span class="tools fade" data-photos-only data-collapsed="true"></span><button class="btn btn-small" type="button">${icon("plus")}Add photos</button></div></div>
+      <div class="section-head"><h2>Listing photos <span class="muted num" style="font-weight:400">· 6 of 8</span></h2><div class="tools"><span class="tools fade" data-photos-only data-collapsed="true"></span><button class="btn btn-small" type="button" aria-label="Add photos">${icon("plus")}<span class="btn-label">Add photos</span></button></div></div>
       <div class="photos-area"><div data-photos-strip><div>${photoStack(6)}</div></div></div>
       <hr class="zone-divider">
       <div class="run-form"><h2>Redesign</h2><div class="redesign-settings">
@@ -4015,7 +4016,7 @@ function fallbackSkeleton(key) {
       </div></div>
     </section>`;
   else html = `${renderDetailHeader({ kind: "taste", name: "Taste name", metadata: `<p class="stats num"><span>Taste profile</span><span>12 reference photos</span><span>30 rules</span></p>` })}
-    <section class="panel"><div class="section-head"><h2>Reference photos <span class="muted num" style="font-weight:400">· 12</span></h2><div class="tools"><button class="btn btn-small" type="button">${icon("plus")}Add photos</button></div></div>
+    <section class="panel"><div class="section-head"><h2>Reference photos <span class="muted num" style="font-weight:400">· 12</span></h2><div class="tools"><button class="btn btn-small" type="button" aria-label="Add photos">${icon("plus")}<span class="btn-label">Add photos</span></button></div></div>
       <div class="dropzone" id="dropzone"><div class="ref-grid">${Array.from({ length: 12 }, () => `<div class="ref"><img alt=""></div>`).join("")}</div><p class="hint" style="margin-top:12px">Whole rooms and close-ups of materials both help.</p></div></section>
     <section class="panel"><div class="section-head" style="margin-bottom:6px"><h2>Brief</h2></div><p class="hint" style="margin:0 0 12px">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal and use the photos to confirm and sharpen it.</p></section>`;
   return skeletonize(html);
