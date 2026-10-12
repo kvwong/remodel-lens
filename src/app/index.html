@@ -141,9 +141,9 @@
     .collection-head .btn { min-height:44px; }
     .collection-grid { grid-template-columns:minmax(0, 1fr); }
     .collection-link { min-height:108px; }
-    .mobile-tabs { position:fixed; z-index:25; bottom:max(8px, env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:4px; padding:6px; border:0; border-radius:999px; background:color-mix(in srgb, var(--surface) 94%, transparent); box-shadow:0 8px 32px rgba(0,0,0,.16), 0 0 0 1px var(--line-strong); }
-    .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-height:56px; border-radius:999px; color:var(--muted); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; --motion:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
-    .mobile-tabs .icon { width:22px; height:22px; }
+    .mobile-tabs { position:fixed; z-index:25; bottom:max(8px, env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:4px; padding:6px; border:0; border-radius:999px; background:color-mix(in srgb, var(--surface) 94%, transparent); box-shadow:0 8px 32px rgba(0,0,0,.12), 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent); }
+    .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:0; min-height:52px; border-radius:999px; color:var(--muted); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; --motion:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
+    .mobile-tabs .icon { width:24px; height:24px; }
     .mobile-tabs a[aria-current="page"] { background:var(--primary); color:var(--primary-text); font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.18); }
     .mobile-tabs a:active { transform:scale(.96); }
     #save-status { top:calc(16px + env(safe-area-inset-top)); }
@@ -763,7 +763,7 @@
   @keyframes skeleton-pulse { to { background-color:var(--skeleton-soft); } }
   @media(prefers-reduced-motion:reduce) { .skeleton::after, [data-skeleton] * { animation:none !important; } }
   /* Tab icons are drawn by script; hold their space so the labels don't drop when they arrive. */
-  .mobile-tabs [data-icon] { display:block; width:22px; height:22px; }
+  .mobile-tabs [data-icon] { display:block; width:24px; height:24px; }
 </style>
 </head>
 <body>
@@ -791,11 +791,11 @@
   <main id="content" tabindex="-1" aria-busy="true" aria-label="App content"><div data-skeleton aria-hidden="true"></div></main>
 </div>
 <nav class="mobile-tabs" aria-label="Main navigation">
-  <a href="/" class="mobile-tab" data-mobile-tab="home"><span data-icon="home"></span><span>Home</span></a>
-  <a href="?view=listings" class="mobile-tab" data-mobile-tab="listings"><span data-icon="list"></span><span>Listings</span></a>
-  <a href="?view=tastes" class="mobile-tab" data-mobile-tab="tastes"><span data-icon="sparkles"></span><span>Tastes</span></a>
-  <a href="?view=reports" class="mobile-tab" data-mobile-tab="reports"><span data-icon="report"></span><span>Reports</span></a>
-  <a href="?view=settings" class="mobile-tab" data-mobile-tab="settings"><span data-icon="settings"></span><span>Settings</span></a>
+  <a href="/" class="mobile-tab" data-mobile-tab="home" aria-label="Home"><span data-icon="home"></span></a>
+  <a href="?view=listings" class="mobile-tab" data-mobile-tab="listings" aria-label="Listings"><span data-icon="list"></span></a>
+  <a href="?view=tastes" class="mobile-tab" data-mobile-tab="tastes" aria-label="Tastes"><span data-icon="sparkles"></span></a>
+  <a href="?view=reports" class="mobile-tab" data-mobile-tab="reports" aria-label="Reports"><span data-icon="report"></span></a>
+  <a href="?view=settings" class="mobile-tab" data-mobile-tab="settings" aria-label="Settings"><span data-icon="settings"></span></a>
 </nav>
 <script>
 /* Before the first paint: show this page's skeleton from its last visit and light its tab. */
