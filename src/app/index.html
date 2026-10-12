@@ -664,11 +664,11 @@
   /* Same hand as the Listing photos: equal photos, each at its own slight angle, overlapping, with a surface ring; later ones sit on top. */
   .reel-card { --tilt:0deg; --lift:0px; position:relative; flex:none; width:var(--reel-card, 250px); transform:translateY(var(--lift)) rotate(var(--tilt)); --motion:transform var(--slow) var(--ease), filter var(--slow) var(--ease), opacity var(--slow) var(--ease); }
   .reel-card + .reel-card { margin-left:calc(var(--reel-card, 250px) * -.1); }
-  .reel-card a { position:relative; display:block; aspect-ratio:4 / 3; border-radius:18px; overflow:hidden; background:var(--surface-2); box-shadow:0 0 0 2px var(--surface), 0 2px 6px rgba(0,0,0,.18), 0 8px 18px rgba(0,0,0,.14); text-decoration:none; --motion:box-shadow var(--base) var(--ease); }
+  .reel-card a { position:relative; display:block; aspect-ratio:4 / 3; border-radius:18px; overflow:hidden; background:var(--surface-2); box-shadow:0 0 0 .5px var(--edge), 0 2px 6px rgba(0,0,0,.18), 0 8px 18px rgba(0,0,0,.14); text-decoration:none; --motion:box-shadow var(--base) var(--ease); }
   /* Hovering a photo brings it forward, straight and a little larger; the rest sink back, soft as bokeh. */
   @media (hover: hover) {
     .reel-card:has(a:hover) { z-index:20; transform:translateY(0) rotate(0deg) scale(1.06); }
-    .reel-card:has(a:hover) a { box-shadow:0 0 0 2px var(--surface), 0 10px 20px rgba(0,0,0,.14), 0 28px 56px rgba(0,0,0,.2); }
+    .reel-card:has(a:hover) a { box-shadow:0 0 0 .5px var(--edge), 0 10px 20px rgba(0,0,0,.14), 0 28px 56px rgba(0,0,0,.2); }
     .reel-track:has(a:hover) .reel-card:not(:has(a:hover)) { transform:translateY(var(--lift)) rotate(var(--tilt)) scale(.98); filter:blur(3px) saturate(.85); opacity:.85; }
   }
   .reel-card:has(a:focus-visible) { z-index:20; transform:translateY(0) rotate(0deg) scale(1.06); }
@@ -759,7 +759,7 @@
   [data-skeleton] .ghost { color:transparent; background:var(--skeleton); border-radius:6px; }
   [data-skeleton] *::before, [data-skeleton] *::after, [data-skeleton] svg { visibility:hidden; }
   [data-skeleton] img { background:var(--skeleton); box-shadow:none; }
-  [data-skeleton] .photo-stack img { box-shadow:0 0 0 2px var(--surface); }
+  [data-skeleton] .photo-stack img { box-shadow:0 0 0 .5px var(--edge); }
   [data-skeleton] .btn, [data-skeleton] input, [data-skeleton] textarea, [data-skeleton] select, [data-skeleton] .pill { color:transparent; background:var(--skeleton); border-color:transparent; box-shadow:none; }
   [data-skeleton] .btn .ghost, [data-skeleton] .pill .ghost { background:none; }
   [data-skeleton] .btn-quiet, [data-skeleton] .icon-plain { background:none; }
