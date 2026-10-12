@@ -45,7 +45,8 @@
   .display-setting { margin-top:auto; padding:0; flex:none; display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .side-scroll-region { position:relative; flex:1; min-height:0; min-width:0; isolation:isolate; }
   .side-scroll-region::before, .side-scroll-region::after { content:""; position:absolute; left:0; right:16px; height:28px; pointer-events:none; z-index:3; }
-  .side-scroll-region::before { top:0; background:linear-gradient(to top, transparent, var(--bg)); }
+  .side-scroll-region::before { top:0; background:linear-gradient(to top, transparent, var(--bg)); opacity:0; transition:opacity .16s ease; }
+  .side-scroll-region.has-scrolled::before { opacity:1; }
   .side-scroll-region::after { bottom:0; background:linear-gradient(to bottom, transparent, var(--bg)); }
   .side-scroll-region .side-content { position:relative; z-index:2; }
   .side-content { align-content:start; }
@@ -3931,6 +3932,13 @@ async function loadView() {
   } catch (error) {
     $("#content").innerHTML = `<div class="empty"><h1 style="font-size:20px;margin-bottom:8px;color:var(--text)">Couldn't load</h1><p>${esc(error.message)}</p><p><a class="btn" href="/">Back to listings</a></p></div>`;
   }
+}
+const sidebarScroller = document.querySelector(".side-content");
+const sidebarScrollRegion = document.querySelector(".side-scroll-region");
+if (sidebarScroller && sidebarScrollRegion) {
+  const updateSidebarFade = () => sidebarScrollRegion.classList.toggle("has-scrolled", sidebarScroller.scrollTop > 12);
+  sidebarScroller.addEventListener("scroll", updateSidebarFade, { passive:true });
+  updateSidebarFade();
 }
 loadWithScroll(history.state?.whimScroll);
 </script>
