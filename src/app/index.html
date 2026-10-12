@@ -445,6 +445,10 @@
   .savebar .btn-primary { background:var(--ink-text); color:var(--ink); border-color:var(--ink-text); }
   dialog.modal { border:1px solid var(--line); border-radius:16px; padding:24px; width:min(440px, calc(100vw - 32px)); background:var(--surface); color:var(--text); box-shadow:0 2px 4px rgba(0,0,0,.06), 0 16px 48px rgba(0,0,0,.16); }
   dialog.modal::backdrop { background:rgba(0,0,0,.4); }
+  dialog.modal::backdrop { transition:opacity .2s ease; }
+  dialog.modal[data-closing]::backdrop { opacity:0; }
+  dialog.modal[data-closing] { pointer-events:none; }
+  .lpick-menu, .profile-menu { transform-origin:left top; }
   dialog.modal input[type="text"], dialog.modal select { width:100%; min-height:42px; font-size:16px; padding:8px 10px; border-radius:12px; border:1px solid var(--line-strong); background:var(--surface); }
 
   /* Motion + depth system */
@@ -756,7 +760,7 @@
     .link-box #home-link { font-size:16px; } /* 16px keeps iPhone from zooming in on focus */
     .ltool { min-height:36px; }
     .lpick-opt { min-height:44px; }
-    .lpick:last-child .lpick-menu { left:auto; right:0; } /* the scope pill sits near the right edge */
+    .lpick:last-child .lpick-menu { left:auto; right:0; transform-origin:right top; } /* the scope pill sits near the right edge */
   }
   @media (max-width:600px) { .reel { --reel-card:200px; } }
   /* On a phone the reel bleeds to both window edges and the first photo keeps the page margin; set here so a skeleton lines up before the live measurement runs. */
@@ -954,6 +958,7 @@
 </dialog>
 <script src="/assets/motion.js"></script>
 <script src="/assets/pull-refresh.js"></script>
+<script src="/assets/smooth.js"></script>
 <script type="module">
 const motion = window.whimMotion;
 document.addEventListener('click', event => {
@@ -1599,6 +1604,21 @@ function runningRow(job) {
     </li>`;
 }
 
+/** Rows that stay slide to their new place and new rows fade in, instead of the list jumping (FLIP). */
+function glideRows(container, update) {
+  const key = (row) => row.dataset.running ? `run:${row.dataset.running}` : row.querySelector("a.run-title, a[href]")?.getAttribute("href");
+  const before = new Map();
+  if (!motion.reduce.matches) for (const row of container.querySelectorAll(".runs > li")) before.set(key(row), row.getBoundingClientRect().top);
+  update();
+  if (!before.size) return;
+  const ease = "cubic-bezier(.2,.8,.2,1)";
+  for (const row of container.querySelectorAll(".runs > li")) {
+    const top = before.get(key(row));
+    if (top === undefined) row.animate({ opacity: [0, 1], transform: ["translateY(-8px)", "none"] }, { duration: 320, easing: ease });
+    else if (Math.abs(top - row.getBoundingClientRect().top) > 1) row.animate({ transform: [`translateY(${top - row.getBoundingClientRect().top}px)`, "none"] }, { duration: 420, easing: ease });
+  }
+}
+
 let runningTimer;
 /** While redesigns run, Home and All reports refresh their progress; a finished one turns into its report row. */
 function watchRunning() {
@@ -1629,11 +1649,11 @@ function watchRunning() {
     } else if (view === "home") {
       await loadHome();
       if (seq !== loadSeq || state.view !== "home") return;
-      $("#home-reports").innerHTML = homeReportsMarkup(state.home, state.listings.length > 0);
+      glideRows($("#home-reports"), () => { $("#home-reports").innerHTML = homeReportsMarkup(state.home, state.listings.length > 0); });
     } else {
       await loadReports();
       if (seq !== loadSeq || state.view !== "reports") return;
-      renderReports();
+      glideRows($("#content"), renderReports);
     }
     if (!same) scheduleShellRefresh();
     watchRunning();
@@ -3036,7 +3056,7 @@ document.addEventListener("click", async (event) => {
     return;
   }
   if (action === "pick-photos") return $("#photo-input").click();
-  if (action === "close-dialog") return event.target.closest("dialog")?.close();
+  if (action === "close-dialog") return motion.closeDialog(event.target.closest("dialog"));
   if (action === "pick-files") return $("#ref-input").click();
   if (action === "delete-detail") return openDetailDelete(event.target.closest("[data-detail-kind]").dataset.detailKind);
   if (action === "duplicate-detail") return duplicateDetail(event.target.closest("[data-detail-kind]").dataset.detailKind);
@@ -3132,7 +3152,7 @@ document.addEventListener("submit", async (event) => {
     try {
       if (kind === "listing") await flushSave();
       await api(endpoint, { method: "DELETE" });
-      dialog.close();
+      motion.closeDialog(dialog);
       await navigate("/");
       showUndo(`Deleted ${name}`, async () => {
         try {
@@ -3160,7 +3180,7 @@ document.addEventListener("submit", async (event) => {
       submit.disabled = true; submit.textContent = "Getting photos…"; err.hidden = true;
       try {
         const created = await api("/api/listings/from-link", { method: "POST", body: JSON.stringify({ link, ...details, name: name || undefined }) });
-        $("#new-listing-dialog").close();
+        motion.closeDialog($("#new-listing-dialog"));
         await navigate(`?listing=${encodeURIComponent(created.id)}`);
         const extra = [created.skipped && `${created.skipped} duplicate${created.skipped === 1 ? "" : "s"} skipped`, created.failed && `${created.failed} couldn't download`].filter(Boolean).join(", ");
         announce(`Added ${created.added} photo${created.added === 1 ? "" : "s"} from ${created.site}${extra ? ` (${extra})` : ""}`);
@@ -3177,7 +3197,7 @@ document.addEventListener("submit", async (event) => {
         const updated = await api(`/api/listings/${encodeURIComponent(state.listing.id)}`, { method: "PATCH", body: JSON.stringify(details) });
         state.listing = updated;
         state.listings = await api("/api/listings");
-        $("#new-listing-dialog").close();
+        motion.closeDialog($("#new-listing-dialog"));
         renderListing();
         renderListings();
         $('[data-action="edit-listing"]')?.focus();
@@ -3185,7 +3205,7 @@ document.addEventListener("submit", async (event) => {
         return;
       }
       const created = await api("/api/listings", { method: "POST", body: JSON.stringify(details) });
-      $("#new-listing-dialog").close();
+      motion.closeDialog($("#new-listing-dialog"));
       navigate(`?listing=${encodeURIComponent(created.id)}`);
     } catch (error) {
       err.textContent = error.message;
@@ -3203,7 +3223,7 @@ document.addEventListener("submit", async (event) => {
       if ($("#new-profile-dialog").dataset.mode === "edit") {
         const p = await api(`/api/taste-profiles/${encodeURIComponent(state.taste.id)}`, { method: "PATCH", body: JSON.stringify({ name, description }) });
         state.taste.meta = p.meta;
-        $("#new-profile-dialog").close();
+        motion.closeDialog($("#new-profile-dialog"));
         [state.tasteProfiles, state.profiles] = await Promise.all([api("/api/taste-profiles"), loadProfiles()]);
         renderProfilesNav();
         rerenderTaste();
@@ -3212,7 +3232,7 @@ document.addEventListener("submit", async (event) => {
         return;
       }
       const created = await api("/api/taste-profiles", { method: "POST", body: JSON.stringify({ name, description, from: $("#np-from").value || null }) });
-      $("#new-profile-dialog").close();
+      motion.closeDialog($("#new-profile-dialog"));
       navigate(`?taste=${encodeURIComponent(created.id)}`);
     } catch (error) {
       err.textContent = error.message;
@@ -3337,13 +3357,36 @@ async function loadWithScroll(position) {
     }
   }
 }
-window.addEventListener("popstate", event => loadWithScroll(event.state?.whimScroll));
+// Page changes cross-fade (View Transitions). The new page gets a short beat to paint its real
+// content; a slower one transitions to its skeleton instead of holding the screen still.
+let transitioning = false;
+function transitionTo(position) {
+  const update = () => {
+    transitioning = true;
+    let work;
+    try { work = loadWithScroll(position); } finally { transitioning = false; }
+    if (position) scrollTo({ left: position.x, top: position.y, behavior: "instant" });
+    return work;
+  };
+  if (!document.startViewTransition || motion.reduce.matches || document.visibilityState !== "visible") return update();
+  return new Promise((resolve, reject) => {
+    const transition = document.startViewTransition(() => {
+      const work = update();
+      work.then(resolve, reject);
+      return Promise.race([work, new Promise(r => setTimeout(r, 90))]);
+    });
+    transition.ready.catch(() => {});
+    transition.finished.catch(() => {});
+  });
+}
+// Safari's own swipe-back already animates; don't add a second transition on top.
+window.addEventListener("popstate", event => event.hasUAVisualTransition ? loadWithScroll(event.state?.whimScroll) : transitionTo(event.state?.whimScroll));
 
 function navigate(href) {
   saveScrollPosition();
   history.pushState({ whimScroll:{ x:0, y:0 } }, "", href);
   Object.assign(state, { confirming: null, redesignOpen: false, uploads: [], renaming: false, briefDirty: false, rulesDirty: false, textEdit: null, runError: null });
-  return loadWithScroll({ x:0, y:0 }).then(() => {
+  return transitionTo({ x:0, y:0 }).then(() => {
     $("#content").focus({ preventScroll: true });
   });
 }
@@ -4213,7 +4256,8 @@ async function load(position) {
   renderMobileTabs(keyView(key));
   // Moving between views keeps the old page (inert) for a moment, so a quick
   // load swaps straight to the new page instead of flashing its skeleton.
-  const leaving = content.dataset.loadedKey && content.dataset.loadedKey !== key;
+  // (Inside a page transition the cross-fade covers the swap, so the skeleton can show at once.)
+  const leaving = !transitioning && content.dataset.loadedKey && content.dataset.loadedKey !== key;
   if (leaving) content.inert = true;
   const scaffold = setTimeout(() => { if (seq === loadSeq && state.paintedSeq !== seq) showLoadingScaffold(position); }, leaving ? 120 : 0);
   if (!leaving) { clearTimeout(scaffold); showLoadingScaffold(position); }
@@ -4252,11 +4296,25 @@ async function loadView() {
   // Top-level pages show what this tab last saw right away, then swap in fresh data only if it differs.
   const top = ["home", "reports", "settings"].includes(view), collection = ["listings", "tastes"].includes(view);
   const showTop = (data) => {
+    // A refresh over an already painted page moves rows into place rather than redrawing it.
+    const refreshing = state.paintedSeq === seq;
     if (view === "settings") { state.settings = data; renderSettings(); }
-    else if (view === "home") { [state.home, state.running] = data; renderHome(); }
-    else { [state.reports, state.running] = data; state.reportErrors = []; renderReports(); }
+    else if (view === "home") {
+      const slidesBefore = JSON.stringify(state.home?.slides);
+      [state.home, state.running] = data;
+      const list = $("#home-reports");
+      // Same photos in the reel: leave it (and how far it was swiped) alone and update only the list.
+      if (refreshing && list && slidesBefore === JSON.stringify(state.home.slides)) {
+        glideRows(list, () => { list.innerHTML = homeReportsMarkup(state.home, state.listings.length > 0); });
+        watchRunning();
+      } else renderHome();
+    }
+    else {
+      [state.reports, state.running] = data; state.reportErrors = [];
+      if (refreshing) glideRows($("#content"), renderReports); else renderReports();
+    }
   };
-  const seen = (state.viewCache ??= new Map());
+  const seen = (state.viewCache ??= savedViews());
   const cached = top ? seen.get(view) : undefined;
   const paintNow = cached !== undefined || (collection && (state.listings.length > 0 || state.tasteProfiles.length > 0));
   if (paintNow) {
@@ -4270,7 +4328,7 @@ async function loadView() {
     if (["listings", "tastes", "listing", "home"].includes(view) && !paintNow) await shell;
     else shell.catch(() => {});
     const { data, error } = await result;
-    if (top && !error) seen.set(view, data); // remembered even if the visitor already moved on
+    if (top && !error) { seen.set(view, data); saveViews(seen); } // remembered even if the visitor already moved on
     if (!current()) return false;
     if (error) throw error;
     if (top) {
@@ -4296,6 +4354,24 @@ async function loadView() {
     $("#content").innerHTML = `<div class="empty"><h1 style="font-size:20px;margin-bottom:8px;color:var(--text)">Couldn't load</h1><p>${esc(error.message)}</p><p><a class="btn nav-inline" href="/">Back to listings</a></p></div>`;
     return false;
   }
+}
+// Home and Redesigns as last seen, kept across full page loads (opening a report and coming
+// back, or relaunching the home screen app), so they paint real content at once and refresh.
+// Running jobs are left out: they would show stale progress until the refresh lands.
+const VIEW_CACHE_KEY = "whim-view-cache";
+function savedViews() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(VIEW_CACHE_KEY) || "{}");
+    return new Map(Object.entries(saved).filter(([view]) => view === "home" || view === "reports"));
+  } catch { return new Map(); }
+}
+function saveViews(seen) {
+  try {
+    const keep = {};
+    for (const view of ["home", "reports"]) if (seen.has(view)) keep[view] = [seen.get(view)[0], []];
+    const json = JSON.stringify(keep);
+    if (json.length < 400_000) localStorage.setItem(VIEW_CACHE_KEY, json);
+  } catch {}
 }
 const sidebarScroller = document.querySelector(".side-content");
 const sidebarScrollRegion = document.querySelector(".side-scroll-region");

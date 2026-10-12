@@ -1,5 +1,6 @@
 import { renderPageHeader, detailHeaderStyles } from "./detail-header.js";
 import { designSystemStyles } from "./ui/design-system.js";
+import { smoothHead } from "./ui/smooth.js";
 import { readFileSync } from "node:fs";
 
 const asset = (name: string) => readFileSync(new URL(`./app/brand/${name}.svg`, import.meta.url), "utf8").trim();
@@ -24,6 +25,7 @@ export const brandLockup = `<span class="whim-lockup" aria-hidden="true">
 export const brandHead = `<style data-whim-design-system>${designSystemStyles}
 ${detailHeaderStyles}</style>
 <script>window.renderPageHeader = ${renderPageHeader.toString()};</script>
+${smoothHead}
 <meta name="application-name" content="Whim">
 <meta name="apple-mobile-web-app-title" content="Whim">
 <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="${touchIcon}">

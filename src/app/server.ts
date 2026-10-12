@@ -53,6 +53,8 @@ const HOST = process.env.HOST ?? "0.0.0.0";
 const INDEX = path.join(path.dirname(new URL(import.meta.url).pathname), "index.html");
 // Pull to refresh for the iPhone home screen app; inert in a browser tab.
 const pullRefreshScript = readFileSync(new URL("./pull-refresh.js", import.meta.url), "utf8");
+const smoothScript = readFileSync(new URL("./smooth.js", import.meta.url), "utf8");
+const serviceWorkerScript = readFileSync(new URL("./sw.js", import.meta.url), "utf8");
 
 function isAllowedRequestHost(host: string): boolean {
   // Explicit hostnames for private reverse proxies such as Tailscale Serve.
@@ -392,6 +394,14 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   if (req.method === "GET" && url.pathname === "/assets/pull-refresh.js") {
     res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" });
     return res.end(pullRefreshScript);
+  }
+  if (req.method === "GET" && url.pathname === "/assets/smooth.js") {
+    res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" });
+    return res.end(smoothScript);
+  }
+  if (req.method === "GET" && url.pathname === "/sw.js") {
+    res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" });
+    return res.end(serviceWorkerScript);
   }
 
   if (req.method !== "GET" && req.method !== "HEAD" && !isSameOrigin(req.headers)) return send(res, 403, { error: "Cross-origin request refused" });

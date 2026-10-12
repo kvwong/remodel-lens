@@ -72,6 +72,81 @@
     });
   }
 
+  const phone = matchMedia("(max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px)");
+  /** Menus grow out of the button that opened them. */
+  function pop(el) {
+    if (reduce.matches || el.hidden) return;
+    const base = getComputedStyle(el).transform;
+    const from = (base === "none" ? "" : base + " ") + "translateY(-4px) scale(.96)";
+    animate(el, { opacity: [0, 1], transform: [from, base] }, {
+      duration: .18,
+      onFinish: () => { el.style.removeProperty("opacity"); el.style.removeProperty("transform"); },
+    });
+  }
+  /** Closes a dialog with the reverse of its entrance: phone sheets slide down, others fade and settle. */
+  function closeDialog(dialog, value) {
+    if (!dialog?.open || dialog.hasAttribute("data-closing")) return;
+    const finish = () => {
+      dialog.removeAttribute("data-closing");
+      dialog.style.removeProperty("transform");
+      dialog.style.removeProperty("opacity");
+      if (dialog.open) dialog.close(value);
+    };
+    if (reduce.matches) return finish();
+    dialog.setAttribute("data-closing", "");
+    stop(dialog);
+    const sheet = dialog.matches(".modal") && phone.matches;
+    const current = getComputedStyle(dialog).transform;
+    const now = current === "none" ? "translateY(0px)" : current;
+    animate(dialog, sheet
+      ? { transform: [now, `translateY(${dialog.offsetHeight + 24}px)`] }
+      : { opacity: [1, 0], transform: [now, `${current === "none" ? "" : current + " "}translateY(6px) scale(.98)`] },
+      { duration: sheet ? .26 : .16, onFinish: finish });
+  }
+  // Escape closes with the same motion.
+  document.addEventListener("cancel", e => {
+    if (!(e.target instanceof HTMLDialogElement) || !e.target.matches(".modal")) return;
+    e.preventDefault();
+    closeDialog(e.target);
+  }, true);
+  // Phone sheets follow a finger dragging down from their top, and close past a third or on a flick.
+  let drag = null;
+  addEventListener("touchstart", e => {
+    const dialog = e.target.closest?.("dialog.modal[open]:not([data-closing])");
+    if (!dialog || !phone.matches || reduce.matches || e.touches.length > 1 || dialog.scrollTop > 0) return;
+    if (e.target.closest("input, textarea, select, [contenteditable]")) return;
+    const t = e.touches[0];
+    drag = { dialog, x: t.clientX, y: t.clientY, dy: 0, active: false, samples: [[t.clientY, e.timeStamp]] };
+  }, { passive: true });
+  addEventListener("touchmove", e => {
+    if (!drag) return;
+    const t = e.touches[0], dy = t.clientY - drag.y, dx = t.clientX - drag.x;
+    if (!drag.active) {
+      if (dy < -6 || Math.abs(dx) > Math.abs(dy) + 4) { drag = null; return; }
+      if (dy < 8) return;
+      drag.active = true;
+      stop(drag.dialog);
+      document.activeElement?.blur?.();
+    }
+    e.preventDefault();
+    drag.dy = Math.max(0, dy);
+    drag.samples.push([t.clientY, e.timeStamp]);
+    if (drag.samples.length > 5) drag.samples.shift();
+    drag.dialog.style.transform = `translateY(${drag.dy}px)`;
+  }, { passive: false });
+  const release = () => {
+    if (!drag) return;
+    const { dialog, dy, active, samples } = drag;
+    drag = null;
+    if (!active) return;
+    const [[y0, t0]] = samples, [y1, t1] = samples[samples.length - 1];
+    const velocity = (y1 - y0) / Math.max(1, t1 - t0); // px per ms
+    if (dy > dialog.offsetHeight / 3 || velocity > .5) return closeDialog(dialog);
+    animate(dialog, { transform: [`translateY(${dy}px)`, "translateY(0px)"] }, { duration: .3, onFinish: () => dialog.style.removeProperty("transform") });
+  };
+  addEventListener("touchend", release, { passive: true });
+  addEventListener("touchcancel", release, { passive: true });
+
   function register(root) {
     if (!(root instanceof Element)) return;
     for (const detail of [root, ...root.querySelectorAll("details.category, details.fold")]) {
@@ -212,9 +287,11 @@
         schedule(el);
         if (record.attributeName === "open") {
           fold(el);
+          if (el.matches("details.room-picker[open]")) { const menu = el.querySelector(".room-menu"); if (menu) pop(menu); }
           if (el.matches("dialog[open]")) enter(el, el.matches(".modal") && matchMedia("(max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px)").matches);
         }
         if (record.attributeName === "hidden" && !el.hidden && el.matches(".savebar, [data-panel]")) enter(el);
+        if (record.attributeName === "hidden" && !el.hidden && el.matches(".lpick-menu, .profile-menu, .dl-menu")) pop(el);
       }
     }
     // Detached views must not retain tweens or perpetual clocks.
@@ -249,5 +326,5 @@
   // User input always takes back control of scrolling.
   for (const event of ["wheel", "touchstart", "pointerdown"]) addEventListener(event, () => scrollTween?.stop(), { passive: true });
   addEventListener("keydown", e => { if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(e.key)) scrollTween?.stop(); });
-  window.whimMotion = { animate, sequence, reduce, enter, scroll, stop, isAnimating, frame: engine.frame, cancelFrame: engine.cancelFrame, own(el, dispose) { cleanups.get(el)?.(); cleanups.set(el, dispose); } };
+  window.whimMotion = { animate, sequence, reduce, enter, pop, closeDialog, scroll, stop, isAnimating, frame: engine.frame, cancelFrame: engine.cancelFrame, own(el, dispose) { cleanups.get(el)?.(); cleanups.set(el, dispose); } };
 })();
