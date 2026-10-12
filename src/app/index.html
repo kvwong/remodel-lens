@@ -673,6 +673,10 @@
   .seg { display:inline-flex; gap:4px; flex-wrap:wrap; }
   .seg button { min-height:32px; padding:4px 10px; border-radius:12px; border:1px solid transparent; background:var(--btn-fill); font-size:13px; cursor:pointer; }
   .seg button[aria-pressed="true"] { background:var(--primary-soft); color:var(--primary); font-weight:600; }
+  .seg-display { display:grid; grid-template-columns:repeat(3, 128px); gap:8px; }
+  .seg-display button { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:8px; min-height:84px; padding:16px 8px 12px; border-radius:16px; font-size:14px; line-height:1.25; text-align:center; }
+  .seg-display button svg { width:24px; height:24px; }
+  @media (max-width:560px) { .seg-display { grid-template-columns:repeat(3, 1fr); width:100%; } }
   .seg button.bad[aria-pressed="true"] { background:var(--bad-bg); color:var(--bad); }
   .tune-grid { list-style:none; margin:0; padding:0; display:grid; gap:14px; grid-template-columns:repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
   .tune-card { display:grid; gap:8px; padding:10px; border:1px solid var(--line); border-radius:14px; }
@@ -1705,7 +1709,7 @@ function homeLinkMarkup() {
   return `<form class="link-compose" id="home-link-form" novalidate>
       <label class="sr-only" for="home-link">Listing link</label>
       <div class="link-box">
-        <input id="home-link" name="link" type="text" inputmode="url" autocapitalize="off" spellcheck="false" enterkeyhint="go" maxlength="2000" placeholder="Paste a listing link and generate report...">
+        <input id="home-link" name="link" type="text" inputmode="url" autocapitalize="off" spellcheck="false" enterkeyhint="go" maxlength="2000" placeholder="Paste link to redesign listing…">
         <div class="link-tools">${taste}${scope}</div>
         <button class="lsend" type="submit" disabled aria-label="${state.profiles.length ? "Add the listing and run a redesign" : "Add the listing"}">${icon("arrowUp")}</button>
       </div>
@@ -3387,7 +3391,7 @@ function displayMarkup() {
   return `<div class="panel-head"><h2 id="display-h">Display</h2>
     <p class="hint">Applies to this browser tab. Match system follows your device's light or dark setting.</p></div>
     <div class="setting-row"><div class="setting-label"><span class="label-text" id="appearance-label">Appearance</span></div>
-      <div class="setting-control"><div class="seg" role="group" aria-labelledby="appearance-label">${[["system", "Match system"], ["light", "Light"], ["dark", "Dark"]].map(([id, label]) => `<button type="button" data-appearance="${id}" aria-pressed="${id === current}">${label}</button>`).join("")}</div></div></div>`;
+      <div class="setting-control"><div class="seg seg-display" role="group" aria-labelledby="appearance-label">${[["system", "Match system", "monitor"], ["light", "Light", "sun"], ["dark", "Dark", "moon"]].map(([id, label, glyph]) => `<button type="button" data-appearance="${id}" aria-pressed="${id === current}">${icon(glyph)}<span>${label}</span></button>`).join("")}</div></div></div>`;
 }
 
 function settingsShell(keys = "") {
