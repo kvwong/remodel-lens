@@ -796,7 +796,7 @@
   /* First-launch splash: the W shimmers until the first view has loaded, then fades away. */
   .splash { position:fixed; inset:0; z-index:200; display:grid; place-items:center; background:var(--bg); transition:opacity .5s ease; }
   .splash.done { opacity:0; pointer-events:none; }
-  .splash svg { width:min(46vw, 200px); height:auto; }
+  .splash svg { width:min(30vw, 128px); height:auto; }
   .splash .base { fill:var(--primary); }
   .splash .sweep { animation:splash-sweep 1.7s cubic-bezier(.45,0,.55,1) infinite; }
   @keyframes splash-sweep { from { transform:translateX(0); } 75%, to { transform:translateX(1000px); } }
