@@ -1159,6 +1159,22 @@ function renderListings() {
     : `<li class="muted" style="font-size:14px">No listings yet.</li>`);
 }
 
+/* Optimistic tab press: light the tapped tab at once, while the page behind it loads; renderMobileTabs() restores the real one. */
+function lightMobileTab(link) {
+  document.querySelectorAll("[data-mobile-tab]").forEach(l => l === link ? l.setAttribute("aria-current", "page") : l.removeAttribute("aria-current"));
+}
+document.addEventListener("pointerdown", (e) => {
+  const link = e.target.closest?.("a.mobile-tab");
+  if (link && e.button === 0 && e.isPrimary) lightMobileTab(link);
+}, true);
+// A drag off the bar, a cancelled touch or a declined "leave without saving" puts the real tab back.
+document.addEventListener("pointercancel", (e) => { if (e.target.closest?.("a.mobile-tab")) renderMobileTabs(); }, true);
+document.addEventListener("pointerup", (e) => {
+  if (!e.target.closest?.("a.mobile-tab")) return;
+  const target = e.target.closest("a.mobile-tab"), up = document.elementFromPoint(e.clientX, e.clientY)?.closest?.("a.mobile-tab");
+  if (up !== target) renderMobileTabs();
+}, true);
+
 /* Collection routes work at every size; the tab bar is mobile-only. */
 function renderMobileTabs(view = state.view) {
   const active = view === "home" ? "home" : view === "taste" || view === "tastes" ? "tastes" : view === "reports" ? "reports" : view === "settings" ? "settings" : "listings";
@@ -3119,8 +3135,10 @@ document.addEventListener("click", (e) => {
   const url = new URL(a.href, location.href);
   if (url.origin !== location.origin || url.pathname !== "/") return;
   e.preventDefault();
-  if (state.textEdit?.saving) { announce("Wait for the edit to finish saving."); return; }
-  if ((state.briefDirty || state.rulesDirty || state.textEdit) && !confirm("Leave without saving your changes?")) return;
+  const isTab = a.matches(".mobile-tab");
+  if (isTab) lightMobileTab(a); // keyboard and mouse taps too, not only touches
+  if (state.textEdit?.saving) { announce("Wait for the edit to finish saving."); if (isTab) renderMobileTabs(); return; }
+  if ((state.briefDirty || state.rulesDirty || state.textEdit) && !confirm("Leave without saving your changes?")) { if (isTab) renderMobileTabs(); return; }
   flushSave();
   navigate(url.search || "/");
 }, true);
