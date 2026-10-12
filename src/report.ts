@@ -1221,6 +1221,9 @@ ${appearanceScript}
   .viewer-actions { display:flex; gap:6px; align-items:center; }
   .vbtn { font:inherit; font-size:13px; min-height:36px; padding:4px 12px; border-radius:8px; border:1px solid rgba(255,255,255,.22); background:transparent; color:inherit; cursor:pointer; }
   .vbtn[aria-pressed="true"] { background:#efede9; color:#0f0f0e; }
+  .viewer-close { display:grid; place-items:center; width:36px; padding:0; }
+  .viewer-badge { display:none; }
+  .viewer-close .icon { width:18px; height:18px; }
   .viewer-body { flex:1; min-height:0; display:flex; }
   .viewer-stage { background-position:center; background-repeat:no-repeat; background-size:contain; position:relative; flex:1; min-width:0; min-height:0; overflow:auto; overscroll-behavior:contain; touch-action:none; display:flex; cursor:zoom-in; }
   .viewer-stage img { flex:none; margin:auto; max-width:100%; max-height:100%; object-fit:contain; display:block; user-select:none; -webkit-user-drag:none; -webkit-touch-callout:none; }
@@ -1335,8 +1338,21 @@ ${appearanceScript}
   @media (max-width: 860px), (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
     .viewer .vbtn, .viewer .seg button { min-height:44px; }
     .viewer, .viewer * { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
-    .shot-tools, .viewer .viewer-iter, .viewer .iter, .viewer .viewer-ver, .viewer .vpins { display:none !important; }
+    .shot-tools, .viewer .viewer-iter, .viewer .iter, .viewer .viewer-ver, .viewer .vpins, .viewer .viewer-tabs, .viewer .viewer-zoom { display:none !important; }
     .viewer .viewer-stage { flex:1; aspect-ratio:auto; max-height:none; }
+    /* Phones: tap flips versions, so the bar is just the title and an X, floating over the photo. */
+    .viewer .viewer-bar { position:absolute; z-index:8; top:0; left:0; right:0; height:auto; grid-template-columns:minmax(0, 1fr) auto; grid-template-rows:auto; gap:12px; padding:calc(env(safe-area-inset-top) + 8px) max(12px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left)); border-bottom:0; background:rgba(15,15,14,.38); -webkit-backdrop-filter:blur(20px) saturate(1.4); backdrop-filter:blur(20px) saturate(1.4); text-shadow:0 1px 2px rgba(0,0,0,.45); }
+    .viewer .viewer-title { grid-column:1; grid-row:1; }
+    /* Which version is on screen; the listing photo gets a light pill so it never passes for a redesign. */
+    .viewer .viewer-badge { position:absolute; z-index:7; left:50%; bottom:calc(env(safe-area-inset-bottom) + 20px); transform:translateX(-50%); display:flex; align-items:center; gap:8px; padding:7px 12px; border-radius:999px; background:rgba(15,15,14,.55); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); color:#efede9; font-size:13px; font-weight:600; line-height:18px; white-space:nowrap; pointer-events:none; box-shadow:0 2px 10px rgba(0,0,0,.25); }
+    .viewer .viewer-badge.original { background:#efede9; color:#0f0f0e; }
+    .viewer-badge .dots { display:flex; gap:4px; }
+    .viewer-badge .dots i { width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.35; }
+    .viewer-badge .dots i.on { opacity:1; }
+    .viewer-badge.pop { animation:badge-pop .28s cubic-bezier(.22,1,.36,1); }
+    @keyframes badge-pop { from { transform:translateX(-50%) scale(.86); opacity:.5; } }
+    @media (prefers-reduced-motion: reduce) { .viewer-badge.pop { animation:none; } }
+    .viewer .viewer-actions > [data-viewer="close"] { grid-column:2; grid-row:1; width:44px; min-height:44px; border:0; border-radius:50%; background:rgba(255,255,255,.14); }
   }
   .viewer-stage.reeling { overflow:hidden; }
   .viewer-neighbor { position:absolute; inset:0; background:#0f0f0e; background-position:center; background-repeat:no-repeat; background-size:contain; pointer-events:none; will-change:transform; }
@@ -1393,11 +1409,12 @@ ${appearanceScript}
         <button type="button" data-viewer="fit" aria-pressed="true" title="Fit (Z)">Fit</button>
         <button type="button" data-viewer="actual" aria-pressed="false" title="Actual size (Z)">100%</button>
       </div>
-      <button class="vbtn" type="button" data-viewer="close">Close</button>
+      <button class="vbtn viewer-close" type="button" data-viewer="close" aria-label="Close" title="Close (Esc)">${icon("x")}</button>
     </div>
   </div>
   <div class="viewer-body">
-    <div class="viewer-stage"><div class="vpins"></div></div>${ch ? `
+    <div class="viewer-stage"><div class="vpins"></div></div>
+    <div class="viewer-badge" aria-hidden="true"></div>${ch ? `
     <select class="viewer-ver" aria-label="Version on screen" hidden></select>
     <aside class="iter" id="iter-panel" aria-labelledby="iter-h">
       <div class="iter-head"><h2 id="iter-h">Changes</h2><span class="iter-sub"></span><button type="button" class="ibtn quiet iter-close" data-viewer="changes" aria-label="Hide changes">${icon("x")}</button></div>
@@ -1555,6 +1572,17 @@ ${appearanceScript}
     stage.setAttribute("aria-busy", "false");
   });
   const tabsEl = dialog.querySelector(".viewer-tabs");
+  const bar = dialog.querySelector(".viewer-bar");
+  const badge = dialog.querySelector(".viewer-badge");
+  function updateBadge() {
+    const version = items[index].dataset.label.split(" · ").pop();
+    const original = !items[index].dataset.status;
+    badge.classList.toggle("original", original);
+    badge.innerHTML = '<span class="dots">' + items.map((_, n) => n === index ? '<i class="on"></i>' : "<i></i>").join("") + "</span>" + (original ? "Original" : version);
+    badge.classList.remove("pop");
+    void badge.offsetWidth; // restart the pop on every flip
+    badge.classList.add("pop");
+  }
   const title = dialog.querySelector("#viewer-title");
   const statusEl = dialog.querySelector("#viewer-status");
   const fitBtn = dialog.querySelector('[data-viewer="fit"]');
@@ -1598,6 +1626,7 @@ ${appearanceScript}
       ? '<span class="status s-' + item.dataset.status + '">' + s.icon + "<span>" + s.label + '</span><span class="status-meaning">' + s.meaning + "</span></span>"
       : '<span class="viewer-plain">As photographed for the listing</span>';
     tabsEl.querySelectorAll("button").forEach((b, n) => b.setAttribute("aria-pressed", String(n === index)));
+    updateBadge();
     if (!keepZoom) setZoom(false);
     else if (img.complete) centerImage();
     iterShow?.(item);
@@ -1610,6 +1639,7 @@ ${appearanceScript}
       x: Math.max(0, Math.min(1, (point.x - before.left) / before.width)),
       y: Math.max(0, Math.min(1, (point.y - before.top) / before.height))
     } : null;
+    resetZoom(false);
     stage.classList.toggle("actual", actual);
     fitBtn.setAttribute("aria-pressed", String(!actual));
     actualBtn.setAttribute("aria-pressed", String(actual));
@@ -1641,6 +1671,8 @@ ${appearanceScript}
         dialog.querySelector(".viewer-iter")?.setAttribute("aria-pressed", "false");
         dialog.showModal();
         dialog.focus({ preventScroll: true });
+        // A history entry, so the phone's back gesture closes the viewer instead of leaving the report.
+        history.pushState({ ...history.state, whimViewer: true }, "");
       } else if (focusVersion) tabsEl.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
       return;
     }
@@ -1664,7 +1696,18 @@ ${appearanceScript}
   function nextPhoto(direction) { adjacentPhoto(direction)?.click(); }
   const mobileViewer = matchMedia("(max-width: 860px), (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 600px)");
   let drag = null, holdTimer = null, springFrame = null, reel = null, split = null;
-  const pointers = new Set();
+  const pointers = new Map(); // pointerId -> latest position, for pinch zoom
+  // Phone pinch zoom: a transform on the image that survives version flips but not room changes.
+  let zoom = { s: 1, x: 0, y: 0 }, pinch = null;
+  const applyZoom = () => { img.style.transform = zoom.s === 1 ? "" : "translate(" + zoom.x + "px, " + zoom.y + "px) scale(" + zoom.s + ")"; };
+  function resetZoom(animate) {
+    zoom = { s: 1, x: 0, y: 0 };
+    if (animate && !motion.reduce.matches) {
+      img.style.transition = "transform .22s cubic-bezier(.22,1,.36,1)";
+      setTimeout(() => { img.style.transition = ""; }, 240);
+    }
+    applyZoom();
+  }
   const imageSource = (item) => item?.dataset.src || item?.querySelector("img")?.src;
   const previewSource = (item) => {
     const source = imageSource(item), warmed = warmedImages.get(source);
@@ -1726,8 +1769,10 @@ ${appearanceScript}
     cancelAnimationFrame(springFrame); springFrame = null;
     reel?.before.remove(); reel?.after.remove(); reel = null;
     split?.layer.remove(); split?.divider.remove(); split = null;
-    img.style.transform = "";
+    applyZoom();
     stage.style.backgroundPosition = "";
+    dialog.style.backgroundColor = "";
+    bar.style.opacity = badge.style.opacity = "";
     stage.classList.remove("reeling", "comparing", "dragging");
     drag = null;
   }
@@ -1756,17 +1801,26 @@ ${appearanceScript}
   }
   function startReel() {
     const previous = adjacentPhoto(-1), next = adjacentPhoto(1);
-    reel = { previous, next, before: makeNeighbor(previous), after: makeNeighbor(next), height: stage.clientHeight, offset: 0 };
+    reel = { previous, next, before: makeNeighbor(previous), after: makeNeighbor(next), size: stage.clientWidth, offset: 0 };
     stage.classList.add("reeling");
     moveReel(0);
   }
-  function moveReel(y) {
+  // Phones move between rooms sideways, like Photos: the previous room waits on the left.
+  function moveReel(x) {
     if (!reel) return;
-    reel.offset = y;
+    reel.offset = x;
+    stage.style.backgroundPosition = "calc(50% + " + x + "px) center";
+    img.style.transform = "translateX(" + x + "px)";
+    reel.before.style.transform = "translateX(" + (x - reel.size) + "px)";
+    reel.after.style.transform = "translateX(" + (x + reel.size) + "px)";
+  }
+  // Pulling the photo down closes the viewer; the page shows through as it goes.
+  function moveDismiss(y) {
+    const progress = Math.min(1, Math.max(0, y) / (stage.clientHeight * .6));
+    img.style.transform = "translateY(" + y + "px) scale(" + (1 - progress * .15) + ")";
     stage.style.backgroundPosition = "center calc(50% + " + y + "px)";
-    img.style.transform = "translateY(" + y + "px)";
-    reel.before.style.transform = "translateY(" + (y - reel.height) + "px)";
-    reel.after.style.transform = "translateY(" + (y + reel.height) + "px)";
+    dialog.style.backgroundColor = "rgba(15,15,14," + (1 - progress * .85) + ")";
+    bar.style.opacity = badge.style.opacity = String(1 - progress);
   }
   function comparisonIndex() {
     const original = items.findIndex((it) => !it.dataset.status);
@@ -1799,16 +1853,35 @@ ${appearanceScript}
   stage.addEventListener("contextmenu", (e) => { if (mobileViewer.matches) e.preventDefault(); });
   stage.addEventListener("pointerdown", (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    pointers.add(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     resetInteraction();
+    if (pointers.size === 2 && e.pointerType === "touch" && mobileViewer.matches && !stage.classList.contains("actual")) {
+      const [a, b] = [...pointers.values()];
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, m: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, zoom: { ...zoom } };
+      stage.setPointerCapture(e.pointerId);
+      return;
+    }
     if (pointers.size > 1) return;
     drag = { id: e.pointerId, x: e.clientX, y: e.clientY, left: stage.scrollLeft, top: stage.scrollTop,
       actual: stage.classList.contains("actual"), touch: e.pointerType !== "mouse", moved: false, image: e.target === img,
-      axis: null, time: performance.now(), lastY: e.clientY, velocity: 0 };
+      axis: null, time: performance.now(), lastX: e.clientX, lastY: e.clientY, velocity: 0, zoomed: zoom.s > 1, zoom: { ...zoom } };
     stage.setPointerCapture(e.pointerId);
-    if (drag.touch && mobileViewer.matches && !drag.actual) holdTimer = setTimeout(startSplit, 350);
+    if (drag.touch && mobileViewer.matches && !drag.actual && !drag.zoomed) holdTimer = setTimeout(startSplit, 350);
   });
   stage.addEventListener("pointermove", (e) => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch) {
+      if (pointers.size < 2) return;
+      // Keep the spot between the fingers under the fingers while scaling around the stage center.
+      const [a, b] = [...pointers.values()], box = stage.getBoundingClientRect();
+      const c = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+      const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const s = Math.max(.8, Math.min(5, pinch.zoom.s * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d));
+      const qx = (pinch.m.x - c.x - pinch.zoom.x) / pinch.zoom.s, qy = (pinch.m.y - c.y - pinch.zoom.y) / pinch.zoom.s;
+      zoom = { s, x: m.x - c.x - s * qx, y: m.y - c.y - s * qy };
+      applyZoom();
+      return;
+    }
     if (!drag || drag.id !== e.pointerId) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (drag.axis === "split") { moveSplit(drag.splitStart + dx); return; }
@@ -1820,21 +1893,38 @@ ${appearanceScript}
       return;
     }
     if (!drag.touch || !mobileViewer.matches || !drag.moved) return;
+    if (drag.zoomed) {
+      zoom = { s: drag.zoom.s, x: drag.zoom.x + dx, y: drag.zoom.y + dy };
+      applyZoom();
+      return;
+    }
     if (!drag.axis) {
-      if (Math.abs(dy) > Math.abs(dx) * 1.2) { drag.axis = "vertical"; startReel(); }
-      else if (Math.abs(dx) > Math.abs(dy) * 1.2) drag.axis = "horizontal";
+      if (Math.abs(dx) > Math.abs(dy) * 1.2) { drag.axis = "rooms"; startReel(); }
+      else if (dy > 0 && dy > Math.abs(dx) * 1.2) drag.axis = "dismiss";
+      else if (Math.abs(dy) > Math.abs(dx) * 1.2) drag.axis = "none";
     }
-    if (drag.axis === "vertical") {
-      const now = performance.now(), dt = now - drag.time;
+    const now = performance.now(), dt = now - drag.time;
+    if (drag.axis === "rooms") {
+      if (dt > 0) drag.velocity = .65 * ((e.clientX - drag.lastX) / dt) + .35 * drag.velocity;
+      const resisted = (!reel.next && dx < 0) || (!reel.previous && dx > 0);
+      moveReel(Math.max(-reel.size, Math.min(reel.size, dx * (resisted ? .25 : 1))));
+    }
+    if (drag.axis === "dismiss") {
       if (dt > 0) drag.velocity = .65 * ((e.clientY - drag.lastY) / dt) + .35 * drag.velocity;
-      drag.time = now; drag.lastY = e.clientY;
-      const resisted = (!reel.next && dy < 0) || (!reel.previous && dy > 0);
-      moveReel(Math.max(-reel.height, Math.min(reel.height, dy * (resisted ? .25 : 1))));
+      moveDismiss(Math.max(0, dy));
     }
+    drag.time = now; drag.lastX = e.clientX; drag.lastY = e.clientY;
   });
   stage.addEventListener("pointerup", (e) => {
     pointers.delete(e.pointerId);
     clearTimeout(holdTimer);
+    if (pinch) {
+      if (pointers.size < 2) {
+        pinch = null; drag = null;
+        if (zoom.s < 1.05) resetZoom(true);
+      }
+      return;
+    }
     stage.classList.remove("dragging");
     const gesture = drag;
     drag = null;
@@ -1849,20 +1939,33 @@ ${appearanceScript}
       });
       return;
     }
+    const velocity = performance.now() - gesture.time < 100 ? Math.max(-3, Math.min(3, gesture.velocity)) : 0;
     if (reel) {
-      const velocity = performance.now() - gesture.time < 100 ? Math.max(-3, Math.min(3, gesture.velocity)) : 0;
       const projected = reel.offset + velocity * 180;
       const direction = projected < 0 ? 1 : -1;
       const target = direction === 1 ? reel.next : reel.previous;
-      const advance = target && Math.abs(projected) > reel.height * .22;
-      spring(reel.offset, advance ? -direction * reel.height : 0, velocity, moveReel, () => {
+      const advance = target && Math.abs(projected) > reel.size * .22;
+      spring(reel.offset, advance ? -direction * reel.size : 0, velocity, moveReel, () => {
         resetInteraction(); if (advance) target.click();
       });
       return;
     }
+    if (gesture.axis === "dismiss") {
+      const y = Math.max(0, dy);
+      if (y + velocity * 180 > 110) spring(y, stage.clientHeight, velocity, moveDismiss, () => dialog.close());
+      else spring(y, 0, velocity, moveDismiss, resetInteraction);
+      return;
+    }
+    if (gesture.axis === "none") return;
+    if (gesture.zoomed && gesture.moved) return;
+    // Phones: a tap flips to the next version of this photo (listing photo, then each redesign).
+    if (!gesture.moved && gesture.touch && mobileViewer.matches) {
+      if (items.length > 1) show(index + 1, true);
+      return;
+    }
     if (gesture.touch && !gesture.actual && Math.max(Math.abs(dx), Math.abs(dy)) >= 45) {
-      if (Math.abs(dy) > Math.abs(dx) * 1.2) nextPhoto(dy < 0 ? 1 : -1);
-      else if (Math.abs(dx) > Math.abs(dy) * 1.2) show(index + (dx < 0 ? 1 : -1), true);
+      if (Math.abs(dx) > Math.abs(dy) * 1.2) nextPhoto(dx < 0 ? 1 : -1);
+      else if (dy > 0 && dy > Math.abs(dx) * 1.2) dialog.close();
       return;
     }
     if (!gesture.moved && !mobileViewer.matches && iterPinClick?.(e)) return;
@@ -1870,6 +1973,7 @@ ${appearanceScript}
   });
   const cancelGesture = (e) => {
     pointers.delete(e.pointerId);
+    if (pinch && pointers.size < 2) { pinch = null; if (zoom.s < 1.05) resetZoom(true); }
     // Normal release also loses capture; let the settling spring finish.
     if (drag?.id === e.pointerId) resetInteraction();
   };
@@ -1884,7 +1988,17 @@ ${appearanceScript}
     if (e.key === "z" || e.key === "Z") { e.preventDefault(); setZoom(!stage.classList.contains("actual")); }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); nextPhoto(e.key === "ArrowDown" ? 1 : -1); }
   });
-  dialog.addEventListener("close", () => { resetInteraction(); pointers.clear(); prefetchQueue = []; img.remove(); trigger?.focus({ preventScroll: true }); });
+  let closingFromHistory = false;
+  window.addEventListener("popstate", () => {
+    if (!dialog.open) return;
+    closingFromHistory = true;
+    dialog.close();
+  });
+  dialog.addEventListener("close", () => {
+    resetInteraction(); pointers.clear(); prefetchQueue = []; img.remove(); trigger?.focus({ preventScroll: true });
+    if (!closingFromHistory && history.state?.whimViewer) history.back();
+    closingFromHistory = false;
+  });
 
   /* Return to the exact picker state when that's where we came from. */
   try {
