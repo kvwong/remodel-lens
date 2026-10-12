@@ -1554,7 +1554,7 @@ function renderJob() {
     const button = $('#run-form button[type="submit"]:not([data-confirmed])');
     if (button) {
       button.disabled = running || !selectedTiers().length;
-      button.innerHTML = `${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Start`;
+      button.innerHTML = `${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Generate`;
     }
     renderJobInto($("#job"), state.job, state.job?.reportUrl ? `<p style="margin:4px 0 0"><a class="btn" href="${esc(state.job.reportUrl)}">Open report</a></p>` : "");
   } else {
@@ -1832,7 +1832,7 @@ function startHomeLink() {
     const photos = `Added ${created.added} photo${created.added === 1 ? "" : "s"} from ${created.site}`;
     let note = `${photos}. Add a taste profile to run a redesign.`;
     if (profile) {
-      status.innerHTML = shimmer("Starting the redesign…");
+      status.innerHTML = shimmer("Generating the redesign…");
       try {
         await api(`/api/listings/${encodeURIComponent(created.id)}/runs`, { method: "POST", body: JSON.stringify({ tiers, profile, interiorsOnly: true }) });
         note = `${photos}. Redesign started on the interior photos.`;
@@ -2248,11 +2248,11 @@ function renderListing() {
           ? `<div class="confirm" role="group" aria-labelledby="confirm-text">
               <p id="confirm-text">This starts <strong>${nf.format(est.n)} redesigns</strong> and takes ${fmtMinutes(est.minutes)}.${tiers.includes("major") ? " Structural images are speculative." : ""}</p>
               <button class="btn" type="button" data-action="cancel-confirm">Cancel</button>
-              <button class="btn btn-primary" type="submit" data-confirmed="1">Start</button>
+              <button class="btn btn-primary" type="submit" data-confirmed="1">Generate</button>
             </div>`
           : `<div class="run-row">
               <button class="btn" type="button" data-action="close-redesign">Cancel</button>
-              <button class="btn btn-primary" type="submit" ${running || !tiers.length ? "disabled" : ""} aria-describedby="run-help">${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Start</button>
+              <button class="btn btn-primary" type="submit" ${running || !tiers.length ? "disabled" : ""} aria-describedby="run-help">${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Generate</button>
               <span id="run-help" class="estimate num">${est.n
                 ? `<strong>${nf.format(est.n)} ${est.n === 1 ? "redesign" : "redesigns"}</strong> · ${fmtMinutes(est.minutes)}`
                 : !l.photos.length ? "Add photos to get started." : !tiers.length ? "Choose at least one scope to run." : "Select at least one photo."}</span>
@@ -2324,10 +2324,15 @@ function updateSelection(files, selected) {
   if (summary) summary.selectedCount = count;
   const sidebarCount = document.querySelector(`[data-sidebar-id="${CSS.escape(state.listing.id)}"] small.num`);
   if (sidebarCount) sidebarCount.textContent = `${count} of ${state.listing.photos.length} selected`;
+  refreshRunRow(count);
+}
+
+// Rewrites just the run row (estimate, Generate state) so picking a scope or photo never re-renders the page.
+function refreshRunRow(count) {
   const tiers = selectedTiers();
   const est = runEstimate(count, tiers.length);
   const running = state.job?.status === "running";
-  const row = `<div class="run-row"><button class="btn btn-primary" type="submit" ${running || !tiers.length || !count ? "disabled" : ""} aria-describedby="run-help">${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Start</button><span id="run-help" class="estimate num">${est.n ? `<strong>${nf.format(est.n)} ${est.n === 1 ? "redesign" : "redesigns"}</strong> · ${fmtMinutes(est.minutes)}` : !tiers.length ? "Choose at least one scope to run." : "Select at least one photo."}</span></div>`;
+  const row = `<div class="run-row">${state.redesignOpen ? '<button class="btn" type="button" data-action="close-redesign">Cancel</button>' : ""}<button class="btn btn-primary" type="submit" ${running || !tiers.length || !count ? "disabled" : ""} aria-describedby="run-help">${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Generate</button><span id="run-help" class="estimate num">${est.n ? `<strong>${nf.format(est.n)} ${est.n === 1 ? "redesign" : "redesigns"}</strong> · ${fmtMinutes(est.minutes)}` : !tiers.length ? "Choose at least one scope to run." : "Select at least one photo."}</span></div>`;
   if (state.redesignOpen) $("#run-form .confirm, #run-form .run-row").outerHTML = row;
   else {
     const open = $('[data-action="open-redesign"]');
@@ -2876,8 +2881,8 @@ document.addEventListener("change", (event) => {
     setParams({ tiers: tiers.join(",") || null });
     state.runError = null;
     state.confirming = null;
-    renderListing();
-    document.querySelector(`input[name="tier"][value="${t.value}"]`)?.focus();
+    document.querySelector("#run-error")?.setAttribute("hidden", "");
+    refreshRunRow(state.listing.photos.filter((p) => p.selected).length);
   }
   if (t.matches("#ref-input, #photo-input")) { uploadFiles(t.files); t.value = ""; }
 });
