@@ -652,19 +652,19 @@
   .tune-meta { display:grid; gap:2px; font-size:13px; min-width:0; overflow-wrap:anywhere; }
   .tune-meta small { color:var(--muted); font-size:12.5px; }
 
-  /* Home: a drifting reel of redesigned photos above the latest reports. */
+  /* Home: the Listing photos stack spread across the page; swipe or drag it, and it springs to the next photo. */
   .reel { position:relative; margin:-12px 0 -62px; }
   /* Room above and below for the tilt and the hover lift's deep shadow to fade out before the clip edge, without pushing the reports down. */
-  .reel-viewport { overflow:hidden; padding:24px 0 96px; -webkit-mask-image:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask-image:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+  .reel-viewport { overflow:hidden; padding:24px 0 96px; -webkit-mask-image:linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); mask-image:linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
   .reel-track { list-style:none; margin:0; padding:0 0 0 12px; display:flex; align-items:center; width:max-content; will-change:transform; }
-  /* Each photo gets its own size, tilt and lift (set per card), so the strip reads as a loose, uneven pile. */
-  /* Neighbours overlap (negative gap) and stack in a set but shuffled order (--z). */
-  .reel-card { --size:1; --tilt:0deg; --lift:0px; position:relative; z-index:var(--z, 1); flex:none; margin-right:-2px; width:calc(var(--reel-card, 250px) * var(--size)); transform:translateY(var(--lift)) rotate(var(--tilt)); --motion:transform var(--slow) var(--ease), filter var(--slow) var(--ease), opacity var(--slow) var(--ease); }
-  .reel-card a { position:relative; display:block; aspect-ratio:4 / 3; border-radius:18px; overflow:hidden; background:var(--surface-2); box-shadow:0 2px 6px rgba(0,0,0,.08), 0 10px 24px rgba(0,0,0,.12), 0 0 0 .5px rgba(0,0,0,.08); text-decoration:none; --motion:box-shadow var(--base) var(--ease); }
+  /* Same hand as the Listing photos: equal photos, each at its own slight angle, overlapping, with a surface ring; later ones sit on top. */
+  .reel-card { --tilt:0deg; --lift:0px; position:relative; flex:none; width:var(--reel-card, 250px); transform:translateY(var(--lift)) rotate(var(--tilt)); --motion:transform var(--slow) var(--ease), filter var(--slow) var(--ease), opacity var(--slow) var(--ease); }
+  .reel-card + .reel-card { margin-left:calc(var(--reel-card, 250px) * -.1); }
+  .reel-card a { position:relative; display:block; aspect-ratio:4 / 3; border-radius:18px; overflow:hidden; background:var(--surface-2); box-shadow:0 0 0 2px var(--surface), 0 2px 6px rgba(0,0,0,.18), 0 8px 18px rgba(0,0,0,.14); text-decoration:none; --motion:box-shadow var(--base) var(--ease); }
   /* Hovering a photo brings it forward, straight and a little larger; the rest sink back, soft as bokeh. */
   @media (hover: hover) {
     .reel-card:has(a:hover) { z-index:20; transform:translateY(0) rotate(0deg) scale(1.06); }
-    .reel-card:has(a:hover) a { box-shadow:0 10px 20px rgba(0,0,0,.14), 0 28px 56px rgba(0,0,0,.2); }
+    .reel-card:has(a:hover) a { box-shadow:0 0 0 2px var(--surface), 0 10px 20px rgba(0,0,0,.14), 0 28px 56px rgba(0,0,0,.2); }
     .reel-track:has(a:hover) .reel-card:not(:has(a:hover)) { transform:translateY(var(--lift)) rotate(var(--tilt)) scale(.98); filter:blur(3px) saturate(.85); opacity:.85; }
   }
   .reel-card:has(a:focus-visible) { z-index:20; transform:translateY(0) rotate(0deg) scale(1.06); }
@@ -673,9 +673,6 @@
   .reel-card span { position:absolute; inset:auto 0 0; padding:28px 12px 10px; background:linear-gradient(transparent, rgba(18,18,17,.62)); color:#fff; font-size:12.5px; line-height:1.35; opacity:0; transform:translateY(6px); --motion:opacity var(--base) var(--ease), transform var(--base) var(--ease); }
   .reel-card a:hover span, .reel-card a:focus-visible span { opacity:1; transform:none; }
   @media (hover: none) { .reel-card span { opacity:1; transform:none; } }
-  .reel-toggle { position:absolute; right:6px; bottom:74px; width:30px; height:30px; border:1px solid var(--line); background:var(--surface); color:var(--muted); box-shadow:var(--shadow); border-radius:999px; }
-  .reel-toggle:hover, .reel-toggle:focus-visible { color:var(--text); background:var(--surface); }
-  .reel-toggle .icon { width:14px; height:14px; }
   .reel-empty .reel-card div { aspect-ratio:4 / 3; border-radius:18px; border:1px dashed var(--line-strong); background:var(--surface-2); opacity:.7; }
   .reel-empty p { position:absolute; inset:0 0 40px; display:grid; place-items:center; margin:0; padding:0 24px; text-align:center; color:var(--muted); font-size:14px; pointer-events:none; }
   .reel-empty p span { padding:6px 14px; border-radius:999px; background:color-mix(in srgb, var(--bg) 88%, transparent); }
@@ -722,10 +719,11 @@
     .lpick:last-child .lpick-menu { left:auto; right:0; } /* the scope pill sits near the right edge */
   }
   @media (max-width:600px) { .reel { --reel-card:200px; } }
-  /* Still frames: no drift; the reel scrolls by hand instead. */
+  /* Swiping is by hand; with reduced motion the strip scrolls natively and snaps instead. */
   .reel-viewport { touch-action:pan-y; user-select:none; -webkit-user-select:none; }
   @media (pointer:fine) { .reel-viewport { cursor:grab; } .reel-viewport a { cursor:inherit; } .reel[data-dragging] .reel-viewport { cursor:grabbing; } }
-  .reel[data-still] .reel-viewport { overflow-x:auto; touch-action:auto; scrollbar-width:none; }
+  .reel[data-still] .reel-viewport { overflow-x:auto; touch-action:auto; scrollbar-width:none; scroll-snap-type:x proximity; }
+  .reel[data-still] .reel-card { scroll-snap-align:start; }
   .reel[data-still] .reel-viewport::-webkit-scrollbar { display:none; }
   /* Navigation keeps a fixed hit area; CSS owns color feedback so nested
      pointer events do not repeatedly detach native animation effects. */
@@ -762,7 +760,7 @@
   [data-skeleton] .btn .ghost, [data-skeleton] .pill .ghost { background:none; }
   [data-skeleton] .btn-quiet, [data-skeleton] .icon-plain { background:none; }
   [data-skeleton] .reel-card a { background:none; box-shadow:none; }
-  [data-skeleton] .reel-card span, [data-skeleton] .reel-toggle, [data-skeleton] .ref .name, [data-skeleton] .ref .remove, [data-skeleton] .check { visibility:hidden; }
+  [data-skeleton] .reel-card span, [data-skeleton] .ref .name, [data-skeleton] .ref .remove, [data-skeleton] .check { visibility:hidden; }
   [data-skeleton] .ghost, [data-skeleton] img, [data-skeleton] .btn, [data-skeleton] input, [data-skeleton] textarea, [data-skeleton] .pill { animation:skeleton-pulse 1.4s ease-in-out infinite alternate; }
   @keyframes skeleton-pulse { to { background-color:var(--skeleton-soft); } }
   @media(prefers-reduced-motion:reduce) { .skeleton::after, [data-skeleton] * { animation:none !important; } }
@@ -1538,11 +1536,10 @@ function homeMarkup({ reports, totalReports, slides }, hasListings) {
   const reel = slides.length
     ? `<section class="reel" aria-label="Recent redesigns" aria-roledescription="carousel">
         <div class="reel-viewport"><ul class="reel-track">${slides.map((slide, i) => reelCard(slide, i)).join("")}</ul></div>
-        <button class="icon-btn reel-toggle" type="button" data-reel-toggle aria-label="Pause the photo reel" data-tip="Pause">${icon("pause")}</button>
       </section>`
     : `<section class="reel reel-empty" aria-label="Recent redesigns">
         <div class="reel-viewport"><ul class="reel-track" aria-hidden="true">${Array.from({ length: 8 }, (_, i) => `<li class="reel-card" style="${reelLook(i)}"><div></div></li>`).join("")}</ul></div>
-        <p><span>Redesigned photos from your reports will drift by here.</span></p>
+        <p><span>Redesigned photos from your reports will fan out here.</span></p>
       </section>`;
   return `${reel}
     ${homeLinkMarkup()}
@@ -1739,107 +1736,85 @@ function startHomeLink() {
   sync();
 }
 
-/** A card's size, tilt, lift and stacking, fixed by its position so each photo and its loop copy always match. */
-function reelLook(i) {
-  const r = (n) => { const x = Math.sin((i + 1) * n) * 43758.5453; return x - Math.floor(x); }; // 0–1, stable per index
-  const tilt = i % 2 ? 1 : -1; // a 1deg lean, alternating like a loosely stacked hand
-  return `--size:${(0.84 + r(12.9898) * 0.32).toFixed(3)};--tilt:${tilt.toFixed(2)}deg;--lift:${Math.round(r(37.719) * 14 - 7)}px;--z:${1 + Math.floor(r(93.989) * 6)}`;
+/** A photo's tilt and lift, seeded by its URL like the Listing photos stack so it holds still across renders; neighbours lean opposite ways. */
+function reelLook(i, seed = String(i)) {
+  let h = 2166136261;
+  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  const rand = (shift) => ((h >>> shift) & 255) / 255;
+  const tilt = (1 + rand(0) * 3) * (i % 2 ? 1 : -1);
+  const lift = (rand(8) - 0.5) * 6;
+  return `--tilt:${tilt.toFixed(1)}deg;--lift:${lift.toFixed(1)}px;z-index:${i + 1}`;
 }
 
-function reelCard(slide, i, copy = false) {
-  return `<li class="reel-card" style="${reelLook(i)}" ${copy ? 'aria-hidden="true"' : ""}><a href="${esc(slide.reportUrl)}" ${copy ? 'tabindex="-1"' : ""}>
-    <img ${thumbAttributes(slide.src, "280px")} alt="${copy ? "" : esc(slide.alt)}" loading="${!copy && i < 3 ? "eager" : "lazy"}" decoding="async" draggable="false"><span>${esc(slide.caption)}</span>
+function reelCard(slide, i) {
+  return `<li class="reel-card" style="${reelLook(i, slide.src)}"><a href="${esc(slide.reportUrl)}">
+    <img ${thumbAttributes(slide.src, "280px")} alt="${esc(slide.alt)}" loading="${i < 4 ? "eager" : "lazy"}" decoding="async" draggable="false"><span>${esc(slide.caption)}</span>
   </a></li>`;
 }
 
-const REEL_SPEED = 6; // pixels per second
-// A flicked reel glides on and slows like an iPhone scroll view (decay of 0.998 per ms, so about 2 per second).
-const FLING_DECAY = 2;
-const FLING_MAX = 5000; // px per second
+// A released reel settles on a photo with a spring; a flick carries on up to this many photos.
+const REEL_SPRING = { stiffness: 190, damping: 24 };
+const REEL_THROW = 0.16; // seconds of release speed the reel is thrown ahead by
+const REEL_RUBBER = 0.35; // how much of a pull past the first or last photo follows the finger
 const reducedMotion = motion.reduce;
 let stopReel = null;
 
-/** Motion owns the clock and speed easing; layout is measured only when the reel changes size. */
+/** Paginated strip: the offset is dragged by hand, then a spring (started at the release speed) settles it on a photo. */
 function startReel() {
   stopReel?.();
   const reel = $(".reel:not(.reel-empty)");
   if (!reel) return;
   const viewport = $(".reel-viewport", reel);
   const track = $(".reel-track", reel);
-  const toggle = $("[data-reel-toggle]", reel);
-  const slides = state.home.slides;
   const listeners = new AbortController();
   const { signal } = listeners;
-  const position = { speed: 0 };
-  const setX = x => { track.style.transform = `translateX(${x}px)`; };
-  let offset = 0, loop = 0, userPaused = false, hovering = false, focused = false;
-  let ticking = false, velocity, fling = 0, drag = null, dragged = false;
-  const clock = (on) => {
-    if (on === ticking) return;
-    ticking = on;
-    if (on) motion.frame.render(tick, true);
-    else motion.cancelFrame(tick);
-  };
+  let offset = 0, snaps = [0], max = 0, speed = 0, target = 0, springing = false, drag = null, dragged = false, wheelTimer = 0;
   const still = () => reducedMotion.matches;
-  const place = () => {
-    if (loop) offset = ((offset % loop) + loop) % loop;
-    track.style.transform = still() ? "" : `translateX(${-offset}px)`;
+  const place = () => { track.style.transform = still() ? "" : `translateX(${-offset}px)`; };
+  const measure = () => {
+    const cards = [...track.children];
+    const pad = cards[0].offsetLeft;
+    max = Math.max(0, track.offsetWidth - viewport.clientWidth);
+    snaps = cards.map(card => Math.min(card.offsetLeft - pad, max));
   };
-  const nudge = dx => {
-    if (still()) viewport.scrollLeft += dx;
-    else { offset += dx; place(); }
-  };
-  const tick = ({ delta }) => {
-    if (!reel.isConnected || !loop) { clock(false); return; }
-    const dt = Math.min(delta, 64) / 1000;
-    if (!still() && !document.hidden) {
-      fling *= Math.exp(-dt * FLING_DECAY);
-      if (Math.abs(fling) < 8) fling = 0;
-      if (!drag) offset += (position.speed + fling) * dt;
-      place();
+  const nearest = x => snaps.reduce((best, s, i) => Math.abs(s - x) < Math.abs(snaps[best] - x) ? i : best, 0);
+  const rubber = x => x < 0 ? x * REEL_RUBBER : x > max ? max + (x - max) * REEL_RUBBER : x;
+  const step = ({ delta }) => {
+    if (!reel.isConnected) { springing = false; return; }
+    const dt = Math.min(delta, 32) / 1000;
+    // A damped spring toward the target, in fixed small slices so a long frame can't blow it up.
+    for (let n = Math.max(1, Math.round(dt / .004)), h = dt / n; n--;) {
+      speed += (-REEL_SPRING.stiffness * (offset - target) - REEL_SPRING.damping * speed) * h;
+      offset += speed * h;
     }
-    if (!position.speed && !fling && !drag && velocity?.state !== "running") clock(false);
-  };
-  const fill = () => {
-    track.querySelectorAll("[aria-hidden]").forEach(el => el.remove());
-    const first = track.firstElementChild, last = track.lastElementChild;
-    const one = last.offsetLeft + last.offsetWidth - first.offsetLeft;
-    const copies = Math.max(1, Math.ceil(reel.clientWidth / Math.max(one, 1)) + 1);
-    track.insertAdjacentHTML("beforeend", Array.from({ length: copies }, () => slides.map((s, i) => reelCard(s, i, true)).join("")).join(""));
-    loop = track.children[slides.length].offsetLeft - first.offsetLeft;
-    if (loop) offset %= loop;
+    if (Math.abs(speed) < 4 && Math.abs(offset - target) < .3) { offset = target; speed = 0; springing = false; place(); return; }
     place();
+    motion.frame.render(step);
   };
-  const update = () => {
-    reel.toggleAttribute("data-still", still());
-    toggle.hidden = still();
-    toggle.innerHTML = icon(userPaused ? "play" : "pause");
-    toggle.setAttribute("aria-label", userPaused ? "Play the photo reel" : "Pause the photo reel");
-    toggle.dataset.tip = userPaused ? "Play" : "Pause";
-    velocity?.stop();
-    if (still() || document.hidden) { position.speed = 0; fling = 0; clock(false); place(); return; }
-    const target = userPaused || hovering || focused || drag ? 0 : REEL_SPEED;
-    clock(true);
-    velocity = motion.animate(position, { speed: target }, { duration: .5, onFinish: () => { if (!target && !fling && !drag) clock(false); } });
+  const settle = (to, v = 0) => {
+    target = snaps[Math.max(0, Math.min(snaps.length - 1, to))];
+    if (still() || document.hidden) { offset = target; speed = 0; place(); return; }
+    speed = v;
+    if (!springing) { springing = true; motion.frame.render(step); }
   };
-  toggle.addEventListener("click", () => { userPaused = !userPaused; update(); }, { signal });
-  reel.addEventListener("pointerenter", event => { if (event.pointerType === "mouse") { hovering = true; update(); } }, { signal });
-  reel.addEventListener("pointerleave", event => { if (event.pointerType === "mouse") { hovering = false; update(); } }, { signal });
-  reel.addEventListener("focusin", () => { focused = true; update(); }, { signal });
-  reel.addEventListener("focusout", e => { if (!reel.contains(e.relatedTarget)) { focused = false; update(); } }, { signal });
+  const halt = () => { springing = false; motion.cancelFrame(step); };
+  const go = delta => settle(nearest(offset) + delta);
   viewport.addEventListener("wheel", event => {
     const dx = event.deltaX || (event.shiftKey ? event.deltaY : 0);
     if (!dx || Math.abs(dx) < Math.abs(event.shiftKey ? 0 : event.deltaY) || still()) return;
     event.preventDefault();
-    fling = 0;
-    nudge(event.deltaMode === 1 ? dx * 16 : dx);
+    halt();
+    offset = rubber(Math.max(-60, Math.min(max + 60, offset + (event.deltaMode === 1 ? dx * 16 : dx))));
+    place();
+    clearTimeout(wheelTimer);
+    wheelTimer = setTimeout(() => settle(nearest(offset)), 120);
   }, { passive: false, signal });
   viewport.addEventListener("pointerdown", event => {
     if (event.button !== 0 || (still() && event.pointerType !== "mouse")) return;
-    drag = { id: event.pointerId, type: event.pointerType, x: event.clientX, y: event.clientY, lastX: event.clientX, samples: [], moved: false };
-    // Touching a gliding reel stops it in place, and that tap doesn't open a report.
-    dragged = Math.abs(fling) > 60;
-    fling = 0;
+    drag = { id: event.pointerId, type: event.pointerType, x: event.clientX, y: event.clientY, lastX: event.clientX, from: offset, samples: [], moved: false };
+    // Touching a moving reel catches it in place, and that tap doesn't open a report.
+    dragged = springing && Math.abs(speed) > 60;
+    halt();
   }, { signal });
   viewport.addEventListener("pointermove", event => {
     if (!drag || event.pointerId !== drag.id) return;
@@ -1849,43 +1824,60 @@ function startReel() {
       if (drag.type !== "mouse" && dyIntent > 8 && dyIntent > dxIntent * 1.15) { drag = null; return; }
       if (dxIntent < 8 || (drag.type !== "mouse" && dxIntent <= dyIntent * 1.15)) return;
       drag.moved = true;
-      fling = 0;
-      update();
       viewport.setPointerCapture(event.pointerId);
       reel.toggleAttribute("data-dragging", true);
     }
-    const dx = drag.lastX - event.clientX;
+    if (still()) { viewport.scrollLeft += drag.lastX - event.clientX; drag.lastX = event.clientX; return; }
     drag.lastX = event.clientX;
     // Keep the last ~100ms of finger positions; the release speed comes from them, like a native scroller.
     drag.samples.push([event.timeStamp, event.clientX]);
     while (drag.samples.length > 2 && event.timeStamp - drag.samples[0][0] > 100) drag.samples.shift();
-    nudge(dx);
+    offset = rubber(drag.from + drag.x - event.clientX);
+    place();
   }, { signal });
   const release = event => {
     if (!drag || event.pointerId !== drag.id) return;
-    if (drag.moved) {
-      dragged = true;
-      const [first, last] = [drag.samples[0], drag.samples.at(-1)];
-      // A finger that stopped before lifting (no move in the last 80ms) lets go without a glide.
-      if (!still() && first && last !== first && event.timeStamp - last[0] < 80) {
-        const v = (first[1] - last[1]) / Math.max(last[0] - first[0], 8) * 1000;
-        fling = Math.max(-FLING_MAX, Math.min(FLING_MAX, v));
-      }
-    }
+    const moved = drag.moved, samples = drag.samples;
     drag = null;
     reel.removeAttribute("data-dragging");
-    update();
+    if (!moved) return;
+    dragged = true;
+    if (still()) return;
+    const [first, last] = [samples[0], samples.at(-1)];
+    // A finger that stopped before lifting (no move in the last 80ms) lets go without a throw.
+    const v = first && last !== first && event.timeStamp - last[0] < 80 ? (first[1] - last[1]) / Math.max(last[0] - first[0], 8) * 1000 : 0;
+    const here = nearest(offset);
+    let to = nearest(offset + v * REEL_THROW);
+    // A real flick always turns at least one page, and never skips more than three.
+    if (Math.abs(v) > 250 && to === here) to = here + Math.sign(v);
+    settle(Math.max(here - 3, Math.min(here + 3, to)), v);
   };
   viewport.addEventListener("pointerup", release, { signal });
   viewport.addEventListener("pointercancel", release, { signal });
   viewport.addEventListener("click", event => { if (dragged) { event.preventDefault(); event.stopPropagation(); dragged = false; } }, { capture: true, signal });
   viewport.addEventListener("dragstart", event => event.preventDefault(), { signal });
-  reducedMotion.addEventListener("change", () => { fill(); update(); }, { signal });
-  document.addEventListener("visibilitychange", update, { signal });
-  addEventListener("resize", () => { fill(); update(); }, { signal });
-  stopReel = () => { listeners.abort(); velocity?.stop(); clock(false); };
+  // Tabbing to a photo that's out of view brings it in (the clipped viewport would otherwise scroll on its own).
+  viewport.addEventListener("scroll", () => { if (!still() && viewport.scrollLeft) viewport.scrollLeft = 0; }, { signal });
+  reel.addEventListener("focusin", event => {
+    const card = event.target.closest?.(".reel-card");
+    if (!card || still()) return;
+    const x = card.offsetLeft - track.firstElementChild.offsetLeft;
+    if (x < offset - 1 || x + card.offsetWidth > offset + viewport.clientWidth) settle([...track.children].indexOf(card));
+  }, { signal });
+  reel.addEventListener("keydown", event => {
+    if (event.key === "ArrowRight" || event.key === "ArrowLeft") { go(event.key === "ArrowRight" ? 1 : -1); event.preventDefault(); }
+  }, { signal });
+  const update = () => {
+    reel.toggleAttribute("data-still", still());
+    measure();
+    halt();
+    offset = Math.min(offset, max);
+    place();
+  };
+  reducedMotion.addEventListener("change", update, { signal });
+  addEventListener("resize", update, { signal });
+  stopReel = () => { listeners.abort(); halt(); clearTimeout(wheelTimer); };
   motion.own(reel, stopReel);
-  fill();
   update();
 }
 
@@ -3886,7 +3878,6 @@ function skeletonize(html) {
   const root = template.content;
   root.querySelectorAll("[hidden]").forEach((el) => el.replaceChildren());
   root.querySelectorAll(".reel-track").forEach((track) => track.removeAttribute("style"));
-  root.querySelectorAll('.reel-card[aria-hidden="true"]').forEach((copy) => copy.remove()); // the loop's repeats
   root.querySelectorAll("*").forEach((el) => {
     SKELETON_DROP_ATTRIBUTES.forEach((name) => el.removeAttribute(name));
     if (el.localName === "img") el.setAttribute("src", BLANK_IMAGE);
