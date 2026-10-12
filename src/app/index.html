@@ -670,6 +670,49 @@
   /* The reel's bottom padding (room for a lifted card's shadow to fade out) runs under the heading; keep the heading on top and clickable. */
   .home-head { position:relative; }
   .home-head .btn { margin-left:auto; }
+  /* Listing link: one rounded composer box like the photo viewer's prompt; taste and scope pickers appear inside it once the link is valid. */
+  .link-compose { position:relative; z-index:2; display:grid; gap:6px; margin:0 0 28px; }
+  .link-box { display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; gap:6px 8px; padding:7px 7px 7px 16px; border:1px solid var(--line-strong); border-radius:18px; background:var(--surface); box-shadow:var(--shadow); --motion:border-color var(--base) var(--ease); }
+  .link-box:focus-within { border-color:color-mix(in srgb, var(--text) 40%, var(--line-strong)); }
+  .link-box #home-link { grid-column:1; grid-row:1; min-width:0; width:100%; min-height:34px; padding:0; border:0; background:transparent; outline:none; font-size:15px; text-overflow:ellipsis; }
+  #home-link:focus-visible { outline:none; } /* the box's border shows focus */
+  #home-link::placeholder { color:var(--muted); }
+  .link-box .lsend { grid-column:2; grid-row:1; }
+  .link-box[data-ready] { padding:10px 8px 8px 16px; }
+  .link-box[data-ready] #home-link { grid-column:1 / -1; }
+  .link-box[data-ready] .lsend { grid-row:2; }
+  .link-tools { grid-column:1; grid-row:2; display:flex; flex-wrap:nowrap; align-items:center; gap:6px; min-width:0; margin-left:-8px; }
+  .link-box[data-ready] .link-tools { animation:link-tools-in var(--base) var(--ease); }
+  @keyframes link-tools-in { from { opacity:0; transform:translateY(-4px); } }
+  .lpick { position:relative; min-width:0; }
+  .lpick:last-child { flex:none; } /* the taste name gives way first on a narrow screen */
+  .ltool { display:inline-flex; align-items:center; gap:6px; max-width:100%; min-height:32px; padding:4px 8px 4px 10px; border:0; border-radius:999px; background:var(--surface-2); color:var(--text); font-size:13px; cursor:pointer; }
+  .ltool > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ltool img { flex:none; width:20px; height:20px; margin-left:-4px; border-radius:50%; object-fit:cover; }
+  .ltool .icon { flex:none; width:14px; height:14px; color:var(--muted); --motion:transform var(--base) var(--ease); }
+  .ltool[aria-expanded="true"] .icon { transform:rotate(180deg); }
+  @media (hover:hover) { .ltool:hover { background:color-mix(in srgb, var(--text) 9%, var(--surface)); } }
+  .lpick-menu { position:absolute; top:calc(100% + 6px); left:0; z-index:35; display:grid; gap:2px; width:max-content; min-width:180px; max-width:min(300px, calc(100vw - 48px)); max-height:280px; overflow:auto; margin:0; padding:4px; border:1px solid var(--line-strong); border-radius:12px; background:var(--surface); box-shadow:var(--shadow-hover); }
+  .lpick-opt { display:flex; align-items:center; gap:10px; min-height:40px; padding:6px 10px; border-radius:8px; font-size:14px; cursor:pointer; }
+  .lpick-opt input { margin:0; flex:none; }
+  .lpick-opt img { flex:none; width:32px; height:24px; border-radius:4px; object-fit:cover; }
+  .lpick-opt small { display:block; color:var(--muted); font-size:12.5px; line-height:1.3; }
+  .lpick-opt:hover, .lpick-opt:has(input:focus-visible) { background:var(--surface-2); }
+  .lpick-opt:has(input:checked) { font-weight:500; }
+  .lsend { flex:none; width:34px; height:34px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; background:var(--text); color:var(--bg); cursor:pointer; }
+  .lsend .icon { width:18px; height:18px; }
+  .lsend[disabled] { opacity:.3; cursor:default; }
+  .lsend[aria-busy="true"] { opacity:.6; cursor:progress; }
+  .link-status { margin:0; padding:0 16px; color:var(--muted); font-size:13px; }
+  .link-status:empty { display:none; }
+  .link-status.error { color:var(--warn); }
+  @media (max-width:600px) {
+    .link-compose { margin-bottom:20px; }
+    .link-box #home-link { font-size:16px; } /* 16px keeps iPhone from zooming in on focus */
+    .ltool { min-height:36px; }
+    .lpick-opt { min-height:44px; }
+    .lpick:last-child .lpick-menu { left:auto; right:0; } /* the scope pill sits near the right edge */
+  }
   @media (max-width:600px) { .reel { --reel-card:200px; } }
   /* Still frames: no drift; the reel scrolls by hand instead. */
   .reel-viewport { touch-action:pan-y; user-select:none; -webkit-user-select:none; }
@@ -879,6 +922,7 @@ const ICONS = {
   image: '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
   settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
   list: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>',
+  arrowUp: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
   pause: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
   play: '<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/>',
   refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.8 9.8 0 0 1 6.7 2.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.8 9.8 0 0 1-6.7-2.7L3 16"/><path d="M8 16H3v5"/>',
@@ -1308,6 +1352,7 @@ function renderHome() {
   document.title = "Whim";
   $("#content").innerHTML = homeMarkup(state.home, state.listings.length > 0);
   startReel();
+  startHomeLink();
 }
 
 function homeMarkup({ reports, totalReports, slides }, hasListings) {
@@ -1321,11 +1366,166 @@ function homeMarkup({ reports, totalReports, slides }, hasListings) {
         <p><span>Redesigned photos from your reports will drift by here.</span></p>
       </section>`;
   return `${reel}
+    ${homeLinkMarkup()}
     <header class="head collection-head home-head"><div><h1>Recent reports</h1><p class="subhead">${!totalReports ? "None yet" : `${totalReports > reports.length ? `Latest ${reports.length} of ${totalReports}` : `${totalReports} ${totalReports === 1 ? "report" : "reports"}`} · newest first`}</p></div>
       ${totalReports > reports.length ? `<a class="btn btn-small nav-inline" href="?view=reports">All reports</a>` : ""}</header>
     <section class="panel">${reports.length ? `<ul class="runs">${reports.map(run => runRow(run, true)).join("")}</ul>` : `${hasListings
       ? `<p class="muted" style="margin:0">No reports yet. Open a listing and run a redesign to create one.</p>`
       : `<div class="empty-start"><p class="muted" style="margin:0">Start with a listing: add photos of a home, then run a redesign to get a report.</p><button class="btn btn-primary btn-small" type="button" data-action="new-listing">${icon("plus")}New listing</button></div>`}`}</section>`;
+}
+
+/* ---------- Home: start from a listing link ---------- */
+
+const LINK_SITES = { "redfin.com": "Redfin", "zillow.com": "Zillow", "compass.com": "Compass" };
+
+/** The site name for a pasted Redfin, Zillow or Compass listing link (with or without https://), else null. Mirrors asUrl in src/listing/scrape.ts. */
+function listingSite(text) {
+  text = text.trim();
+  if (!text || /\s/.test(text)) return null;
+  const withScheme = /^https?:\/\//i.test(text) ? text : /^(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)+\//i.test(text) ? `https://${text}` : null;
+  try {
+    const url = new URL(withScheme);
+    const host = url.hostname.replace(/^www\./, "");
+    const site = Object.keys(LINK_SITES).find((s) => host === s || host.endsWith(`.${s}`));
+    return site && url.pathname.length > 1 ? LINK_SITES[site] : null;
+  } catch { return null; }
+}
+
+/** Taste defaults to the profile of the newest report, scope to Finishes. */
+function homeLinkDefaults() {
+  const lastPath = state.home?.reports?.find((r) => state.profiles.some((p) => p.path === r.profile))?.profile;
+  const profile = state.profiles.find((p) => p.path === lastPath) ?? state.profiles[0];
+  return { profile: profile?.id ?? null, tiers: ["moderate"] };
+}
+
+function homeLinkMarkup() {
+  const { profile, tiers } = state.homeLink ?? homeLinkDefaults();
+  const chosen = state.profiles.find((p) => p.id === profile);
+  const taste = state.profiles.length ? `<div class="lpick">
+      <button class="ltool" type="button" data-lpick aria-expanded="false" aria-controls="lpick-taste" aria-label="Taste profile: ${esc(chosen?.name ?? "")}">${chosen?.previews?.[0] ? `<img ${thumbAttributes(chosen.previews[0], "20px")} alt="">` : ""}<span>${esc(chosen?.name ?? "")}</span>${icon("chevron")}</button>
+      <fieldset class="lpick-menu" id="lpick-taste" hidden><legend class="sr-only">Taste profile</legend>${state.profiles.map((p) => `<label class="lpick-opt"><input type="radio" name="home-taste" value="${esc(p.id)}" ${p.id === profile ? "checked" : ""}>${p.previews?.[0] ? `<img ${thumbAttributes(p.previews[0], "32px")} alt="" loading="lazy">` : ""}<span>${esc(p.name)}</span></label>`).join("")}</fieldset>
+    </div>` : "";
+  const scopeLabel = tiers.length === TIERS.length ? "All scopes" : tiers.length ? tiers.map(tierName).join(" + ") : "Choose a scope";
+  const scope = `<div class="lpick">
+      <button class="ltool" type="button" data-lpick aria-expanded="false" aria-controls="lpick-scope" aria-label="Scope: ${esc(scopeLabel)}"><span>${esc(scopeLabel)}</span>${icon("chevron")}</button>
+      <fieldset class="lpick-menu" id="lpick-scope" hidden><legend class="sr-only">Scope</legend>${TIERS.map((t) => `<label class="lpick-opt"><input type="checkbox" name="home-tier" value="${t.id}" ${tiers.includes(t.id) ? "checked" : ""}><span>${t.name}<small>${esc(t.blurb)}</small></span></label>`).join("")}</fieldset>
+    </div>`;
+  return `<form class="link-compose" id="home-link-form" novalidate>
+      <label class="sr-only" for="home-link">Listing link</label>
+      <div class="link-box">
+        <input id="home-link" name="link" type="text" inputmode="url" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" maxlength="2000" placeholder="Paste a Redfin, Zillow or Compass link">
+        <div class="link-tools" hidden>${taste}${scope}</div>
+        <button class="lsend" type="submit" disabled aria-label="${state.profiles.length ? "Add the listing and run a redesign" : "Add the listing"}">${icon("arrowUp")}</button>
+      </div>
+      <p class="link-status" id="home-link-status" role="status"></p>
+    </form>`;
+}
+
+let homeLinkListeners = null;
+
+/** Wires the link box: pickers show once the link looks like a listing; submitting imports its photos and starts the redesign. */
+function startHomeLink() {
+  const form = $("#home-link-form");
+  if (!form) return;
+  const box = $(".link-box", form), input = $("#home-link"), tools = $(".link-tools", form), send = $(".lsend", form), status = $("#home-link-status");
+  let busy = false;
+  const choice = () => ({
+    profile: $('input[name="home-taste"]:checked', form)?.value ?? null,
+    tiers: [...form.querySelectorAll('input[name="home-tier"]:checked')].map((i) => i.value),
+  });
+  const sync = () => {
+    const ready = !!listingSite(input.value);
+    box.toggleAttribute("data-ready", ready);
+    tools.hidden = !ready;
+    send.disabled = busy || !ready || (state.profiles.length > 0 && !choice().tiers.length);
+    if (!ready) closeMenus();
+  };
+  const closeMenus = (except) => form.querySelectorAll("[data-lpick]").forEach((b) => {
+    if (b === except) return;
+    b.setAttribute("aria-expanded", "false");
+    $(`#${b.getAttribute("aria-controls")}`).hidden = true;
+  });
+  const relabel = () => {
+    state.homeLink = choice();
+    const { profile, tiers } = state.homeLink;
+    const [tasteBtn, scopeBtn] = [form.querySelector('[aria-controls="lpick-taste"]'), form.querySelector('[aria-controls="lpick-scope"]')];
+    const chosen = state.profiles.find((p) => p.id === profile);
+    if (tasteBtn && chosen) {
+      tasteBtn.innerHTML = `${chosen.previews?.[0] ? `<img ${thumbAttributes(chosen.previews[0], "20px")} alt="">` : ""}<span>${esc(chosen.name)}</span>${icon("chevron")}`;
+      tasteBtn.setAttribute("aria-label", `Taste profile: ${chosen.name}`);
+    }
+    const label = tiers.length === TIERS.length ? "All scopes" : tiers.length ? tiers.map(tierName).join(" + ") : "Choose a scope";
+    scopeBtn.innerHTML = `<span>${esc(label)}</span>${icon("chevron")}`;
+    scopeBtn.setAttribute("aria-label", `Scope: ${label}`);
+    sync();
+  };
+
+  input.addEventListener("input", () => { status.textContent = ""; status.classList.remove("error"); sync(); });
+  form.addEventListener("click", (event) => {
+    // Picking a taste (even the current one) is one choice, so its menu closes; scopes stay open for more than one.
+    if (event.target.matches('input[name="home-taste"]')) { closeMenus(); form.querySelector('[aria-controls="lpick-taste"]').focus(); return; }
+    const toggle = event.target.closest("[data-lpick]");
+    if (!toggle) return;
+    const menu = $(`#${toggle.getAttribute("aria-controls")}`);
+    const open = menu.hidden;
+    closeMenus(toggle);
+    menu.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+    if (open && !matchMedia("(pointer: coarse)").matches) ($("input:checked", menu) ?? $("input", menu))?.focus();
+  });
+  form.addEventListener("change", (event) => {
+    if (!event.target.matches('input[name="home-taste"], input[name="home-tier"]')) return;
+    relabel();
+  });
+  form.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    const open = form.querySelector('[data-lpick][aria-expanded="true"]');
+    if (!open) return;
+    event.preventDefault(); event.stopPropagation();
+    closeMenus(); open.focus();
+  });
+  // Tapping or tabbing anywhere else closes an open picker; the previous Home's listeners go when Home renders again.
+  homeLinkListeners?.abort();
+  homeLinkListeners = new AbortController();
+  const outside = (event) => { if (form.isConnected && !event.target.closest?.(".lpick")) closeMenus(); };
+  document.addEventListener("pointerdown", outside, { signal: homeLinkListeners.signal });
+  document.addEventListener("focusin", outside, { signal: homeLinkListeners.signal });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const site = listingSite(input.value);
+    if (busy || !site) return;
+    const { profile, tiers } = choice();
+    if (state.profiles.length && !tiers.length) return;
+    busy = true; closeMenus(); sync();
+    send.setAttribute("aria-busy", "true"); input.readOnly = true;
+    status.classList.remove("error");
+    status.textContent = `Getting photos from ${site}…`;
+    let created;
+    try {
+      created = await api("/api/listings/from-link", { method: "POST", body: JSON.stringify({ link: input.value.trim() }) });
+    } catch (error) {
+      busy = false; send.removeAttribute("aria-busy"); input.readOnly = false; sync();
+      status.classList.add("error");
+      status.textContent = error.message;
+      return;
+    }
+    const photos = `Added ${created.added} photo${created.added === 1 ? "" : "s"} from ${created.site}`;
+    let note = `${photos}. Add a taste profile to run a redesign.`;
+    if (profile) {
+      status.textContent = "Starting the redesign…";
+      try {
+        await api(`/api/listings/${encodeURIComponent(created.id)}/runs`, { method: "POST", body: JSON.stringify({ tiers, profile }) });
+        note = `${photos}. Redesign started.`;
+      } catch (error) {
+        note = `${photos}, but the redesign didn't start: ${error.message}`;
+      }
+    }
+    state.homeLink = null;
+    await navigate(`?listing=${encodeURIComponent(created.id)}&tiers=${tiers.join(",")}${profile ? `&profile=${encodeURIComponent(profile)}` : ""}`);
+    announce(note);
+  });
+  sync();
 }
 
 /** A card's size, tilt, lift and stacking, fixed by its position so each photo and its loop copy always match. */
