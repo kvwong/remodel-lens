@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Local listing picker: npm run app → http://localhost:4310
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
@@ -48,6 +48,8 @@ const PORT = Number(process.env.PORT ?? 4310);
 // Listen on the LAN so the app can be opened from another device on the same Wi-Fi.
 const HOST = process.env.HOST ?? "0.0.0.0";
 const INDEX = path.join(path.dirname(new URL(import.meta.url).pathname), "index.html");
+// Pull to refresh for the iPhone home screen app; inert in a browser tab.
+const pullRefreshScript = readFileSync(new URL("./pull-refresh.js", import.meta.url), "utf8");
 
 function isAllowedRequestHost(host: string): boolean {
   // Explicit hostnames for private reverse proxies such as Tailscale Serve.
@@ -339,13 +341,18 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     return res.end(JSON.stringify({
       id: "/", name: "Whim", short_name: "Whim", start_url: "/", scope: "/", display: "standalone",
       background_color: "#f5f4f1", theme_color: "#f5f4f1",
-      icons: [192, 512].map((size) => ({ src: `/assets/brand/icon-${size}.png`, sizes: `${size}x${size}`, type: "image/png", purpose: "any" })),
+      // Versioned names, so a phone that saved an older icon fetches these fresh.
+      icons: [180, 192, 512].map((size) => ({ src: `/assets/brand/icon-${size}-v3.png`, sizes: `${size}x${size}`, type: "image/png", purpose: "any" })),
     }));
   }
   const appIcons: Record<string, string> = {
     "/apple-touch-icon.png": "icon-180.png",
     "/apple-touch-icon-precomposed.png": "icon-180.png",
     "/assets/brand/apple-touch-icon-v2.png": "icon-180.png",
+    "/assets/brand/apple-touch-icon-v3.png": "icon-180.png",
+    "/assets/brand/icon-180-v3.png": "icon-180.png",
+    "/assets/brand/icon-192-v3.png": "icon-192.png",
+    "/assets/brand/icon-512-v3.png": "icon-512.png",
     "/assets/brand/icon-192.png": "icon-192.png",
     "/assets/brand/icon-512.png": "icon-512.png",
   };
@@ -355,6 +362,10 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   if (req.method === "GET" && url.pathname === "/assets/motion.js") {
     res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" });
     return res.end(motionScript);
+  }
+  if (req.method === "GET" && url.pathname === "/assets/pull-refresh.js") {
+    res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" });
+    return res.end(pullRefreshScript);
   }
 
   // Writes must come from this page, not from another site in the same browser.

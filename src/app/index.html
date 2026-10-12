@@ -143,6 +143,8 @@
     .mobile-tabs a[aria-current="page"] { background:var(--primary); color:var(--primary-text); font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.18); }
     .mobile-tabs a:active { transform:scale(.96); }
     #save-status { top:calc(16px + env(safe-area-inset-top)); }
+    /* Home screen app: iOS blurs the strip under the status bar, so keep the logo clear of it. */
+    @media (display-mode: standalone) { .layout { padding-top:44px; } }
   }
   @supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
     .mobile-tabs { background:color-mix(in srgb, var(--surface) 35%, transparent); backdrop-filter:blur(24px) saturate(1.5); -webkit-backdrop-filter:blur(24px) saturate(1.5); }
@@ -793,6 +795,7 @@
   </form>
 </dialog>
 <script src="/assets/motion.js"></script>
+<script src="/assets/pull-refresh.js"></script>
 <script type="module">
 const motion = window.whimMotion;
 document.addEventListener('click', event => {
@@ -2595,6 +2598,13 @@ document.addEventListener("drop", (e) => {
 window.addEventListener("beforeunload", (event) => {
   if (pending.size) { flushSave(); event.preventDefault(); }
   if (state.briefDirty || state.rulesDirty || state.textEdit) event.preventDefault();
+});
+// Pull to refresh (home screen app) reloads the view in place, and waits for unsaved
+// edits instead of dropping them (iOS ignores beforeunload there).
+window.addEventListener("whim:refresh", (event) => {
+  event.preventDefault();
+  if (pending.size || state.briefDirty || state.rulesDirty || state.textEdit) return flushSave();
+  event.detail?.waitUntil(loadWithScroll({ x:0, y:0 }));
 });
 // Restore only after asynchronous views have rendered, so the browser does not
 // clamp a saved position against the previous (often shorter) page.
