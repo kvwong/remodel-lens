@@ -198,6 +198,7 @@
 
   /* Listing: run */
   .run-form { display:grid; gap:20px; }
+  .redesign-options { display:grid; gap:20px; }
   fieldset { border:0; margin:0; padding:0; min-width:0; }
   legend { font-weight:500; margin-bottom:8px; padding:0; font-size:14px; }
   .tiers { display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
@@ -1007,7 +1008,7 @@ const statusTag = (s, count) => `<span class="status s-${s}">${icon(STATUS[s].ic
 
 let state = {
   view: "listing", listings: [], listing: null, profiles: [], tasteProfiles: [], taste: null,
-  keysError: null, job: null, logOpen: false, runError: null, confirming: null, renaming: false,
+  keysError: null, job: null, logOpen: false, runError: null, confirming: null, redesignOpen: false, renaming: false,
   rulesDraft: null, rulesDirty: false, briefDirty: false, briefDraft: "", textEdit: null, uploads: [],
   savingOrder: false, duplicating: false, reports: [], reportErrors: [],
   settings: null, tuning: null, tuningLoading: false, tuningFilter: "worth", tuningShow: 24, tuningTouched: new Set(),
@@ -1453,6 +1454,11 @@ function renderJob() {
   const running = state.job?.status === "running";
   document.querySelectorAll('.detail-admin button').forEach(button => { button.disabled = running || state.duplicating || !!state.textEdit; });
   if (state.view === "listing") {
+    const opener = $('#run-form [data-action="open-redesign"]');
+    if (opener) {
+      opener.disabled = running || !state.listing.photos.length;
+      opener.innerHTML = `${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Redesign`;
+    }
     const button = $('#run-form button[type="submit"]:not([data-confirmed])');
     if (button) {
       button.disabled = running || !selectedTiers().length;
@@ -2117,6 +2123,7 @@ function renderListing() {
 
       <form class="run-form" id="run-form" novalidate>
         <h2 id="run-h" tabindex="-1">Redesign</h2>
+        ${state.redesignOpen ? `<div id="redesign-options" class="redesign-options">
         <div class="redesign-settings">
           <section class="taste-setting" aria-labelledby="profile-label">
             <label for="profile" class="field-label" id="profile-label">Taste profile</label>
@@ -2148,11 +2155,16 @@ function renderListing() {
               <button class="btn btn-primary" type="submit" data-confirmed="1">Start run</button>
             </div>`
           : `<div class="run-row">
+              <button class="btn" type="button" data-action="close-redesign">Cancel</button>
               <button class="btn btn-primary" type="submit" ${running || !tiers.length ? "disabled" : ""} aria-describedby="run-help">${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Run redesign</button>
               <span id="run-help" class="estimate num">${est.n
                 ? `<strong>${nf.format(est.n)} ${est.n === 1 ? "redesign" : "redesigns"}</strong> · ${fmtMinutes(est.minutes)}`
                 : !l.photos.length ? "Add photos to get started." : !tiers.length ? "Choose at least one scope to run." : "Select at least one photo."}</span>
             </div>`}
+        </div>` : `<div class="run-row">
+          <button class="btn btn-primary" type="button" data-action="open-redesign" aria-expanded="false" aria-controls="redesign-options" aria-describedby="run-help" ${running || !l.photos.length ? "disabled" : ""}>${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Redesign</button>
+          <span id="run-help" class="estimate num">${!l.photos.length ? "Add photos to get started." : `<strong>${nf.format(selected)} ${selected === 1 ? "photo" : "photos"}</strong> selected`}</span>
+        </div>`}
         <p id="run-error" class="error" role="alert" ${state.runError ? "" : "hidden"}>${esc(state.runError)}</p>
       </form>
       <div id="job"></div>
@@ -2220,7 +2232,13 @@ function updateSelection(files, selected) {
   const est = runEstimate(count, tiers.length);
   const running = state.job?.status === "running";
   const row = `<div class="run-row"><button class="btn btn-primary" type="submit" ${running || !tiers.length || !count ? "disabled" : ""} aria-describedby="run-help">${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Run redesign</button><span id="run-help" class="estimate num">${est.n ? `<strong>${nf.format(est.n)} ${est.n === 1 ? "redesign" : "redesigns"}</strong> · ${fmtMinutes(est.minutes)}` : !tiers.length ? "Choose at least one scope to run." : "Select at least one photo."}</span></div>`;
-  $("#run-form .confirm, #run-form .run-row").outerHTML = row;
+  if (state.redesignOpen) $("#run-form .confirm, #run-form .run-row").outerHTML = row;
+  else {
+    const open = $('[data-action="open-redesign"]');
+    if (open) open.disabled = running || !state.listing.photos.length;
+    const help = $("#run-help");
+    if (help) help.innerHTML = `<strong>${nf.format(count)} ${count === 1 ? "photo" : "photos"}</strong> selected`;
+  }
 }
 
 function setPhotosHidden(hidden) {
@@ -2881,6 +2899,19 @@ document.addEventListener("click", async (event) => {
     announce("Changes discarded");
     return;
   }
+  if (action === "open-redesign") {
+    state.redesignOpen = true;
+    renderListing();
+    $("#profile")?.focus({ preventScroll: true });
+    $("#redesign-options")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    return;
+  }
+  if (action === "close-redesign") {
+    state.redesignOpen = false; state.confirming = null; state.runError = null;
+    renderListing();
+    $('[data-action="open-redesign"]')?.focus({ preventScroll: true });
+    return;
+  }
   if (action === "cancel-confirm") {
     state.confirming = null;
     if (state.view === "listing") { renderListing(); $('#run-form button[type="submit"]')?.focus(); }
@@ -3068,6 +3099,7 @@ document.addEventListener("submit", async (event) => {
   try {
     state.job = await api(`/api/listings/${encodeURIComponent(state.listing.id)}/runs`, { method: "POST", body: JSON.stringify({ tiers, profile }) });
     state.runError = null;
+    state.redesignOpen = false;
     state.logOpen = false;
     pollJob();
   } catch (error) {
@@ -3158,7 +3190,7 @@ window.addEventListener("popstate", event => loadWithScroll(event.state?.whimScr
 function navigate(href) {
   saveScrollPosition();
   history.pushState({ whimScroll:{ x:0, y:0 } }, "", href);
-  Object.assign(state, { confirming: null, uploads: [], renaming: false, briefDirty: false, rulesDirty: false, textEdit: null, runError: null });
+  Object.assign(state, { confirming: null, redesignOpen: false, uploads: [], renaming: false, briefDirty: false, rulesDirty: false, textEdit: null, runError: null });
   return loadWithScroll({ x:0, y:0 }).then(() => {
     $("#content").focus({ preventScroll: true });
   });
