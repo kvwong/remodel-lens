@@ -1038,8 +1038,54 @@ async function api(path, options = {}) {
   const res = await fetch(path, { ...options, headers: { "content-type": "application/json", ...(options.headers ?? {}) } });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error ?? `Request failed (${res.status})`);
+  if (options.method && options.method !== "GET") {
+    shellFetchedAt = 0;
+    scheduleShellRefresh();
+  }
   return body;
 }
+
+const SHELL_CACHE = "whim-shell:v1";
+let shellFetchedAt = 0, shellRequest = null, shellRefreshTimer;
+let shellRevision = 0;
+function scheduleShellRefresh() {
+  shellRevision++;
+  clearTimeout(shellRefreshTimer);
+  shellRefreshTimer = setTimeout(() => refreshShell(true).catch(() => {}), 200);
+}
+async function refreshShell(force = false) {
+  if (shellRequest) return shellRequest;
+  if (!force && Date.now() - shellFetchedAt < 30000) return;
+  const revision = shellRevision;
+  shellRequest = (async () => {
+    const [listings, profiles, tasteProfiles, status] = await Promise.all([
+      api("/api/listings"), loadProfiles(), api("/api/taste-profiles"), api("/api/status")
+    ]);
+    if (revision !== shellRevision) return;
+    Object.assign(state, { listings, profiles, tasteProfiles });
+    shellFetchedAt = Date.now();
+    updateBanner(status.keysError);
+    renderListings(); renderProfilesNav();
+    try { localStorage.setItem(SHELL_CACHE, JSON.stringify({ listings, tasteProfiles, savedAt: shellFetchedAt })); } catch {}
+  })().finally(() => {
+    shellRequest = null;
+    if (revision !== shellRevision) {
+      clearTimeout(shellRefreshTimer);
+      shellRefreshTimer = setTimeout(() => refreshShell(true).catch(() => {}), 0);
+    }
+  });
+  return shellRequest;
+}
+// A reload restores only sidebar summaries; page data and credentials remain fresh.
+try {
+  const cached = JSON.parse(localStorage.getItem(SHELL_CACHE) || "null");
+  if (cached && Date.now() - cached.savedAt < 86400000 && Array.isArray(cached.listings) && Array.isArray(cached.tasteProfiles)) {
+    state.listings = cached.listings; state.tasteProfiles = cached.tasteProfiles;
+    renderListings(); renderProfilesNav();
+  }
+} catch {}
+addEventListener("focus", () => refreshShell().catch(() => {}));
+addEventListener("storage", event => { if (event.key === SHELL_CACHE) shellFetchedAt = 0; });
 
 /** With a link, the name and location come from the listing page unless typed. */
 function syncListingLink() {
@@ -1070,15 +1116,47 @@ function rerenderTaste() {
 
 /* ---------- Sidebar ---------- */
 
+// Reconcile keyed rows and their contents, preserving focus, scroll and image nodes.
+function patchSidebar(list, html) {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const existing = new Map([...list.children].map(row => [row.dataset.sidebarId ?? "empty", row]));
+  let cursor = list.firstChild;
+  for (const next of [...template.content.children]) {
+    const key = next.dataset.sidebarId ?? "empty";
+    const row = existing.get(key) ?? next;
+    existing.delete(key);
+    if (row !== next) patchNode(row, next);
+    if (row !== cursor) list.insertBefore(row, cursor);
+    cursor = row.nextSibling;
+  }
+  for (const row of existing.values()) row.remove();
+}
+function patchNode(node, next) {
+  if (node.nodeType !== next.nodeType || node.nodeName !== next.nodeName) {
+    node.replaceWith(next.cloneNode(true));
+    return;
+  }
+  if (node.nodeType === Node.TEXT_NODE) {
+    if (node.data !== next.data) node.data = next.data;
+    return;
+  }
+  for (const attr of [...node.attributes]) if (!next.hasAttribute(attr.name)) node.removeAttribute(attr.name);
+  for (const attr of next.attributes) if (node.getAttribute(attr.name) !== attr.value) node.setAttribute(attr.name, attr.value);
+  const children = [...node.childNodes], incoming = [...next.childNodes];
+  incoming.forEach((child, i) => children[i] ? patchNode(children[i], child) : node.append(child.cloneNode(true)));
+  children.slice(incoming.length).forEach(child => child.remove());
+}
+
 function renderListings() {
-  const current = state.view === "listing" ? state.listing?.id : null;
-  $("#listings").innerHTML = state.listings.length
+  const current = state.view === "listing" ? params().get("listing") : null;
+  patchSidebar($("#listings"), state.listings.length
     ? state.listings.map((l) => `
       <li class="sidebar-row" data-sidebar-kind="listings" data-sidebar-id="${esc(l.id)}" draggable="${!state.savingOrder}"><a class="nav-link" draggable="false" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" href="?listing=${encodeURIComponent(l.id)}" ${l.id === current ? 'aria-current="page"' : ""}>
         ${l.cover ? `<img src="${esc(l.cover)}" draggable="false" alt="" width="44" height="33">` : `<span class="listing-placeholder" aria-label="No photos">${icon("home")}</span>`}
-        <span><span class="nav-name">${esc(l.name)}</span><small class="num">${l.id === current ? state.listing.photos.filter((p) => p.selected).length : l.selectedCount} of ${l.photoCount} selected</small></span>
+        <span><span class="nav-name">${esc(l.name)}</span><small class="num">${l.id === current && state.listing?.id === l.id ? state.listing.photos.filter((p) => p.selected).length : l.selectedCount} of ${l.photoCount} selected</small></span>
       </a></li>`).join("")
-    : `<li class="muted" style="font-size:14px">No listings yet.</li>`;
+    : `<li class="muted" style="font-size:14px">No listings yet.</li>`);
 }
 
 /* Collection routes work at every size; the tab bar is mobile-only. */
@@ -1121,19 +1199,12 @@ function collectionMarkup(view, items) {
 }
 
 async function loadReports() {
-  // Reuse listing detail data so report links and statuses match the listing pages.
-  const listings = state.listings;
-  const results = await Promise.allSettled(listings.map(listing => api(`/api/listings/${encodeURIComponent(listing.id)}`)));
+  const seq = loadSeq;
+  const [reports, running] = await Promise.all([api("/api/reports"), api("/api/running").catch(() => [])]);
+  if (seq !== loadSeq) return;
   state.reportErrors = [];
-  state.reports = results.flatMap((result, index) => {
-    const listing = listings[index];
-    if (result.status === "rejected") { state.reportErrors.push(listing.name); return []; }
-    return result.value.runs.filter(run => run.reportUrl).map(run => ({ ...run, listingId: listing.id, listingName: listing.name }));
-  }).sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt) || a.listingName.localeCompare(b.listingName) || a.id.localeCompare(b.id));
-  const previews = await api("/api/reports").catch(() => []);
-  const images = new Map(previews.map(run => [`${run.listingId}/${run.id}`, run.images]));
-  for (const run of state.reports) run.images = images.get(`${run.listingId}/${run.id}`) ?? [];
-  state.running = await api("/api/running").catch(() => []);
+  state.reports = reports;
+  state.running = running;
 }
 
 function renderReports() {
@@ -1233,13 +1304,13 @@ document.addEventListener("keydown", (event) => {
 
 
 function renderProfilesNav() {
-  const current = state.view === "taste" ? state.taste?.id : null;
-  $("#profiles-nav").innerHTML = state.tasteProfiles.length
+  const current = state.view === "taste" ? params().get("taste") : null;
+  patchSidebar($("#profiles-nav"), state.tasteProfiles.length
     ? state.tasteProfiles.map((p) => `
       <li class="sidebar-row" data-sidebar-kind="taste-profiles" data-sidebar-id="${esc(p.id)}" draggable="${!state.savingOrder}"><a class="nav-link" draggable="false" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" href="?taste=${encodeURIComponent(p.id)}" ${p.id === current ? 'aria-current="page"' : ""}>
         <span><span class="nav-name">${esc(p.name)}</span><small class="num">${p.referenceCount} photos · ${p.built ? `${p.ruleCount} rules` : "no rules yet"}${p.running ? " · rebuilding…" : p.stale ? ' · <span class="stale">out of date</span>' : ""}</small></span>
       </a></li>`).join("")
-    : `<li class="muted" style="font-size:14px">No profiles yet.</li>`;
+    : `<li class="muted" style="font-size:14px">No profiles yet.</li>`);
 }
 
 /* ---------- Job progress (shared by redesign runs and profile rebuilds) ---------- */
@@ -1305,14 +1376,14 @@ let pollTimer;
 async function pollJob() {
   clearTimeout(pollTimer); // one polling loop, even across in-place navigation
   if (!state.job || state.job.status !== "running") return;
-  const id = state.job.id;
+  const id = state.job.id, seq = loadSeq;
   let next;
   try {
     next = await api(`/api/jobs/${id}`);
   } catch {
     return;
   }
-  if (state.job?.id !== id) return; // navigated to another listing or profile meanwhile
+  if (seq !== loadSeq || state.job?.id !== id) return; // navigated to another listing or profile meanwhile
   state.job = next;
   if (state.job.status === "running") {
     renderJob();
@@ -1320,16 +1391,18 @@ async function pollJob() {
     return;
   }
   if (state.view === "listing") {
-    state.listing = await api(`/api/listings/${encodeURIComponent(state.listing.id)}`);
+    const listing = await api(`/api/listings/${encodeURIComponent(state.listing.id)}`);
+    if (seq !== loadSeq) return;
+    state.listing = listing;
     renderListing();
+    scheduleShellRefresh();
   } else {
     const job = state.job;
     await loadTaste(state.taste.id);
+    if (seq !== loadSeq) return;
     state.job = job;
     renderTaste();
-    state.tasteProfiles = await api("/api/taste-profiles");
-    state.profiles = await loadProfiles();
-    renderProfilesNav();
+    scheduleShellRefresh();
   }
 }
 
@@ -1354,7 +1427,9 @@ function renderJob() {
 /* ---------- Home ---------- */
 
 async function loadHome() {
-  [state.home, state.running] = await Promise.all([api("/api/home"), api("/api/running").catch(() => [])]);
+  const seq = loadSeq;
+  const data = await Promise.all([api("/api/home"), api("/api/running").catch(() => [])]);
+  if (seq === loadSeq) [state.home, state.running] = data;
 }
 
 /** A redesign still going, shown above the finished reports with its live progress. */
@@ -1383,11 +1458,11 @@ let runningTimer;
 function watchRunning() {
   clearTimeout(runningTimer);
   if (!state.running?.length || !["home", "reports"].includes(state.view)) return;
-  const view = state.view;
+  const view = state.view, seq = loadSeq;
   runningTimer = setTimeout(async () => {
     let next;
     try { next = await api("/api/running"); } catch { return watchRunning(); }
-    if (state.view !== view) return;
+    if (seq !== loadSeq || state.view !== view) return;
     const same = next.length === state.running.length && next.every((job, i) => job.id === state.running[i].id);
     state.running = next;
     if (same) {
@@ -1407,13 +1482,14 @@ function watchRunning() {
       }
     } else if (view === "home") {
       await loadHome();
-      if (state.view !== "home") return;
+      if (seq !== loadSeq || state.view !== "home") return;
       $("#home-reports").innerHTML = homeReportsMarkup(state.home, state.listings.length > 0);
     } else {
       await loadReports();
-      if (state.view !== "reports") return;
+      if (seq !== loadSeq || state.view !== "reports") return;
       renderReports();
     }
+    if (!same) scheduleShellRefresh();
     watchRunning();
   }, 3000);
 }
@@ -2033,11 +2109,12 @@ function queueSave(file, patch) {
 }
 async function flushSave() {
   if (!pending.size || !state.listing) return;
+  const savedListing = state.listing;
   const photos = [...pending.values()];
   pending.clear();
   try {
-    const listing = await api(`/api/listings/${encodeURIComponent(state.listing.id)}/selection`, { method: "PUT", body: JSON.stringify({ photos }) });
-    state.listing = { ...listing, runs: state.listing.runs };
+    const listing = await api(`/api/listings/${encodeURIComponent(savedListing.id)}/selection`, { method: "PUT", body: JSON.stringify({ photos }) });
+    if (state.listing?.id === savedListing.id) state.listing = { ...listing, runs: savedListing.runs };
     announce("Saved");
     renderListings();
   } catch (error) {
@@ -2133,7 +2210,10 @@ function swapPhotosArea(hidden) {
 /* ---------- Taste profile view ---------- */
 
 async function loadTaste(id) {
-  state.taste = await api(`/api/taste-profiles/${encodeURIComponent(id)}`);
+  const seq = loadSeq;
+  const taste = await api(`/api/taste-profiles/${encodeURIComponent(id)}`);
+  if (seq !== loadSeq) return;
+  state.taste = taste;
   state.rulesDraft = state.taste.profile ? structuredClone(state.taste.profile) : null;
   state.rulesDirty = false;
   state.briefDirty = false;
@@ -2615,6 +2695,7 @@ document.addEventListener("click", async (event) => {
     const expanded = sidebarToggle.getAttribute("aria-expanded") !== "true";
     sidebarToggle.setAttribute("aria-expanded", String(expanded));
     document.getElementById(sidebarToggle.dataset.sidebarToggle).hidden = !expanded;
+    try { sessionStorage.setItem("whim-sidebar:" + sidebarToggle.dataset.sidebarToggle, String(expanded)); } catch {}
     return;
   }
   const thumbnail = event.target.closest("[data-thumbnail]");
@@ -2971,6 +3052,7 @@ window.addEventListener("beforeunload", (event) => {
 window.addEventListener("whim:refresh", (event) => {
   event.preventDefault();
   if (pending.size || state.briefDirty || state.rulesDirty || state.textEdit) return flushSave();
+  shellFetchedAt = 0;
   event.detail?.waitUntil(loadWithScroll({ x:0, y:0 }));
 });
 // Restore only after asynchronous views have rendered, so the browser does not
@@ -3767,11 +3849,21 @@ function skeletonize(html) {
   return template.innerHTML.replace(/>\s+</g, "> <");
 }
 
+let skeletonTask = null;
+function queueSkeleton(key, seq) {
+  if (skeletonTask !== null) (window.cancelIdleCallback ?? clearTimeout)(skeletonTask);
+  const save = () => {
+    skeletonTask = null;
+    if (seq === loadSeq) rememberSkeleton(key);
+  };
+  skeletonTask = window.requestIdleCallback ? requestIdleCallback(save, { timeout: 2000 }) : setTimeout(save, 200);
+}
 function rememberSkeleton(key) {
   const content = $("#content");
   if (key !== loadingKey() || content.querySelector("[data-skeleton]")) return;
   const html = skeletonize(content.innerHTML);
   try {
+    if (localStorage.getItem(SKELETON_PREFIX + key) === html) return;
     let keys = JSON.parse(localStorage.getItem(SKELETON_PREFIX + "keys") || "[]").filter((k) => k !== key);
     keys.unshift(key);
     for (const old of keys.splice(SKELETON_KEEP)) localStorage.removeItem(SKELETON_PREFIX + old);
@@ -3847,102 +3939,90 @@ new MutationObserver(() => {
 }).observe($("#content"), {childList:true});
 
 async function load(position) {
-  const key = loadingKey(), content = $("#content");
+  const key = loadingKey(), content = $("#content"), seq = loadSeq;
   renderMobileTabs(keyView(key));
   // Moving between views keeps the old page (inert) for a moment, so a quick
   // load swaps straight to the new page instead of flashing its skeleton.
   const leaving = content.dataset.loadedKey && content.dataset.loadedKey !== key;
   if (leaving) content.inert = true;
-  const scaffold = setTimeout(() => showLoadingScaffold(position), leaving ? 120 : 0);
+  const scaffold = setTimeout(() => { if (seq === loadSeq) showLoadingScaffold(position); }, leaving ? 120 : 0);
   if (!leaving) { clearTimeout(scaffold); showLoadingScaffold(position); }
   try {
-    if (await loadView()) requestAnimationFrame(() => rememberSkeleton(key));
+    if (await loadView()) queueSkeleton(key, seq);
   } finally {
     clearTimeout(scaffold);
-    content.inert = false;
+    if (seq === loadSeq) {
+      content.inert = false;
+      $("#progress-live").textContent = "";
+    }
   }
 }
 
 /** Fetches and renders the current view; true when it rendered a page worth remembering as a skeleton. */
 async function loadView() {
+  const seq = loadSeq, route = new URLSearchParams(location.search);
+  const current = () => seq === loadSeq;
   state.textEdit = null;
   state.job = null;
-  clearTimeout(pollTimer);
-  clearTimeout(runningTimer);
-  stopReel?.();
+  clearTimeout(pollTimer); clearTimeout(runningTimer); stopReel?.();
+  const view = route.get("view") || (route.get("taste") ? "taste" : route.get("listing") ? "listing" : "home");
+  state.view = view;
+  renderMobileTabs();
+  renderListings(); renderProfilesNav();
+  // Start the route request immediately, alongside any shell revalidation.
+  const routeData = view === "listing" ? api(`/api/listings/${encodeURIComponent(route.get("listing"))}`)
+    : view === "taste" ? api(`/api/taste-profiles/${encodeURIComponent(route.get("taste"))}`)
+    : view === "settings" ? api("/api/settings")
+    : view === "home" ? Promise.all([api("/api/home"), api("/api/running").catch(() => [])])
+    : view === "reports" ? Promise.all([api("/api/reports"), api("/api/running").catch(() => [])])
+    : Promise.resolve(null);
+  // Handle rejection immediately, even if a collection is waiting for shell data.
+  const result = routeData.then(data => ({ data }), error => ({ error }));
+  const shell = refreshShell();
   try {
-    const [listings, profiles, tasteProfiles, status] = await Promise.all([api("/api/listings"), loadProfiles(), api("/api/taste-profiles"), api("/api/status")]);
-    Object.assign(state, { listings, profiles, tasteProfiles });
-
-    if (params().get("view") === "settings") {
-      state.view = "settings";
-      updateBanner(status.keysError);
-      renderListings();
-      renderProfilesNav();
-      renderMobileTabs();
-      await loadSettingsPage();
-      return true;
-    }
-    updateBanner(status.keysError);
-
-    const collection = params().get("view");
-    if (!collection && !params().get("listing") && !params().get("taste")) {
-      state.view = "home";
-      renderListings();
-      renderProfilesNav();
-      renderMobileTabs();
-
-      await loadHome();
-      if (state.view === "home") renderHome();
-      return state.view === "home";
-    }
-    if (["listings", "tastes", "reports"].includes(collection)) {
-      state.view = collection;
-      renderListings();
-      renderProfilesNav();
-      renderMobileTabs();
-      if (collection === "reports") {
-
-        await loadReports();
-        if (state.view === "reports") renderReports();
-      } else renderCollection(collection);
-      return state.view === collection;
-    }
-    const tasteId = params().get("taste");
-    if (tasteId) {
-      state.view = "taste";
-      renderMobileTabs();
-      await loadTaste(tasteId);
-      state.job = state.taste.activeJob;
-      renderListings();
-      renderProfilesNav();
-      renderTaste();
-      pollJob();
-      return true;
-    }
-
-    state.view = "listing";
-    renderMobileTabs();
-    const id = params().get("listing") ?? listings[0]?.id;
-    renderProfilesNav();
-    if (!id) { state.listing = null; renderListings(); return renderEmpty(); }
-    // Start each listing visit collapsed; expanding applies only to the current visit.
-    setParams({ listing: id, photos: "hidden" });
-    state.listing = await api(`/api/listings/${encodeURIComponent(id)}`);
-    state.job = state.listing.activeJob;
-    renderListings();
-    renderListing();
-    pollJob();
+    if (["listings", "tastes", "listing", "home"].includes(view)) await shell;
+    else shell.catch(() => {});
+    const { data, error } = await result;
+    if (!current()) return false;
+    if (error) throw error;
+    if (view === "settings") { state.settings = data; renderSettings(); }
+    else if (view === "home") { [state.home, state.running] = data; renderHome(); }
+    else if (view === "reports") {
+      [state.reports, state.running] = data; state.reportErrors = []; renderReports();
+    } else if (["listings", "tastes"].includes(view)) renderCollection(view);
+    else if (view === "taste") {
+      state.taste = data;
+      state.rulesDraft = data.profile ? structuredClone(data.profile) : null;
+      state.rulesDirty = false; state.briefDirty = false; state.briefDraft = data.brief;
+      state.job = data.activeJob; renderTaste(); pollJob();
+    } else if (view === "listing") {
+      state.listing = data; state.job = data.activeJob;
+      setParams({ photos: "hidden" }); renderListing(); pollJob();
+    } else throw new Error("Unknown page");
+    renderListings(); renderProfilesNav();
     return true;
   } catch (error) {
-    $("#content").innerHTML = `<div class="empty"><h1 style="font-size:20px;margin-bottom:8px;color:var(--text)">Couldn't load</h1><p>${esc(error.message)}</p><p><a class="btn" href="/">Back to listings</a></p></div>`;
+    if (!current()) return false;
+    $("#content").innerHTML = `<div class="empty"><h1 style="font-size:20px;margin-bottom:8px;color:var(--text)">Couldn't load</h1><p>${esc(error.message)}</p><p><a class="btn nav-inline" href="/">Back to listings</a></p></div>`;
+    return false;
   }
 }
 const sidebarScroller = document.querySelector(".side-content");
 const sidebarScrollRegion = document.querySelector(".side-scroll-region");
 if (sidebarScroller && sidebarScrollRegion) {
   const updateSidebarFade = () => sidebarScrollRegion.classList.toggle("has-scrolled", sidebarScroller.scrollTop > 12);
-  sidebarScroller.addEventListener("scroll", updateSidebarFade, { passive:true });
+  try {
+    document.querySelectorAll("[data-sidebar-toggle]").forEach(toggle => {
+      const expanded = sessionStorage.getItem("whim-sidebar:" + toggle.dataset.sidebarToggle) !== "false";
+      toggle.setAttribute("aria-expanded", String(expanded));
+      document.getElementById(toggle.dataset.sidebarToggle).hidden = !expanded;
+    });
+    sidebarScroller.scrollTop = Number(sessionStorage.getItem("whim-sidebar:scroll") || 0);
+  } catch {}
+  sidebarScroller.addEventListener("scroll", () => {
+    updateSidebarFade();
+    try { sessionStorage.setItem("whim-sidebar:scroll", String(sidebarScroller.scrollTop)); } catch {}
+  }, { passive:true });
   updateSidebarFade();
 }
 loadWithScroll(history.state?.whimScroll);
