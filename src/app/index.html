@@ -1627,7 +1627,14 @@ function startHomeLink() {
   form.addEventListener("pointercancel", () => { pickerPress = null; });
   form.addEventListener("click", (event) => {
     // Picking a taste (even the current one) is one choice, so its menu closes; scopes stay open for more than one.
-    if (event.target.matches('input[name="home-taste"]')) { closeMenus(); form.querySelector('[aria-controls="lpick-taste"]').focus(); return; }
+    if (event.target.matches('input[name="home-taste"]')) {
+      // Let the radio's default activation and change event finish before hiding it.
+      setTimeout(() => {
+        if (!form.isConnected) return;
+        closeMenus(); form.querySelector('[aria-controls="lpick-taste"]').focus();
+      }, 0);
+      return;
+    }
     const toggle = event.target.closest("[data-lpick]");
     if (!toggle) return;
     const menu = $(`#${toggle.getAttribute("aria-controls")}`);
@@ -1638,7 +1645,7 @@ function startHomeLink() {
     menu.hidden = false;
     toggle.setAttribute("aria-expanded", "true");
     if (event.detail === 0) ($("input:checked", menu) ?? $("input", menu))?.focus();
-    else toggle.focus({ preventScroll:true });
+
   });
   form.addEventListener("change", (event) => {
     if (!event.target.matches('input[name="home-taste"], input[name="home-tier"]')) return;
@@ -1656,7 +1663,12 @@ function startHomeLink() {
   homeLinkListeners = new AbortController();
   const outside = (event) => { if (form.isConnected && !event.target.closest?.(".lpick")) closeMenus(); };
   document.addEventListener("pointerdown", outside, { signal: homeLinkListeners.signal });
-  document.addEventListener("focusin", outside, { signal: homeLinkListeners.signal });
+  // Pointer interactions can briefly focus the document while a label activates its input.
+  // Only dismiss for focus leaving via keyboard navigation.
+  let keyboardFocus = false;
+  document.addEventListener("pointerdown", () => { keyboardFocus = false; }, { capture:true, signal: homeLinkListeners.signal });
+  document.addEventListener("keydown", event => { if (event.key === "Tab") keyboardFocus = true; }, { capture:true, signal: homeLinkListeners.signal });
+  document.addEventListener("focusin", event => { if (keyboardFocus) outside(event); }, { signal: homeLinkListeners.signal });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
