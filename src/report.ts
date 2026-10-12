@@ -1987,9 +1987,11 @@ ${appearanceScript}
       return;
     }
     if (gesture.zoomed && gesture.moved) return;
-    // Phones: a tap flips to the next version of this photo (listing photo, then each redesign).
+    // Phones: a tap on the right half flips to the next version of this photo (listing photo, then
+    // each redesign), a tap on the left half to the previous one.
     if (!gesture.moved && gesture.touch && mobileViewer.matches) {
-      if (items.length > 1) show(index + 1, true);
+      const box = stage.getBoundingClientRect();
+      if (items.length > 1) show(index + (e.clientX < box.left + box.width / 2 ? -1 : 1), true);
       return;
     }
     if (gesture.touch && !gesture.actual && Math.max(Math.abs(dx), Math.abs(dy)) >= 45) {
