@@ -44,7 +44,9 @@
   /* Bottom row: Settings on the left, the display switch on the right. */
   .display-setting { margin-top:auto; padding:0; flex:none; display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .side-scroll-region { position:relative; flex:1; min-height:0; min-width:0; isolation:isolate; }
-  .side-scroll-region::after { content:""; position:absolute; left:0; right:16px; bottom:0; height:28px; background:linear-gradient(to bottom, transparent, var(--bg)); pointer-events:none; z-index:1; }
+  .side-scroll-region::before, .side-scroll-region::after { content:""; position:absolute; left:0; right:16px; height:28px; pointer-events:none; z-index:1; }
+  .side-scroll-region::before { top:0; background:linear-gradient(to top, transparent, var(--bg)); }
+  .side-scroll-region::after { bottom:0; background:linear-gradient(to bottom, transparent, var(--bg)); }
   .side-scroll-region .side-content { position:relative; z-index:2; }
   .side-content { align-content:start; }
   @media (min-width:861px) { .side > .display-setting { margin-top:-16px; } }
@@ -129,7 +131,7 @@
     .layout { padding:var(--page-top) max(var(--page-gutter), env(safe-area-inset-left)) calc(112px + env(safe-area-inset-bottom)) max(var(--page-gutter), env(safe-area-inset-right)); gap:var(--section-gap); align-content:start; }
     .side { flex-direction:row; align-items:center; gap:8px; padding:0; }
     .side-scroll-region, .side-content { display:contents; }
-    .side-scroll-region::after { display:none; }
+    .side-scroll-region::before, .side-scroll-region::after { display:none; }
     .side-content nav { display:none; }
     .side .brand { padding-left:0; }
     .display-setting { margin:0 0 0 auto; padding:0; }
