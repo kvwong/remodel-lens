@@ -1,6 +1,7 @@
 import { renderPageHeader } from "./detail-header.js";
 import { motionScript } from "./motion.js";
 import { planCost, type ChangePlan, type CostRange } from "./redesign/plan.js";
+import { mobileTabsCss, mobileTabsHtml, mobileTabsScript } from "./ui/mobile-tabs.js";
 import { appearanceScript, brandHead, brandLockup } from "./branding.js";
 import type { PhotoResult, TierResult } from "./redesign/run.js";
 import { TIER_LABELS, TIER_RANK, type Tier } from "./redesign/tiers.js";
@@ -1369,6 +1370,9 @@ ${appearanceScript}
   button, .btn, a.nav-link, .tier, .pick, .zoom, summary, [role="tab"] { --motion:transform var(--fast) var(--ease), box-shadow var(--base) var(--ease), background-color var(--base) var(--ease), border-color var(--base) var(--ease), color var(--base) var(--ease), opacity var(--base) var(--ease); }
   button:active:not(:disabled), .btn:active, a.nav-link:active, .tier:active, .pick:active, .zoom:active, summary:active, [role="tab"]:active { transform:scale(0.98); }
   /* Motion fades and lifts tooltip pseudo-elements through these custom properties. */
+${back ? `${mobileTabsCss}
+  /* On a phone the tab bar carries navigation, so the logo row above the title goes. */
+  @media (max-width:860px) { .report-brand { display:none; } }` : ""}
 </style>
 </head>
 <body>
@@ -1439,7 +1443,7 @@ ${appearanceScript}
   </div>
 </dialog>
 
-<script>${motionScript}</script>${input.changes ? `\n<script src="/assets/pull-refresh.js"></script>` : ""}
+${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` : ""}<script>${motionScript}</script>${input.changes ? `\n<script src="/assets/pull-refresh.js"></script>` : ""}
 <script>
 (() => {
   const motion = window.whimMotion;

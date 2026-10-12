@@ -137,6 +137,8 @@
     .side-content nav { display:none; }
     .side .brand { padding-left:0; }
     .display-setting { margin:0 0 0 auto; padding:0; }
+    /* Only Home keeps the logo and display toggle on top; every other page starts with its own heading. */
+    body:not([data-view="home"]) .side { display:none; }
     main > .head + * { margin-top:0; }
     .collection-head { align-items:center; }
     .collection-head .btn { min-height:44px; }
@@ -815,6 +817,7 @@
 (() => {
   const q = new URLSearchParams(location.search);
   const key = q.get("view") || (q.get("listing") ? "listing:" + q.get("listing") : q.get("taste") ? "taste:" + q.get("taste") : "home");
+  document.body.dataset.view = key.split(":")[0];
   const tab = key.startsWith("listing") ? "listings" : key.startsWith("taste") ? "tastes" : key;
   document.querySelector(`[data-mobile-tab="${tab}"]`)?.setAttribute("aria-current", "page");
   let html = null;
@@ -1207,6 +1210,7 @@ document.addEventListener("pointerup", (e) => {
 
 /* Collection routes work at every size; the tab bar is mobile-only. */
 function renderMobileTabs(view = state.view) {
+  document.body.dataset.view = view;
   const active = view === "home" ? "home" : view === "taste" || view === "tastes" ? "tastes" : view === "reports" ? "reports" : view === "settings" ? "settings" : "listings";
   document.querySelectorAll("[data-mobile-tab]").forEach(link => {
     if (link.dataset.mobileTab === active) link.setAttribute("aria-current", "page");
