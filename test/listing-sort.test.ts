@@ -16,25 +16,33 @@ afterAll(async () => { await rm(root, { recursive: true, force: true }); });
 
 const photo = (dir: string, name: string) => sharp({ create: { width: 64, height: 48, channels: 3, background: "#888" } }).jpeg().toFile(path.join(dir, name));
 
-it("keeps interiors selected with room names and skips exteriors and floor plans", async () => {
-  const listing = await store.createListing({ name: "Sorted" });
-  for (const name of ["01.jpg", "02.jpg", "03.jpg", "04.jpg", "05.jpg"]) await photo(listing.dir, name);
+const KINDS: Record<string, [string, string]> = { "01.jpg": ["exterior", "other room"], "02.jpg": ["interior", "kitchen"], "03.jpg": ["interior", "living room"], "04.jpg": ["floor_plan", "other room"], "05.jpg": ["interior", "other room"] };
+
+async function fiveRooms(name: string) {
+  const listing = await store.createListing({ name });
+  for (const file of Object.keys(KINDS)) await photo(listing.dir, file);
   await store.saveSelection(listing.dir, [{ file: "02.jpg", room: "chef's kitchen" }]);
-  const calls: Array<{ prompt: string; images: number }> = [];
-  const generate = vi.fn(async (input: { prompt: string; images?: unknown[] }) => {
-    calls.push({ prompt: input.prompt, images: input.images?.length ?? 0 });
-    return { photos: [
-      { id: "photo_1", kind: "exterior", room: "" },
-      { id: "photo_2", kind: "interior", room: "kitchen" },
-      { id: "Photo_3", kind: "interior", room: "living room" },
-      { id: "photo_4", kind: "floor_plan", room: "" },
-    ] };
+  return listing;
+}
+
+it("asks the Decisions API about each photo, keeps interiors with room names and skips exteriors and floor plans", async () => {
+  process.env.OPENAI_API_KEY = "test";
+  const listing = await fiveRooms("Decided");
+  const order = Object.values(KINDS);
+  let n = 0;
+  const bodies: Array<{ model: string; questions: Array<{ name: string }>; input: Array<{ content: Array<{ type: string; image_url?: string }> }> }> = [];
+  const fetchFn = (async (_url: string, init: { body: string }) => {
+    bodies.push(JSON.parse(init.body));
+    const [kind, room] = order[n++]!;
+    return new Response(JSON.stringify({ answers: [{ type: "choice", name: "kind", choice: kind }, { type: "choice", name: "room", choice: room }] }));
   }) as never;
 
-  const result = await keepInteriorPhotos(listing.dir, "openai/test", generate);
-  expect(calls).toEqual([{ prompt: expect.stringContaining("photo_1, photo_2, photo_3, photo_4, photo_5"), images: 5 }]);
+  const result = await keepInteriorPhotos(listing.dir, "openai/test", { fetch: fetchFn });
+  expect(bodies).toHaveLength(5);
+  expect(bodies[0]).toMatchObject({ model: "gpt-6-luna", questions: [{ name: "kind" }, { name: "room" }] });
+  expect(bodies[0]!.input[0]!.content[1]!.image_url).toMatch(/^data:image\/jpeg;base64,/);
   expect(result).toMatchObject({ kept: 3, skipped: 2 });
-  // A typed room name wins; photo 5 wasn't mentioned, so it stays in rather than silently dropping.
+  // A typed room name wins over the guess.
   expect((await store.readListing(listing.dir)).photos).toEqual([
     { file: "01.jpg", room: "", selected: false },
     { file: "02.jpg", room: "chef's kitchen", selected: true },
@@ -44,10 +52,29 @@ it("keeps interiors selected with room names and skips exteriors and floor plans
   ]);
 });
 
+it("falls back to the vision model when the Decisions API fails, keeping photos it didn't mention", async () => {
+  const listing = await fiveRooms("Fallback");
+  const fetchFn = (async () => new Response("not found", { status: 404 })) as never;
+  const calls: Array<{ prompt: string; images: number }> = [];
+  const generate = (async (input: { prompt: string; images?: unknown[] }) => {
+    calls.push({ prompt: input.prompt, images: input.images?.length ?? 0 });
+    return { photos: [
+      { id: "photo_1", kind: "exterior", room: "" },
+      { id: "photo_2", kind: "interior", room: "kitchen" },
+      { id: "Photo_3", kind: "interior", room: "living room" },
+      { id: "photo_4", kind: "floor_plan", room: "" },
+    ] };
+  }) as never;
+  const result = await keepInteriorPhotos(listing.dir, "openai/test", { fetch: fetchFn, generate });
+  expect(calls).toEqual([{ prompt: expect.stringContaining("photo_1, photo_2, photo_3, photo_4, photo_5"), images: 5 }]);
+  expect(result).toMatchObject({ kept: 3, skipped: 2 });
+  expect((await store.readListing(listing.dir)).photos.map((p) => p.selected)).toEqual([false, true, true, false, true]);
+});
+
 it("refuses a listing with no interior photos", async () => {
   const listing = await store.createListing({ name: "Yard only" });
   await photo(listing.dir, "yard.jpg");
-  const generate = (async () => ({ photos: [{ id: "photo_1", kind: "exterior", room: "" }] })) as never;
-  await expect(keepInteriorPhotos(listing.dir, "openai/test", generate)).rejects.toThrow(/No interior photos/);
+  const fetchFn = (async () => new Response(JSON.stringify({ answers: [{ type: "choice", name: "kind", choice: "exterior" }] }))) as never;
+  await expect(keepInteriorPhotos(listing.dir, "openai/test", { fetch: fetchFn })).rejects.toThrow(/No interior photos/);
   expect((await store.readListing(listing.dir)).photos[0]!.selected).toBe(true);
 });
