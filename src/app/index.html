@@ -696,10 +696,6 @@
   .reel { position:relative; margin:-12px 0 -62px; }
   /* Room above and below for the tilt and the hover lift's deep shadow to fade out before the clip edge, without pushing the reports down. */
   .reel-viewport { overflow:hidden; padding:24px 0 96px; }
-  /* The end of the reel is just a button, not a card: it doesn't tilt, overlap or take part in the hover focus. */
-  .reel-end { flex:none; margin:0 28px 0 36px; }
-  .reel-end .btn { white-space:nowrap; }
-  .reel-end .icon { transform:rotate(-90deg); }
   .reel-track { list-style:none; margin:0; padding:0 0 0 12px; display:flex; align-items:center; width:max-content; will-change:transform; }
   /* Same hand as the Listing photos: equal photos, each at its own slight angle, overlapping, with a surface ring; later ones sit on top. */
   .reel-card { --tilt:0deg; --lift:0px; position:relative; flex:none; width:var(--reel-card, 250px); transform:translateY(var(--lift)) rotate(var(--tilt)); --motion:transform var(--slow) var(--ease), filter var(--slow) var(--ease), opacity var(--slow) var(--ease); }
@@ -1673,7 +1669,7 @@ function renderHome() {
 function homeMarkup({ reports, totalReports, slides }, hasListings) {
   const reel = slides.length
     ? `<section class="reel" aria-label="Recent redesigns" aria-roledescription="carousel">
-        <div class="reel-viewport"><ul class="reel-track">${slides.map((slide, i) => reelCard(slide, i)).join("")}${reelMore(slides.length, totalReports)}</ul></div>
+        <div class="reel-viewport"><ul class="reel-track">${slides.map((slide, i) => reelCard(slide, i)).join("")}</ul></div>
       </section>`
     : `<section class="reel reel-empty" aria-label="Recent redesigns">
         <div class="reel-viewport"><ul class="reel-track" aria-hidden="true">${Array.from({ length: 8 }, (_, i) => `<li class="reel-card" style="${reelLook(i)}"><div></div></li>`).join("")}</ul></div>
@@ -1897,11 +1893,7 @@ function reelLook(i, seed = String(i)) {
   return `--tilt:${tilt.toFixed(1)}deg;--lift:${lift.toFixed(1)}px;z-index:${i + 1}`;
 }
 
-/** The reel's last card: opens the full list of reports. */
-function reelMore(i, totalReports) {
-  return `<li class="reel-end"><a class="btn nav-inline" href="?view=reports">All redesigns${icon("chevron")}</a></li>`;
-}
-
+/** One photo in the reel, linking to its report. */
 function reelCard(slide, i) {
   return `<li class="reel-card" style="${reelLook(i, slide.src)}"><a href="${esc(slide.reportUrl)}">
     <img ${thumbAttributes(slide.src, "280px")} alt="${esc(slide.alt)}" loading="${i < 4 ? "eager" : "lazy"}" decoding="async" draggable="false"><span>${esc(slide.caption)}</span>
