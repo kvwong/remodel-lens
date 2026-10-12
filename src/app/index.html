@@ -655,7 +655,28 @@
   /* Home: the Listing photos stack spread across the page; swipe or drag it, and it springs to the next photo. */
   .reel { position:relative; margin:-12px 0 -62px; }
   /* Room above and below for the tilt and the hover lift's deep shadow to fade out before the clip edge, without pushing the reports down. */
-  .reel-viewport { overflow:hidden; padding:24px 0 96px; -webkit-mask-image:linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); mask-image:linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+  .reel-viewport { overflow:hidden; padding:24px 0 96px; }
+  /* Progressive blur on an edge that has more photos beyond it: eight backdrop layers, each blurrier and nearer the edge, so the blur builds up on a curve. Nothing shows at the first or last photo. */
+  .reel-edge { position:absolute; top:0; bottom:96px; width:96px; pointer-events:none; z-index:30; opacity:0; --motion:opacity var(--base) var(--ease); }
+  .reel-edge span { position:absolute; inset:0; -webkit-backdrop-filter:blur(var(--blur)); backdrop-filter:blur(var(--blur)); -webkit-mask-image:linear-gradient(var(--dir), var(--band)); mask-image:linear-gradient(var(--dir), var(--band)); }
+  .reel-edge-start { left:0; --dir:270deg; }
+  .reel-edge-end { right:0; --dir:90deg; }
+  .reel[data-has-prev] .reel-edge-start, .reel[data-has-next] .reel-edge-end { opacity:1; }
+  /* Trial: an eased fade (smoothstep stops, so it softens at both ends) on an edge with more photos beyond it; "blur", "fade" or "both" is picked with the small switch above the reel. */
+  @property --fade-l { syntax:"<length>"; inherits:true; initial-value:0px; }
+  @property --fade-r { syntax:"<length>"; inherits:true; initial-value:0px; }
+  .reel { transition:--fade-l var(--base) var(--ease), --fade-r var(--base) var(--ease); }
+  .reel[data-edge="fade"][data-has-prev], .reel[data-edge="both"][data-has-prev] { --fade-l:96px; }
+  .reel[data-edge="fade"][data-has-next], .reel[data-edge="both"][data-has-next] { --fade-r:96px; }
+  .reel[data-edge="fade"] .reel-viewport, .reel[data-edge="both"] .reel-viewport { -webkit-mask-image:linear-gradient(90deg, rgba(0,0,0,0.000) calc(var(--fade-l) * 0.000), rgba(0,0,0,0.015) calc(var(--fade-l) * 0.071), rgba(0,0,0,0.055) calc(var(--fade-l) * 0.143), rgba(0,0,0,0.118) calc(var(--fade-l) * 0.214), rgba(0,0,0,0.198) calc(var(--fade-l) * 0.286), rgba(0,0,0,0.292) calc(var(--fade-l) * 0.357), rgba(0,0,0,0.394) calc(var(--fade-l) * 0.429), rgba(0,0,0,0.500) calc(var(--fade-l) * 0.500), rgba(0,0,0,0.606) calc(var(--fade-l) * 0.571), rgba(0,0,0,0.708) calc(var(--fade-l) * 0.643), rgba(0,0,0,0.802) calc(var(--fade-l) * 0.714), rgba(0,0,0,0.882) calc(var(--fade-l) * 0.786), rgba(0,0,0,0.945) calc(var(--fade-l) * 0.857), rgba(0,0,0,0.985) calc(var(--fade-l) * 0.929), rgba(0,0,0,1.000) calc(var(--fade-l) * 1.000), rgba(0,0,0,1.000) calc(100% - var(--fade-r) * 1.000), rgba(0,0,0,0.985) calc(100% - var(--fade-r) * 0.929), rgba(0,0,0,0.945) calc(100% - var(--fade-r) * 0.857), rgba(0,0,0,0.882) calc(100% - var(--fade-r) * 0.786), rgba(0,0,0,0.802) calc(100% - var(--fade-r) * 0.714), rgba(0,0,0,0.708) calc(100% - var(--fade-r) * 0.643), rgba(0,0,0,0.606) calc(100% - var(--fade-r) * 0.571), rgba(0,0,0,0.500) calc(100% - var(--fade-r) * 0.500), rgba(0,0,0,0.394) calc(100% - var(--fade-r) * 0.429), rgba(0,0,0,0.292) calc(100% - var(--fade-r) * 0.357), rgba(0,0,0,0.198) calc(100% - var(--fade-r) * 0.286), rgba(0,0,0,0.118) calc(100% - var(--fade-r) * 0.214), rgba(0,0,0,0.055) calc(100% - var(--fade-r) * 0.143), rgba(0,0,0,0.015) calc(100% - var(--fade-r) * 0.071), rgba(0,0,0,0.000) calc(100% - var(--fade-r) * 0.000)); mask-image:linear-gradient(90deg, rgba(0,0,0,0.000) calc(var(--fade-l) * 0.000), rgba(0,0,0,0.015) calc(var(--fade-l) * 0.071), rgba(0,0,0,0.055) calc(var(--fade-l) * 0.143), rgba(0,0,0,0.118) calc(var(--fade-l) * 0.214), rgba(0,0,0,0.198) calc(var(--fade-l) * 0.286), rgba(0,0,0,0.292) calc(var(--fade-l) * 0.357), rgba(0,0,0,0.394) calc(var(--fade-l) * 0.429), rgba(0,0,0,0.500) calc(var(--fade-l) * 0.500), rgba(0,0,0,0.606) calc(var(--fade-l) * 0.571), rgba(0,0,0,0.708) calc(var(--fade-l) * 0.643), rgba(0,0,0,0.802) calc(var(--fade-l) * 0.714), rgba(0,0,0,0.882) calc(var(--fade-l) * 0.786), rgba(0,0,0,0.945) calc(var(--fade-l) * 0.857), rgba(0,0,0,0.985) calc(var(--fade-l) * 0.929), rgba(0,0,0,1.000) calc(var(--fade-l) * 1.000), rgba(0,0,0,1.000) calc(100% - var(--fade-r) * 1.000), rgba(0,0,0,0.985) calc(100% - var(--fade-r) * 0.929), rgba(0,0,0,0.945) calc(100% - var(--fade-r) * 0.857), rgba(0,0,0,0.882) calc(100% - var(--fade-r) * 0.786), rgba(0,0,0,0.802) calc(100% - var(--fade-r) * 0.714), rgba(0,0,0,0.708) calc(100% - var(--fade-r) * 0.643), rgba(0,0,0,0.606) calc(100% - var(--fade-r) * 0.571), rgba(0,0,0,0.500) calc(100% - var(--fade-r) * 0.500), rgba(0,0,0,0.394) calc(100% - var(--fade-r) * 0.429), rgba(0,0,0,0.292) calc(100% - var(--fade-r) * 0.357), rgba(0,0,0,0.198) calc(100% - var(--fade-r) * 0.286), rgba(0,0,0,0.118) calc(100% - var(--fade-r) * 0.214), rgba(0,0,0,0.055) calc(100% - var(--fade-r) * 0.143), rgba(0,0,0,0.015) calc(100% - var(--fade-r) * 0.071), rgba(0,0,0,0.000) calc(100% - var(--fade-r) * 0.000)); }
+  .reel[data-edge="fade"] .reel-edge { display:none; }
+  .reel-edge-pick { position:absolute; top:-6px; right:4px; z-index:40; display:flex; gap:2px; padding:2px; border-radius:999px; background:var(--surface); box-shadow:var(--shadow); font-size:12px; }
+  .reel-edge-pick button { border:0; background:none; color:var(--muted); padding:3px 10px; border-radius:999px; font:inherit; cursor:pointer; }
+  .reel-edge-pick button[aria-pressed="true"] { background:var(--primary); color:var(--primary-text); }
+  /* The last card links to every report. */
+  .reel-more a { display:grid; place-content:center; justify-items:center; gap:6px; text-align:center; color:var(--text); background:var(--surface-2); font-weight:600; font-size:17px; }
+  .reel-more small { color:var(--muted); font-weight:500; font-size:13px; }
+  .reel-more .icon { width:22px; height:22px; transform:rotate(-90deg); margin-top:4px; }
   .reel-track { list-style:none; margin:0; padding:0 0 0 12px; display:flex; align-items:center; width:max-content; will-change:transform; }
   /* Same hand as the Listing photos: equal photos, each at its own slight angle, overlapping, with a surface ring; later ones sit on top. */
   .reel-card { --tilt:0deg; --lift:0px; position:relative; flex:none; width:var(--reel-card, 250px); transform:translateY(var(--lift)) rotate(var(--tilt)); --motion:transform var(--slow) var(--ease), filter var(--slow) var(--ease), opacity var(--slow) var(--ease); }
@@ -1535,7 +1556,9 @@ function renderHome() {
 function homeMarkup({ reports, totalReports, slides }, hasListings) {
   const reel = slides.length
     ? `<section class="reel" aria-label="Recent redesigns" aria-roledescription="carousel">
-        <div class="reel-viewport"><ul class="reel-track">${slides.map((slide, i) => reelCard(slide, i)).join("")}</ul></div>
+        <div class="reel-viewport"><ul class="reel-track">${slides.map((slide, i) => reelCard(slide, i)).join("")}${reelMore(slides.length, totalReports)}</ul></div>
+        <div class="reel-edge-pick" role="group" aria-label="Reel edge style (trial)">${["blur", "fade", "both"].map(m => `<button type="button" data-edge-mode="${m}">${m[0].toUpperCase() + m.slice(1)}</button>`).join("")}</div>
+        <div class="reel-edge reel-edge-start" aria-hidden="true">${reelBlurLayers()}</div><div class="reel-edge reel-edge-end" aria-hidden="true">${reelBlurLayers()}</div>
       </section>`
     : `<section class="reel reel-empty" aria-label="Recent redesigns">
         <div class="reel-viewport"><ul class="reel-track" aria-hidden="true">${Array.from({ length: 8 }, (_, i) => `<li class="reel-card" style="${reelLook(i)}"><div></div></li>`).join("")}</ul></div>
@@ -1746,6 +1769,18 @@ function reelLook(i, seed = String(i)) {
   return `--tilt:${tilt.toFixed(1)}deg;--lift:${lift.toFixed(1)}px;z-index:${i + 1}`;
 }
 
+const REEL_BLURS = [0.4, 0.9, 1.8, 3.2, 5.5, 8.5, 12.5, 18]; // px, building up toward the edge
+/** Layers of backdrop blur; layer i fades in over its own eighth of the edge and holds to the edge, so blur steps up smoothly. */
+function reelBlurLayers() {
+  const n = REEL_BLURS.length, at = (k) => `${Math.min(100, k * 100 / n).toFixed(1)}%`;
+  return REEL_BLURS.map((blur, i) => `<span style="--blur:${blur}px;--band:transparent ${at(i)}, #000 ${at(i + 1)}${i + 2 <= n ? `, #000 ${at(i + 2)}, transparent ${at(Math.min(i + 3, n))}` : ""}"></span>`).join("");
+}
+
+/** The reel's last card: opens the full list of reports. */
+function reelMore(i, totalReports) {
+  return `<li class="reel-card reel-more" style="${reelLook(i, "all-reports")}"><a class="nav-inline" href="?view=reports">All reports<small>${totalReports} in all</small>${icon("chevron")}</a></li>`;
+}
+
 function reelCard(slide, i) {
   return `<li class="reel-card" style="${reelLook(i, slide.src)}"><a href="${esc(slide.reportUrl)}">
     <img ${thumbAttributes(slide.src, "280px")} alt="${esc(slide.alt)}" loading="${i < 4 ? "eager" : "lazy"}" decoding="async" draggable="false"><span>${esc(slide.caption)}</span>
@@ -1770,7 +1805,22 @@ function startReel() {
   const { signal } = listeners;
   let offset = 0, snaps = [0], max = 0, speed = 0, target = 0, springing = false, drag = null, dragged = false, wheelTimer = 0;
   const still = () => reducedMotion.matches;
-  const place = () => { track.style.transform = still() ? "" : `translateX(${-offset}px)`; };
+  let mode = "blur";
+  try { mode = localStorage.getItem("whim-reel-edge") || mode; } catch {}
+  const setMode = (m) => {
+    mode = m;
+    reel.dataset.edge = m;
+    reel.querySelectorAll("[data-edge-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.edgeMode === m)));
+    try { localStorage.setItem("whim-reel-edge", m); } catch {}
+  };
+  reel.addEventListener("click", event => { const b = event.target.closest("[data-edge-mode]"); if (b) setMode(b.dataset.edgeMode); }, { signal });
+  setMode(mode);
+  const edges = () => {
+    const x = still() ? viewport.scrollLeft : offset, end = still() ? viewport.scrollWidth - viewport.clientWidth : max;
+    reel.toggleAttribute("data-has-prev", x > 2);
+    reel.toggleAttribute("data-has-next", x < end - 2);
+  };
+  const place = () => { track.style.transform = still() ? "" : `translateX(${-offset}px)`; edges(); };
   const measure = () => {
     const cards = [...track.children];
     const pad = cards[0].offsetLeft;
@@ -1857,7 +1907,7 @@ function startReel() {
   viewport.addEventListener("click", event => { if (dragged) { event.preventDefault(); event.stopPropagation(); dragged = false; } }, { capture: true, signal });
   viewport.addEventListener("dragstart", event => event.preventDefault(), { signal });
   // Tabbing to a photo that's out of view brings it in (the clipped viewport would otherwise scroll on its own).
-  viewport.addEventListener("scroll", () => { if (!still() && viewport.scrollLeft) viewport.scrollLeft = 0; }, { signal });
+  viewport.addEventListener("scroll", () => { if (!still() && viewport.scrollLeft) viewport.scrollLeft = 0; else edges(); }, { signal });
   reel.addEventListener("focusin", event => {
     const card = event.target.closest?.(".reel-card");
     if (!card || still()) return;
