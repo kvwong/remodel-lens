@@ -12,5 +12,5 @@ export const detailHeaderStyles = `
 .whim-detail-header .detail-actions { align-self:center; }
 .whim-detail-header .back-link { display:inline-flex; align-items:center; gap:2px; min-height:44px; margin:-10px 0 -4px -6px; padding:0 8px 0 2px; border-radius:8px; color:var(--muted); font-size:14px; font-weight:500; text-decoration:none; }
 .whim-detail-header .back-link:hover { color:var(--text); }
-@media(max-width:860px) { .whim-detail-header h1 { font-size:24px !important; line-height:1.25; } .whim-detail-header .detail-actions { flex-basis:100%; } .whim-detail-header .detail-actions .share { justify-content:flex-start; flex-wrap:wrap; } }
+@media(max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) { .whim-detail-header h1 { font-size:24px !important; line-height:1.25; } .whim-detail-header .detail-actions { flex-basis:100%; } .whim-detail-header .detail-actions .share { justify-content:flex-start; flex-wrap:wrap; } }
 `;
