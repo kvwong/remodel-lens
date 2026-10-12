@@ -159,9 +159,13 @@ function safeJoin(base: string, relative: string): string | null {
   return full.startsWith(base + path.sep) ? full : null;
 }
 
+const IMAGE_CACHE = "private, max-age=300, stale-while-revalidate=86400";
+
 async function sendFile(res: ServerResponse, file: string | null) {
   if (!file || !existsSync(file) || !(await stat(file)).isFile()) return send(res, 404, { error: "Not found" });
-  res.writeHead(200, { "content-type": CONTENT_TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream", "cache-control": "no-cache" });
+  const type = CONTENT_TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream";
+  // Photos are served from the browser cache while it revalidates in the background, so tabbing around never re-fetches them in view.
+  res.writeHead(200, { "content-type": type, "cache-control": type.startsWith("image/") ? IMAGE_CACHE : "no-cache" });
   res.end(await readFile(file));
 }
 
@@ -169,7 +173,7 @@ async function sendThumb(res: ServerResponse, file: string | null, width: number
   if (!file || !existsSync(file)) return send(res, 404, { error: "Not found" });
   const preview = await imagePreview(file, width);
   const etag = `"${preview.version}-${preview.width}-v1"`;
-  const headers = { "cache-control": "private, max-age=0, must-revalidate", etag };
+  const headers = { "cache-control": IMAGE_CACHE, etag };
   if (res.req.headers["if-none-match"] === etag) {
     res.writeHead(304, headers); return res.end();
   }
