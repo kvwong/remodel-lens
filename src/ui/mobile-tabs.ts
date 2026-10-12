@@ -3,7 +3,7 @@ const TABS = [
   { href: "/", key: "home", label: "Home", path: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>' },
   { href: "/?view=listings", key: "listings", label: "Listings", path: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>' },
   { href: "/?view=tastes", key: "tastes", label: "Tastes", path: '<path d="m12 3 2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6z"/><path d="M20 2v4M18 4h4"/>' },
-  { href: "/?view=reports", key: "reports", label: "Reports", path: '<path d="M14 2H5a1 1 0 0 0-1 1v18a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8z"/><path d="M14 2v6h6M8 12h8M8 16h8"/>' },
+  { href: "/?view=reports", key: "reports", label: "Redesigns", path: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M12 4v16"/><path d="m3.5 17 4-4.5 3 3"/><path d="m13.5 16 3-3.5 4 4.5"/><circle cx="7.5" cy="8.5" r="1"/>' },
 ] as const;
 
 export type MobileTab = (typeof TABS)[number]["key"];
