@@ -6,8 +6,8 @@
     /* Secondary buttons are a soft tint, not an outline, so they read on white cards and the page alike. */
     --btn-fill:rgba(27,26,25,.06); --btn-fill-hover:rgba(27,26,25,.1);
     --ink:#1b1a19; --ink-text:#fafaf9;
-    /* Primary: deep forest green from the taste palette, for primary actions, selection, and progress only. */
-    --primary:#2f5a44; --primary-hover:#244a37; --primary-text:#ffffff; --primary-soft:#e4eee7;
+    /* Primary: a warm near-black, so buttons stay neutral next to whatever palette the photos show. --brand is the logo green. */
+    --primary:#2b2825; --primary-hover:#1a1816; --primary-text:#faf8f5; --primary-soft:#ebe7e1; --brand:#2f5a44;
     --accent:var(--primary); --accent-soft:var(--primary-soft);
     --ok:#3d6a4c; --warn:#8a6216; --warn-bg:#f7f0e2; --bad:#9a3b2f; --bad-bg:#f7ebe8;
     --font:"Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -19,7 +19,7 @@
       --control-hover:var(--surface-2);
       --btn-fill:rgba(236,235,232,.1); --btn-fill-hover:rgba(236,235,232,.16);
       --ink:#ecebe8; --ink-text:#121211;
-      --primary:#8cc3a1; --primary-hover:#a3d1b5; --primary-text:#0d1a12; --primary-soft:#223a2b;
+      --primary:#ebe6df; --primary-hover:#fbf8f3; --primary-text:#1b1917; --primary-soft:#34302b; --brand:#8cc3a1;
       --ok:#8fc49f; --warn:#e0bd78; --warn-bg:#2c2414; --bad:#ee9d90; --bad-bg:#321b17;
   }
   :root { color-scheme:light; }
