@@ -153,7 +153,7 @@
     .mobile-tabs { transform-origin:50% 100%; transform:translateX(-50%) scale(var(--nav-scale, 1)); will-change:transform; }
     #save-status { top:calc(16px + env(safe-area-inset-top)); }
     /* Home screen app: iOS blurs the strip under the status bar, so keep the logo clear of it. */
-    @media (display-mode: standalone) { .layout { padding-top:44px; } }
+    @media (display-mode: standalone) { .layout { padding-top:var(--standalone-top); } }
   }
   @supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
     .mobile-tabs { background:color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter:blur(28px) saturate(1.6); -webkit-backdrop-filter:blur(28px) saturate(1.6); }

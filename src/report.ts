@@ -1180,7 +1180,7 @@ ${appearanceScript}
   @media (max-width: 680px) {
     .legend { grid-template-columns:minmax(0, 1fr); gap:12px; }
     main { padding-top:16px; }
-    @media (display-mode: standalone) { main { padding-top:44px; } } /* clear iOS's blur under the status bar */
+    @media (display-mode: standalone) { main { padding-top:var(--standalone-top); } } /* clear iOS's blur under the status bar */
     .pair, .info { grid-template-columns:minmax(0, 1fr); }
     .info-tier, .info-listing { grid-column:1; grid-row:auto; }
     .toolbar .crumb span { display:none; }
