@@ -976,7 +976,7 @@ ${appearanceScript}
   .album-pile { position:relative; display:block; width:42%; max-width:320px; aspect-ratio:4/3; flex:none; margin:32px 16px; }
   .album-pile { --pile-direction:1; }
   .scope-link:nth-child(even) .album-pile { --pile-direction:-1; }
-  .album-pile img { --angle:-5.5deg; --offset:-5%; --lift:3px; position:absolute; width:84%; height:100%; object-fit:cover; border:3px solid var(--surface); border-radius:16px; box-shadow:var(--shadow-hover); left:8%; transform:translateX(calc(var(--offset) * var(--pile-direction))) translateY(var(--lift)) rotate(calc(var(--angle) * var(--pile-direction))); --motion:transform 300ms cubic-bezier(0,.18,.16,2); }
+  .album-pile img { --angle:-5.5deg; --offset:-5%; --lift:3px; position:absolute; width:84%; height:100%; object-fit:cover; border-radius:16px; box-shadow:var(--shadow-hover); left:8%; transform:translateX(calc(var(--offset) * var(--pile-direction))) translateY(var(--lift)) rotate(calc(var(--angle) * var(--pile-direction))); --motion:transform 300ms cubic-bezier(0,.18,.16,2); }
   .album-pile img:nth-child(2) { --angle:5deg; --offset:5%; --lift:11px; }
   .album-pile img:nth-child(3) { --angle:-2deg; --offset:-.5%; --lift:17px; }
   .album-pile img:nth-child(4) { --angle:2deg; --offset:2.5%; --lift:0px; }
