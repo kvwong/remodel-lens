@@ -146,10 +146,8 @@
     .mobile-tabs .icon { width:24px; height:24px; }
     .mobile-tabs a[aria-current="page"] { background:var(--primary); color:var(--primary-text); font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.18); }
     .mobile-tabs a:active { transform:scale(.96); }
-    /* Scrolling down tucks the bar to a smaller pill; scrolling up (or reaching the top) restores it. */
-    .mobile-tabs { transform-origin:50% 100%; transition:transform var(--base) var(--ease); }
-    body[data-nav-small] .mobile-tabs { transform:translateX(-50%) scale(.82); }
-    @media (prefers-reduced-motion:reduce) { .mobile-tabs { transition:none; } }
+    /* The bar's size follows the scroll: it shrinks in step with scrolling down and grows back in step with scrolling up (--nav-scale is set from the scroll position). */
+    .mobile-tabs { transform-origin:50% 100%; transform:translateX(-50%) scale(var(--nav-scale, 1)); }
     #save-status { top:calc(16px + env(safe-area-inset-top)); }
     /* Home screen app: iOS blurs the strip under the status bar, so keep the logo clear of it. */
     @media (display-mode: standalone) { .layout { padding-top:44px; } }
@@ -1178,17 +1176,18 @@ document.addEventListener("pointerup", (e) => {
   if (up !== target) renderMobileTabs();
 }, true);
 
-// Shrink the tab bar while scrolling down, restore it on scroll up; small jitters and the rubber band at the edges are ignored.
+// The tab bar scales linearly with scrolling: 18% smaller over 120px of scrolling down, and back the same way going up. Rubber banding at the edges is ignored.
 (() => {
-  let last = scrollY, ticking = false;
+  const SMALLEST = .82, RANGE = 120, rate = (1 - SMALLEST) / RANGE;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+  let last = scrollY, scale = 1, ticking = false;
   const update = () => {
     ticking = false;
     const y = Math.max(0, Math.min(scrollY, document.documentElement.scrollHeight - innerHeight));
-    const delta = y - last;
-    if (y < 24) document.body.removeAttribute("data-nav-small");
-    else if (delta > 6) document.body.setAttribute("data-nav-small", "");
-    else if (delta < -6) document.body.removeAttribute("data-nav-small");
-    if (Math.abs(delta) > 6) last = y;
+    // Never smaller than the distance from the top allows, so the top of the page is always full size.
+    scale = reduce.matches ? 1 : Math.min(1, Math.max(scale - (y - last) * rate, SMALLEST, 1 - y * rate));
+    last = y;
+    document.body.style.setProperty("--nav-scale", scale.toFixed(4));
   };
   addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
 })();
