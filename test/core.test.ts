@@ -128,7 +128,7 @@ describe("geometry verification", () => {
   });
 
   it("judge failures outrank edge passes; edge-only failures become review", () => {
-    const judgement: JudgeResult = { fixedChecks: [], openingsChanged: false, cameraChanged: false, roomSizeChanged: false, planAdherence: 8, unplannedChanges: [], issues: [] };
+    const judgement: JudgeResult = { fixedChecks: [], openingsChanged: false, cameraChanged: false, roomSizeChanged: false, planAdherence: 8, scopeExceeded: false, unplannedChanges: [], issues: [] };
     const okEdge = { kind: "window", description: "", correlation: 0.9, pass: true };
     const badEdge = { ...okEdge, correlation: 0.1, pass: false };
     expect(verdict([okEdge], judgement).verdict).toBe("verified");

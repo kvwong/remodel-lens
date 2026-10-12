@@ -5,6 +5,7 @@ import { decide, type DecisionQuestion } from "../decisions.js";
 import type { BoxTuple, RoomInventory } from "../listing/inventory.js";
 import { log } from "../files.js";
 import { generateStructured } from "../providers.js";
+import { TIER_DEFINITIONS } from "./tiers.js";
 import type { ChangePlan } from "./plan.js";
 
 const EDGE_WIDTH = 384; // small enough to forgive a few pixels of drift
@@ -107,6 +108,7 @@ export const JudgeResult = z.object({
   cameraChanged: z.boolean().describe("Viewpoint, crop, or perspective noticeably different."),
   roomSizeChanged: z.boolean().describe("Room is visibly larger or smaller, or the ceiling height changed. Removing planned decorative coffers or soffits does not count."),
   planAdherence: z.number().int().describe("0–10: did the planned changes happen as described?"),
+  scopeExceeded: z.boolean().default(false).describe("True when visible changes exceed the allowed remodel scope. Explain the offending changes in issues and unplannedChanges."),
   unplannedChanges: z.array(z.string()),
   issues: z.array(z.string()),
 });
@@ -128,6 +130,7 @@ export async function quickJudge(input: JudgeInput, fetchFn: typeof fetch = fetc
     { type: "predicate", name: "openings_changed", instructions: JudgeResult.shape.openingsChanged.description! },
     { type: "predicate", name: "camera_changed", instructions: JudgeResult.shape.cameraChanged.description! },
     { type: "predicate", name: "room_size_changed", instructions: JudgeResult.shape.roomSizeChanged.description! },
+    { type: "predicate", name: "scope_compliant", instructions: `Are all visible changes in image 2 within this allowed scope: ${TIER_DEFINITIONS[input.plan.tier].allowed}? Compare against image 1. Judge visible construction changes; do not infer hidden work. A planned change still fails if it exceeds the scope.` },
     { type: "score", name: "plan_adherence", instructions: "How fully did the planned changes happen in image 2?", levels: [
       { label: "none", description: "None of the planned changes are visible." },
       { label: "little", description: "A few planned changes, most missing." },
@@ -138,6 +141,7 @@ export async function quickJudge(input: JudgeInput, fetchFn: typeof fetch = fetc
   ];
   const answers = await decide({
     text: `Image 1 is a listing photo. Image 2 is meant to be a realistic remodel of the same room from the same camera. Any change to the architecture is a failure; small rendering differences a builder wouldn't notice are not.
+Allowed scope: ${TIER_DEFINITIONS[input.plan.tier].allowed}. Flag any visible change outside this scope even when it is in the plan.
 Planned changes (tier ${input.plan.tier}):
 ${input.plan.changes.map((c) => `- ${c.element}: → ${c.proposed}`).join("\n")}
 ${input.plan.removedWalls.length ? `Planned wall removals: ${input.plan.removedWalls.join("; ")}` : "No walls are planned for removal."}`,
@@ -148,13 +152,14 @@ ${input.plan.removedWalls.length ? `Planned wall removals: ${input.plan.removedW
   const kept = fixed.map((_, i) => yes(`preserved_${i}`));
   const changed = ["openings_changed", "camera_changed", "room_size_changed"].map(yes);
   const score = answers.get("plan_adherence");
-  if (kept.some((p) => p === null || p < QUICK_PASS) || changed.some((p) => p === null || p > 1 - QUICK_PASS) || score?.type !== "score") return null;
+  if (kept.some((p) => p === null || p < QUICK_PASS) || changed.some((p) => p === null || p > 1 - QUICK_PASS) || (yes("scope_compliant") ?? 0) < QUICK_PASS || score?.type !== "score") return null;
   return {
     fixedChecks: fixed.map((item) => ({ element: `${item.kind}: ${item.description}`, preserved: true, note: "" })),
     openingsChanged: false,
     cameraChanged: false,
     roomSizeChanged: false,
     planAdherence: Math.round(Math.max(0, Math.min(4, score.score)) * 2.5), // five levels (0–4) onto the judge's 0–10
+    scopeExceeded: false,
     unplannedChanges: [],
     issues: [],
   };
@@ -196,6 +201,7 @@ How to judge:
 Fixed elements:
 ${input.inventory.fixed.map((item) => `- ${item.kind}: ${item.description}`).join("\n")}
 
+Allowed scope: ${TIER_DEFINITIONS[input.plan.tier].allowed}. Flag any visible change outside this scope even when it is in the plan.
 Planned changes (tier ${input.plan.tier}):
 ${input.plan.changes.map((c) => `- ${c.element}: → ${c.proposed}`).join("\n")}
 ${input.plan.removedWalls.length ? `Planned wall removals: ${input.plan.removedWalls.join("; ")}` : "No walls are planned for removal."}`,
@@ -207,6 +213,7 @@ export type Verdict = "verified" | "review" | "failed";
 export function verdict(edges: EdgeCheck[], judgement: JudgeResult): { verdict: Verdict; reasons: string[] } {
   const reasons = [
     ...judgement.fixedChecks.filter((c) => !c.preserved).map((c) => `${c.element} not preserved: ${c.note}`),
+    ...(judgement.scopeExceeded ? ["Changes exceed the selected remodel scope.", ...judgement.unplannedChanges] : []),
     ...(judgement.openingsChanged ? ["Openings were added, removed, or moved."] : []),
     ...(judgement.cameraChanged ? ["Camera viewpoint changed."] : []),
     ...(judgement.roomSizeChanged ? ["Room size or ceiling height changed."] : []),

@@ -5,11 +5,11 @@ import { z } from "zod";
 
 import { log, mapLimit } from "../files.js";
 import { generateStructured, type ImageInput } from "../providers.js";
-import { readListing, saveSelection, type Listing } from "./listing.js";
+import { readListing, saveSelection, setAutomaticThumbnail, type Listing } from "./listing.js";
 
 export const PHOTO_KINDS = ["interior", "exterior", "floor_plan", "other"] as const;
 type Kind = (typeof PHOTO_KINDS)[number];
-type Sorted = { kind: Kind; room: string };
+type Sorted = { kind: Kind; room: string; quality?: string; coverScore?: number };
 
 const KIND_HELP: Record<Kind, string> = {
   interior: "A room inside the home: kitchen, living, bedroom, bathroom, hall, laundry, finished basement, garage interior.",
@@ -45,16 +45,35 @@ export async function decidePhoto(image: ImageInput, fetchFn: Fetch = fetch): Pr
       questions: [
         { type: "choice", name: "kind", instructions: "What does this photo show?", choices: PHOTO_KINDS.map((value) => ({ value, description: KIND_HELP[value] })) },
         { type: "choice", name: "room", instructions: "If it shows a room inside the home, which room is it?", choices: ROOMS.map((value) => ({ value, description: value })) },
+        { type: "choice", name: "quality", instructions: "Is this photo a useful source for a realistic remodel? Ignore MLS watermarks, ordinary wide-angle photography, dated decor, and virtual staging. Flag only a clear problem.", choices: [
+          { value: "usable", description: "A clear room or exterior view with enough visible detail." },
+          { value: "blurred", description: "Severe blur makes room surfaces and boundaries hard to inspect." },
+          { value: "obstructed", description: "A large obstruction hides most of the room." },
+          { value: "detail_only", description: "A close-up of an object or finish without useful room context." },
+          { value: "distorted", description: "Severe stitching or perspective distortion makes room geometry unreliable." },
+        ] },
+        { type: "score", name: "cover", instructions: "Rate suitability as a small listing thumbnail. Prefer a clear wide view of a living area, kitchen, or the house exterior. Avoid views, plans, close-ups, dark or obstructed images. Judge composition and recognizable house/room content, not expensive finishes.", levels: [
+          { label: "poor", description: "Unclear, unusable, drawing, detail, or view without house/room context." },
+          { label: "fair", description: "Recognizable but limited context, cluttered composition, or a secondary room." },
+          { label: "good", description: "Clear, well framed, recognizable view of a main room or house." },
+          { label: "excellent", description: "Especially clear, balanced wide view of a main living area, kitchen, or house, legible at thumbnail size." },
+        ] },
       ],
     }),
   });
   if (!res.ok) throw new Error(`Decisions API ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  const body = (await res.json()) as { answers?: Array<{ type: string; name: string; choice?: string }> };
+  const body = (await res.json()) as { answers?: Array<{ type: string; name: string; choice?: string; confidence?: number; score?: number }> };
   const answer = (name: string) => body.answers?.find((a) => a.name === name && a.type === "choice")?.choice;
   const kind = answer("kind");
   if (!kind || !(PHOTO_KINDS as readonly string[]).includes(kind)) throw new Error("Decisions API gave no photo kind.");
   const room = answer("room");
-  return { kind: kind as Kind, room: kind === "interior" && room && room !== "other room" ? room : "" };
+  const quality = body.answers?.find(a => a.name === "quality" && a.type === "choice");
+  const cover = body.answers?.find(a => a.name === "cover" && a.type === "score");
+  const warnings: Record<string, string> = { blurred: "Severe blur", obstructed: "Room mostly obstructed", detail_only: "Detail photo: limited room context", distorted: "Severe image distortion" };
+  return { kind: kind as Kind, room: kind === "interior" && room && room !== "other room" ? room : "",
+    quality: quality && (quality.confidence ?? 0) >= 0.85 ? warnings[quality.choice ?? ""] ?? "" : "",
+    ...(cover && Number.isFinite(cover.score) ? { coverScore: cover.score } : {}),
+  };
 }
 
 const PhotoSort = z.object({
@@ -87,9 +106,9 @@ async function sortWithModel(thumbs: ImageInput[], model: string, generate: type
  * Looks at small copies of every photo, keeps interiors selected and labels their rooms (without overwriting a room
  * someone typed), and skips the rest. Throws when nothing is left to redesign.
  */
-export async function keepInteriorPhotos(dir: string, model: string, deps: { fetch?: Fetch; generate?: typeof generateStructured } = {}): Promise<{ listing: Listing; kept: number; skipped: number }> {
+export async function keepInteriorPhotos(dir: string, model: string, deps: { fetch?: Fetch; generate?: typeof generateStructured; interiorsOnly?: boolean } = {}): Promise<{ listing: Listing; kept: number; skipped: number }> {
   const listing = await readListing(dir);
-  log(`Sorting ${listing.photos.length} photo${listing.photos.length === 1 ? "" : "s"}: interiors only`);
+  log(`Sorting ${listing.photos.length} photo${listing.photos.length === 1 ? "" : "s"}: ${deps.interiorsOnly === false ? "quality and cover assessment" : "interiors only"}`);
   const thumbs = await mapLimit(listing.photos, 6, async (photo): Promise<ImageInput> => ({
     bytes: await sharp(path.join(dir, photo.file)).rotate().resize({ width: THUMB_WIDTH, withoutEnlargement: true }).jpeg({ quality: 70 }).toBuffer(),
     mediaType: "image/jpeg",
@@ -106,12 +125,22 @@ export async function keepInteriorPhotos(dir: string, model: string, deps: { fet
   // A photo with no answer stays selected, so a short reply never silently drops a room.
   const updates = listing.photos.map((photo, i) => {
     const s = sorted[i];
-    const keep = !s || s.kind === "interior";
-    return { file: photo.file, selected: keep, room: photo.room || (keep ? s?.room ?? "" : "") };
+    const keep = deps.interiorsOnly === false ? photo.selected : !s || s.kind === "interior";
+    return { file: photo.file, selected: keep, room: photo.room || (keep ? s?.room ?? "" : ""), quality: s?.quality ?? photo.quality };
   });
   const kept = updates.filter((u) => u.selected).length;
-  if (!kept) throw new Error("No interior photos found in this listing, so there's nothing to redesign.");
-  const saved = await saveSelection(dir, updates);
-  log(`Kept ${kept} interior photo${kept === 1 ? "" : "s"}, skipped ${updates.length - kept} (exteriors, floor plans and other shots)`);
+  if (!kept && deps.interiorsOnly !== false) throw new Error("No interior photos found in this listing, so there's nothing to redesign.");
+  let saved = await saveSelection(dir, updates);
+  const cover = listing.photos.map((photo, i) => ({ file: photo.file, result: sorted[i] }))
+    .filter(p => p.result && ["interior", "exterior"].includes(p.result.kind) && !p.result.quality && Number.isFinite(p.result.coverScore))
+    .sort((a, b) => b.result!.coverScore! - a.result!.coverScore!)[0];
+  if (cover && cover.result!.coverScore! >= 2) saved = await setAutomaticThumbnail(dir, cover.file);
+  if (deps.interiorsOnly === false) log(`Assessed ${updates.length} photos; preserved photo selections`);
+  else log(`Kept ${kept} interior photo${kept === 1 ? "" : "s"}, skipped ${updates.length - kept} (exteriors, floor plans and other shots)`);
   return { listing: saved, kept, skipped: updates.length - kept };
+}
+
+/** Assess imported or manually selected photos without changing the user's selection. */
+export async function assessListingPhotos(dir: string, model: string): Promise<void> {
+  await keepInteriorPhotos(dir, model, { interiorsOnly: false });
 }

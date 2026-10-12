@@ -18,10 +18,10 @@ const ListingFile = z.object({
   location: z.string().optional(),
   description: z.string().optional(),
   thumbnail: z.string().optional(),
-  photos: z.record(z.string(), z.object({ room: z.string().default(""), selected: z.boolean().default(true) })).default({}),
+  photos: z.record(z.string(), z.object({ room: z.string().default(""), selected: z.boolean().default(true), quality: z.string().optional() })).default({}),
 });
 
-export type ListingPhoto = { file: string; room: string; selected: boolean };
+export type ListingPhoto = { file: string; room: string; selected: boolean; quality?: string };
 export type Listing = { id: string; name: string; source: string | null; sourceUrl: string | null; location: string | null; description: string; thumbnail: string | null; deletedAt: string | null; dir: string; photos: ListingPhoto[] };
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9._-]*$/i;
@@ -68,11 +68,11 @@ export async function readListing(dir: string): Promise<Listing> {
     thumbnail: files.includes(meta.thumbnail ?? "") ? meta.thumbnail! : files[0] ?? null,
     dir,
     deletedAt: meta.deletedAt ?? null,
-    photos: files.map((file) => ({ file, room: meta.photos[file]?.room ?? "", selected: meta.photos[file]?.selected ?? true })),
+    photos: files.map((file) => ({ file, room: meta.photos[file]?.room ?? "", selected: meta.photos[file]?.selected ?? true, ...(meta.photos[file]?.quality ? { quality: meta.photos[file]!.quality } : {}) })),
   };
 }
 
-export async function saveSelection(dir: string, photos: Array<{ file: string; room?: string; selected?: boolean }>): Promise<Listing> {
+export async function saveSelection(dir: string, photos: Array<{ file: string; room?: string; selected?: boolean; quality?: string }>): Promise<Listing> {
   const listing = await readListing(dir);
   const updates = new Map(photos.map((p) => [p.file, p]));
   const metaPath = path.join(dir, "listing.json");
@@ -88,6 +88,7 @@ export async function saveSelection(dir: string, photos: Array<{ file: string; r
           {
             room: (update?.room ?? photo.room).trim().slice(0, 80),
             selected: update?.selected ?? photo.selected,
+            quality: update?.quality ?? photo.quality,
           },
         ];
       }),
@@ -104,6 +105,15 @@ export async function setListingThumbnail(dir: string, file: string): Promise<Li
   const meta = existsSync(metaPath) ? JSON.parse(await readFile(metaPath, "utf8")) : {};
   await writeFile(metaPath, `${JSON.stringify({ ...meta, thumbnail: file }, null, 2)}\n`);
   return readListing(dir);
+}
+
+/** Automatic cover selection respects any explicitly saved thumbnail. */
+export async function setAutomaticThumbnail(dir: string, file: string): Promise<Listing> {
+  const metaPath = path.join(dir, "listing.json");
+  const meta = existsSync(metaPath) ? JSON.parse(await readFile(metaPath, "utf8")) : {};
+  const listing = await readListing(dir);
+  if (listing.photos.some(p => p.file === meta.thumbnail)) return listing;
+  return setListingThumbnail(dir, file);
 }
 
 const MAX_PHOTO_EDGE = 2560;

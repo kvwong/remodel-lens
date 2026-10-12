@@ -92,7 +92,7 @@ const inventory: RoomInventory = {
   condition: "",
   uncertainties: [],
 };
-const judgement: JudgeResult = { fixedChecks: [], openingsChanged: false, cameraChanged: false, roomSizeChanged: false, planAdherence: 7, unplannedChanges: [], issues: [] };
+const judgement: JudgeResult = { fixedChecks: [], openingsChanged: false, cameraChanged: false, roomSizeChanged: false, planAdherence: 7, scopeExceeded: false, unplannedChanges: [], issues: [] };
 
 /** Vertical stripes; shifting them moves every edge. */
 async function stripes(offset: number) {

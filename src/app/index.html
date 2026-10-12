@@ -1513,8 +1513,7 @@ function startHomeLink() {
     const ready = !!listingSite(input.value);
     send.disabled = busy || !ready || (state.profiles.length > 0 && !choice().tiers.length);
   };
-  const closeMenus = (except) => form.querySelectorAll("[data-lpick]").forEach((b) => {
-    if (b === except) return;
+  const closeMenus = () => form.querySelectorAll("[data-lpick]").forEach((b) => {
     b.setAttribute("aria-expanded", "false");
     $(`#${b.getAttribute("aria-controls")}`).hidden = true;
   });
@@ -1549,11 +1548,12 @@ function startHomeLink() {
     const toggle = event.target.closest("[data-lpick]");
     if (!toggle) return;
     const menu = $(`#${toggle.getAttribute("aria-controls")}`);
-    const open = menu.hidden;
-    closeMenus(toggle);
-    menu.hidden = !open;
-    toggle.setAttribute("aria-expanded", String(open));
-    if (open && !matchMedia("(pointer: coarse)").matches) ($("input:checked", menu) ?? $("input", menu))?.focus();
+    const open = toggle.getAttribute("aria-expanded") !== "true";
+    closeMenus();
+    if (!open) return;
+    menu.hidden = false;
+    toggle.setAttribute("aria-expanded", "true");
+    if (!matchMedia("(pointer: coarse)").matches) ($("input:checked", menu) ?? $("input", menu))?.focus();
   });
   form.addEventListener("change", (event) => {
     if (!event.target.matches('input[name="home-taste"], input[name="home-tier"]')) return;
@@ -1951,6 +1951,7 @@ function renderListing() {
                   <label for="room-${i}" class="sr-only">Room</label>
                   <input class="room" id="room-${i}" name="room-${esc(p.file)}" data-room="${esc(p.file)}" value="${esc(p.room)}" placeholder="Room" autocomplete="off" spellcheck="false" maxlength="80">
                   <button class="btn btn-small" type="button" data-thumbnail="${esc(p.file)}" ${l.thumbnail === p.file ? "disabled" : ""}>${l.thumbnail === p.file ? "Default thumbnail" : "Set as thumbnail"}</button>
+                  ${p.quality ? `<p class="hint" style="margin:0;color:var(--warn)">Photo quality: ${esc(p.quality)}</p>` : ""}
                   <div class="file">${p.selected ? "" : `<span>Skipped ·</span>`}<a class="file-name" href="${esc(p.full)}" target="_blank" rel="noopener" title="Open full size in a new tab">${esc(p.file)}</a></div>
                 </div>
               </div>`;

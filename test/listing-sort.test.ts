@@ -39,7 +39,7 @@ it("asks the Decisions API about each photo, keeps interiors with room names and
 
   const result = await keepInteriorPhotos(listing.dir, "openai/test", { fetch: fetchFn });
   expect(bodies).toHaveLength(5);
-  expect(bodies[0]).toMatchObject({ model: "gpt-6-luna", questions: [{ name: "kind" }, { name: "room" }] });
+  expect(bodies[0]).toMatchObject({ model: "gpt-6-luna", questions: [{ name: "kind" }, { name: "room" }, { name: "quality" }, { name: "cover" }] });
   expect(bodies[0]!.input[0]!.content[1]!.image_url).toMatch(/^data:image\/jpeg;base64,/);
   expect(result).toMatchObject({ kept: 3, skipped: 2 });
   // A typed room name wins over the guess.
@@ -77,4 +77,38 @@ it("refuses a listing with no interior photos", async () => {
   const fetchFn = (async () => new Response(JSON.stringify({ answers: [{ type: "choice", name: "kind", choice: "exterior" }] }))) as never;
   await expect(keepInteriorPhotos(listing.dir, "openai/test", { fetch: fetchFn })).rejects.toThrow(/No interior photos/);
   expect((await store.readListing(listing.dir)).photos[0]!.selected).toBe(true);
+});
+
+it("flags poor photos without deselecting interiors and respects manual cover choices", async () => {
+  process.env.OPENAI_API_KEY = "test";
+  const listing = await fiveRooms("Quality and cover");
+  let n = 0;
+  const fetchFn = (async () => {
+    const i = n++ % 5;
+    const [kind, room] = Object.values(KINDS)[i]!;
+    return new Response(JSON.stringify({ answers: [
+      { type: "choice", name: "kind", choice: kind },
+      { type: "choice", name: "room", choice: room },
+      { type: "choice", name: "quality", choice: i === 1 ? "blurred" : "usable", confidence: 0.97 },
+      { type: "score", name: "cover", score: i === 1 ? 3 : i === 2 ? 2.8 : 0 },
+    ] }));
+  }) as never;
+  const result = await keepInteriorPhotos(listing.dir, "openai/test", { fetch: fetchFn });
+  expect(result.listing.thumbnail).toBe("03.jpg");
+  expect(result.listing.photos[1]).toMatchObject({ selected: true, quality: "Severe blur" });
+  await store.saveSelection(listing.dir, [{ file: "02.jpg", room: "My kitchen" }]);
+  expect((await store.readListing(listing.dir)).photos[1]!.quality).toBe("Severe blur");
+  await store.setListingThumbnail(listing.dir, "01.jpg");
+  expect((await keepInteriorPhotos(listing.dir, "openai/test", { fetch: fetchFn })).listing.thumbnail).toBe("01.jpg");
+});
+
+it("quality assessment preserves manual photo selections", async () => {
+  const listing = await fiveRooms("Manual selections");
+  await store.saveSelection(listing.dir, [{ file: "01.jpg", selected: true }, { file: "02.jpg", selected: false }]);
+  const fetchFn = (async () => new Response(JSON.stringify({ answers: [
+    { type: "choice", name: "kind", choice: "interior" },
+    { type: "choice", name: "room", choice: "living room" },
+  ] }))) as never;
+  await keepInteriorPhotos(listing.dir, "openai/test", { fetch: fetchFn, interiorsOnly: false });
+  expect((await store.readListing(listing.dir)).photos.map(p => p.selected)).toEqual([true, false, true, true, true]);
 });

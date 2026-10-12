@@ -17,7 +17,7 @@ import { startChange } from "../redesign/change.js";
 import { applyPicks, ORIGINAL, pickKey, readVersions, updateVersions, type VersionsFile } from "../redesign/versions.js";
 import { renderReport } from "../report.js";
 import { scrapeListing } from "../listing/scrape.js";
-import { keepInteriorPhotos } from "../listing/sort.js";
+import { assessListingPhotos, keepInteriorPhotos } from "../listing/sort.js";
 import { motionScript } from "../motion.js";
 import { brandAppHtml } from "../branding.js";
 import { homeView } from "./home-api.js";
@@ -175,6 +175,16 @@ async function sendThumb(res: ServerResponse, file: string | null, width: number
   }
   res.writeHead(200, { ...headers, "content-type": "image/webp" });
   res.end(preview.bytes);
+}
+
+async function assessImportedPhotos(dir: string): Promise<void> {
+  if (!process.env.OPENAI_API_KEY) return;
+  try {
+    await assessListingPhotos(dir, resolveModels().reasoning);
+  } catch (error) {
+    // Import succeeds even when optional photo assessment is unavailable.
+    console.warn("Photo assessment unavailable:", error instanceof Error ? error.message : String(error));
+  }
 }
 
 function listingJson(listing: Listing, runs: RunSummary[]) {
@@ -402,6 +412,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     if (req.method === "POST" && parts[1] === "listings" && parts[2] === "from-link" && parts.length === 3) {
       const body = z.object({ link: z.string().max(2000), name: z.string().max(80).optional(), location: z.string().max(120).nullable().optional(), description: z.string().max(300).optional() }).parse(await readBody(req));
       const result = await createListingFromWeb(body);
+      await assessImportedPhotos(result.listing.dir);
       return send(res, 201, { id: result.listing.id, site: result.site, url: result.url, found: result.found, added: result.added, skipped: result.skipped, failed: result.failed });
     }
     if (req.method === "PUT" && parts[1] === "listings" && parts[2] === "order" && parts.length === 3) {
@@ -447,6 +458,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         if (isRunning("redesign", parts[2])) return send(res, 409, { error: "Wait for the running redesign to finish before adding photos." });
         const body = z.object({ link: z.string().max(2000) }).parse(await readBody(req));
         const result = await addPhotosFromWeb(dir, await scrapeListing(body.link));
+        await assessImportedPhotos(dir);
         return send(res, 200, { site: result.site, url: result.url, found: result.found, added: result.added, skipped: result.skipped, failed: result.failed });
       }
       if (req.method === "PUT" && parts[3] === "selection") {
@@ -469,6 +481,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
 
         const job = startJob("redesign", listing.id, async () => {
           if (body.interiorsOnly) await keepInteriorPhotos(dir, resolveModels().reasoning);
+          else await assessImportedPhotos(dir);
           return runListingRedesign({ listingDir: dir, profilePath: profileJsonPath(body.profile), tiers: body.tiers });
         });
         job.info = { tiers: body.tiers, profileName: runProfile.name };
