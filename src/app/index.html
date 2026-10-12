@@ -1481,7 +1481,7 @@ function homeLinkMarkup() {
   return `<form class="link-compose" id="home-link-form" novalidate>
       <label class="sr-only" for="home-link">Listing link</label>
       <div class="link-box">
-        <input id="home-link" name="link" type="text" inputmode="url" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" maxlength="2000" placeholder="Paste a listing link and generate report...">
+        <input id="home-link" name="link" type="text" inputmode="url" autocapitalize="off" spellcheck="false" enterkeyhint="go" maxlength="2000" placeholder="Paste a listing link and generate report...">
         <div class="link-tools">${taste}${scope}</div>
         <button class="lsend" type="submit" disabled aria-label="${state.profiles.length ? "Add the listing and run a redesign" : "Add the listing"}">${icon("arrowUp")}</button>
       </div>
@@ -1525,7 +1525,16 @@ function startHomeLink() {
     sync();
   };
 
-  input.addEventListener("input", () => { status.textContent = ""; status.classList.remove("error"); sync(); });
+  input.addEventListener("input", (event) => {
+    status.textContent = ""; status.classList.remove("error");
+    // A paste (the menu, or the iOS 27 paste button above the keyboard) can bring a title or message around the link: keep just the link.
+    const pasted = event.inputType === "insertFromPaste" || event.inputType === "insertReplacementText" || /\s/.test(input.value.trim());
+    const link = pasted && !listingSite(input.value) ? input.value.match(/(?:https?:\/\/|www\.)[^\s<>"']+/gi)?.find((u) => listingSite(u.replace(/[.,;:!?)\]]+$/, ""))) : null;
+    if (link) input.value = link.replace(/[.,;:!?)\]]+$/, "");
+    sync();
+    // On a phone, a pasted listing link drops the keyboard so the pickers and send button are in view.
+    if (pasted && listingSite(input.value) && matchMedia("(pointer: coarse)").matches) input.blur();
+  });
   form.addEventListener("click", (event) => {
     // Picking a taste (even the current one) is one choice, so its menu closes; scopes stay open for more than one.
     if (event.target.matches('input[name="home-taste"]')) { closeMenus(); form.querySelector('[aria-controls="lpick-taste"]').focus(); return; }
