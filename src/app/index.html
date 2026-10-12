@@ -456,8 +456,10 @@
     .grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px 10px; }
     .pick { border-radius:9px; }
     .check { top:6px; left:6px; width:28px; height:28px; }
-    .meta { padding-top:6px; gap:4px; }
-    .room { min-height:40px; padding:6px 8px; }
+    .meta { padding-top:6px; gap:4px 6px; grid-template-columns:minmax(0, 1fr) auto; align-items:center; }
+    .meta > :not(.room):not(.thumb-btn):not(.sr-only) { grid-column:1 / -1; }
+    .room { min-height:40px; padding:6px 8px; min-width:0; }
+    .thumb-btn { min-height:40px; min-width:40px; padding:0; justify-content:center; }
     .file { font-size:11px; }
     .file-name { line-height:32px; }
 
@@ -2105,7 +2107,7 @@ function renderListing() {
                 <div class="meta">
                   <label for="room-${i}" class="sr-only">Room</label>
                   <input class="room" id="room-${i}" name="room-${esc(p.file)}" data-room="${esc(p.file)}" value="${esc(p.room)}" placeholder="Room" autocomplete="off" spellcheck="false" maxlength="80">
-                  <button class="btn btn-small" type="button" data-thumbnail="${esc(p.file)}" ${l.thumbnail === p.file ? "disabled" : ""}>${l.thumbnail === p.file ? "Default thumbnail" : "Set as thumbnail"}</button>
+                  <button class="btn btn-small thumb-btn" type="button" data-thumbnail="${esc(p.file)}" ${l.thumbnail === p.file ? "disabled" : ""} aria-label="${l.thumbnail === p.file ? "Default thumbnail" : "Set as thumbnail"}" title="${l.thumbnail === p.file ? "Default thumbnail" : "Set as thumbnail"}">${icon("image")}<span class="btn-label">${l.thumbnail === p.file ? "Default thumbnail" : "Set as thumbnail"}</span></button>
                   ${p.quality ? `<p class="hint" style="margin:0;color:var(--warn)">Photo quality: ${esc(p.quality)}</p>` : ""}
                   <div class="file">${p.selected ? "" : `<span>Skipped ·</span>`}<a class="file-name" href="${esc(p.full)}" target="_blank" rel="noopener" title="Open full size in a new tab">${esc(p.file)}</a></div>
                 </div>
