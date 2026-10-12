@@ -17,6 +17,7 @@ import { startChange } from "../redesign/change.js";
 import { applyPicks, ORIGINAL, pickKey, readVersions, updateVersions, type VersionsFile } from "../redesign/versions.js";
 import { renderReport } from "../report.js";
 import { scrapeListing } from "../listing/scrape.js";
+import { keepInteriorPhotos } from "../listing/sort.js";
 import { motionScript } from "../motion.js";
 import { brandAppHtml } from "../branding.js";
 import { homeView } from "./home-api.js";
@@ -334,7 +335,8 @@ const ChangeBody = z.object({
   pins: z.array(z.object({ x: z.number().min(0).max(1000), y: z.number().min(0).max(1000), note: z.string().max(500) })).max(8).default([]),
   references: z.array(z.string().max(12_000_000)).max(3).default([]),
 });
-const RunBody = z.object({ tiers: z.array(z.enum(TIERS)).min(1), profile: z.string().max(60) });
+// interiorsOnly (runs started from Home's link box): sort the photos first so exteriors and floor plans are skipped.
+const RunBody = z.object({ tiers: z.array(z.enum(TIERS)).min(1), profile: z.string().max(60), interiorsOnly: z.boolean().optional() });
 const CreateProfileBody = z.object({ name: z.string().max(60), description: z.string().max(300).optional(), from: z.string().max(60).nullable().optional() });
 
 async function handle(req: IncomingMessage, res: ServerResponse) {
@@ -462,9 +464,10 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         const listing = await readListing(dir);
         if (!listing.photos.some((p) => p.selected)) return send(res, 400, { error: "Select at least one photo." });
 
-        const job = startJob("redesign", listing.id, () =>
-          runListingRedesign({ listingDir: dir, profilePath: profileJsonPath(body.profile), tiers: body.tiers }),
-        );
+        const job = startJob("redesign", listing.id, async () => {
+          if (body.interiorsOnly) await keepInteriorPhotos(dir, resolveModels().reasoning);
+          return runListingRedesign({ listingDir: dir, profilePath: profileJsonPath(body.profile), tiers: body.tiers });
+        });
         return send(res, 202, jobView(job));
       }
     }

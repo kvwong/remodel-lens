@@ -1515,8 +1515,8 @@ function startHomeLink() {
     if (profile) {
       status.textContent = "Starting the redesign…";
       try {
-        await api(`/api/listings/${encodeURIComponent(created.id)}/runs`, { method: "POST", body: JSON.stringify({ tiers, profile }) });
-        note = `${photos}. Redesign started.`;
+        await api(`/api/listings/${encodeURIComponent(created.id)}/runs`, { method: "POST", body: JSON.stringify({ tiers, profile, interiorsOnly: true }) });
+        note = `${photos}. Redesign started on the interior photos.`;
       } catch (error) {
         note = `${photos}, but the redesign didn't start: ${error.message}`;
       }
