@@ -732,6 +732,11 @@
     .lpick:last-child .lpick-menu { left:auto; right:0; } /* the scope pill sits near the right edge */
   }
   @media (max-width:600px) { .reel { --reel-card:200px; } }
+  /* On a phone the reel bleeds to both window edges and the first photo keeps the page margin; set here so a skeleton lines up before the live measurement runs. */
+  @media (max-width:860px) {
+    .reel { margin-left:calc(-1 * max(var(--page-gutter), env(safe-area-inset-left))); margin-right:calc(-1 * max(var(--page-gutter), env(safe-area-inset-right))); }
+    .reel-track { padding-left:max(var(--page-gutter), env(safe-area-inset-left)); padding-right:max(var(--page-gutter), env(safe-area-inset-right)); }
+  }
   /* Swiping is by hand; with reduced motion the strip scrolls natively and snaps instead. */
   .reel-viewport { touch-action:pan-y; user-select:none; -webkit-user-select:none; }
   @media (pointer:fine) { .reel-viewport { cursor:grab; } .reel-viewport a { cursor:inherit; } .reel[data-dragging] .reel-viewport { cursor:grabbing; } }
@@ -1903,13 +1908,13 @@ function startReel() {
   reel.addEventListener("keydown", event => {
     if (event.key === "ArrowRight" || event.key === "ArrowLeft") { go(event.key === "ArrowRight" ? 1 : -1); event.preventDefault(); }
   }, { signal });
-  // Full bleed: the reel runs out to the window edge on the right, and on a phone (one column) on the left too; the first photo keeps the page margin.
+  // Full bleed: the reel runs out to the window edge on the right (measured here); on a phone it bleeds both edges from the stylesheet. The first photo keeps the page margin.
   const bleed = () => {
     reel.style.marginLeft = reel.style.marginRight = track.style.paddingLeft = track.style.paddingRight = "";
+    if (matchMedia("(max-width:860px)").matches) return; // the stylesheet bleeds both edges on a phone
     const box = reel.getBoundingClientRect(), right = document.documentElement.clientWidth - box.right;
     reel.style.marginRight = `${-right}px`;
     track.style.paddingRight = "12px";
-    if (matchMedia("(max-width:860px)").matches) { reel.style.marginLeft = `${-box.left}px`; track.style.paddingLeft = track.style.paddingRight = `${box.left}px`; }
   };
   const update = () => {
     reel.toggleAttribute("data-still", still());
@@ -4060,7 +4065,7 @@ async function load(position) {
   // load swaps straight to the new page instead of flashing its skeleton.
   const leaving = content.dataset.loadedKey && content.dataset.loadedKey !== key;
   if (leaving) content.inert = true;
-  const scaffold = setTimeout(() => { if (seq === loadSeq) showLoadingScaffold(position); }, leaving ? 120 : 0);
+  const scaffold = setTimeout(() => { if (seq === loadSeq && state.paintedSeq !== seq) showLoadingScaffold(position); }, leaving ? 120 : 0);
   if (!leaving) { clearTimeout(scaffold); showLoadingScaffold(position); }
   try {
     if (await loadView()) queueSkeleton(key, seq);
@@ -4094,17 +4099,36 @@ async function loadView() {
   // Handle rejection immediately, even if a collection is waiting for shell data.
   const result = routeData.then(data => ({ data }), error => ({ error }));
   const shell = refreshShell();
-  try {
-    if (["listings", "tastes", "listing", "home"].includes(view)) await shell;
-    else shell.catch(() => {});
-    const { data, error } = await result;
-    if (!current()) return false;
-    if (error) throw error;
+  // Top-level pages show what this tab last saw right away, then swap in fresh data only if it differs.
+  const top = ["home", "reports", "settings"].includes(view), collection = ["listings", "tastes"].includes(view);
+  const showTop = (data) => {
     if (view === "settings") { state.settings = data; renderSettings(); }
     else if (view === "home") { [state.home, state.running] = data; renderHome(); }
-    else if (view === "reports") {
-      [state.reports, state.running] = data; state.reportErrors = []; renderReports();
-    } else if (["listings", "tastes"].includes(view)) renderCollection(view);
+    else { [state.reports, state.running] = data; state.reportErrors = []; renderReports(); }
+  };
+  const seen = (state.viewCache ??= new Map());
+  const cached = top ? seen.get(view) : undefined;
+  const paintNow = cached !== undefined || (collection && (state.listings.length > 0 || state.tasteProfiles.length > 0));
+  if (paintNow) {
+    if (cached !== undefined) showTop(cached); else renderCollection(view);
+    state.paintedSeq = seq;
+    const content = $("#content");
+    content.inert = false;
+    content.dataset.loadedKey = route.get("view") || (route.get("taste") ? "taste:" + route.get("taste") : route.get("listing") ? "listing:" + route.get("listing") : "home");
+  }
+  try {
+    if (["listings", "tastes", "listing", "home"].includes(view) && !paintNow) await shell;
+    else shell.catch(() => {});
+    const { data, error } = await result;
+    if (top && !error) seen.set(view, data); // remembered even if the visitor already moved on
+    if (!current()) return false;
+    if (error) throw error;
+    if (top) {
+      if (!(cached !== undefined && JSON.stringify(cached) === JSON.stringify(data))) showTop(data);
+    } else if (collection) {
+      if (paintNow) { await shell.catch(() => {}); if (!current()) return false; }
+      renderCollection(view);
+    }
     else if (view === "taste") {
       state.taste = data;
       state.rulesDraft = data.profile ? structuredClone(data.profile) : null;
@@ -4118,6 +4142,7 @@ async function loadView() {
     return true;
   } catch (error) {
     if (!current()) return false;
+    if (state.paintedSeq === seq) return false; // keep the page already shown rather than replacing it with an error
     $("#content").innerHTML = `<div class="empty"><h1 style="font-size:20px;margin-bottom:8px;color:var(--text)">Couldn't load</h1><p>${esc(error.message)}</p><p><a class="btn nav-inline" href="/">Back to listings</a></p></div>`;
     return false;
   }
