@@ -7,6 +7,7 @@
     "check": "tsc --noEmit",
     "test": "vitest run",
     "app": "tsx src/app/server.ts",
+    "restart": "tsx src/cli/restart.ts",
     "import": "tsx src/cli/import.ts",
     "scrape": "tsx src/cli/scrape.ts",
     "tune": "tsx src/cli/tune.ts",

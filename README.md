@@ -77,6 +77,12 @@ Tailscale tailnet. Find the Mac's Tailscale IPv4 address in the Tailscale app,
 then open `http://<mac-address>:4310` on the other device. The app has no
 sign-in, so only use it on a network you trust.
 
+Runs, taste builds and spot changes happen in the app's own process, so you can
+close the page and come back later. Restarting the app cuts them off, though. If
+the app runs as a launchd service (`com.kvwong.whim`, or set `WHIM_SERVICE`),
+restart it with `npm run restart`: the app stops taking new jobs, waits for the
+running ones to finish, then restarts. `npm run restart -- --now` skips the wait.
+
 ### Find your way around
 
 The app opens on **Home**, with a reel of redesigned photos and the five most
