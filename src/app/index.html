@@ -1472,6 +1472,16 @@ function renderJobInto(el, job, doneHtml) {
 }
 
 // <details> "toggle" doesn't bubble; capture it to remember the log's open state across re-renders.
+/** Keep every image the page has loaded in memory, so a re-rendered view paints its photos at once instead of flickering. */
+const keptImages = new Map();
+document.addEventListener("load", (e) => {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement) || !img.currentSrc || keptImages.has(img.currentSrc)) return;
+  const keep = new Image();
+  keep.src = img.currentSrc;
+  keptImages.set(img.currentSrc, keep);
+  if (keptImages.size > 400) keptImages.delete(keptImages.keys().next().value);
+}, true);
 document.addEventListener("toggle", (e) => { if (e.target.matches?.("details.log-details")) state.logOpen = e.target.open; }, true);
 
 let pollTimer;
