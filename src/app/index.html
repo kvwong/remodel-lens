@@ -103,13 +103,17 @@
   .detail-admin { display:grid; gap:12px; }
   .subhead { margin:6px 0 0; color:var(--muted); font-size:14px; }
   .section-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; margin-bottom:14px; }
+  .panel-toggle { display:flex; align-items:center; gap:8px; margin:0; padding:0; border:0; background:none; color:inherit; font:inherit; cursor:pointer; text-align:left; }
+  .panel-toggle svg { flex:none; color:var(--muted); transition:transform .2s; transform:rotate(-90deg); }
+  .panel-toggle[aria-expanded="true"] svg { transform:none; }
+  .panel-body[hidden] { display:none; }
   .tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   [data-photos-only][data-collapsed="true"] { display:none; }
-  #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]) { flex-wrap:nowrap; }
-  #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]) h2 { min-width:0; }
-  #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]) > .tools { flex:none; }
+  #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]), #refs-zone .section-head:has([data-photos-only][data-collapsed="true"]) { flex-wrap:nowrap; }
+  #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]) h2, #refs-zone .section-head:has([data-photos-only][data-collapsed="true"]) h2 { min-width:0; }
+  #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]) > .tools, #refs-zone .section-head:has([data-photos-only][data-collapsed="true"]) > .tools { flex:none; }
   @media (max-width:600px) {
-    #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]) h2 .num { display:block; margin-top:4px; font-size:13px; }
+    #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]) h2 .num, #refs-zone .section-head:has([data-photos-only][data-collapsed="true"]) h2 .num { display:block; margin-top:4px; font-size:13px; }
   }
   .hint { margin:6px 0 0; font-size:13px; color:var(--muted); max-width:68ch; }
 
@@ -453,9 +457,9 @@
     .detail-head .title-row .icon-plain { width:36px; height:36px; }
 
     /* Listing photos: two up, so a 12-photo listing is a few screens instead of a dozen. */
-    #photos-zone .section-head > .tools { width:auto; }
-    #photos-zone .section-head > .tools:has([data-photos-only][data-collapsed="false"]) { width:100%; }
-    #photos-zone .section-head > .tools > .btn:last-of-type { margin-left:auto; }
+    #photos-zone .section-head > .tools, #refs-zone .section-head > .tools { width:auto; }
+    #photos-zone .section-head > .tools:has([data-photos-only][data-collapsed="false"]), #refs-zone .section-head > .tools:has([data-photos-only][data-collapsed="false"]) { width:100%; }
+    #photos-zone .section-head > .tools > .btn:last-of-type, #refs-zone .section-head > .tools > .btn:last-of-type { margin-left:auto; }
     .grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px 10px; }
     .pick { border-radius:9px; }
     .check { top:6px; left:6px; width:28px; height:28px; }
@@ -2275,16 +2279,30 @@ function setPhotosHidden(hidden) {
   renderListings();
 }
 
+function setRefsHidden(hidden) {
+  setParams({ refs: hidden ? "hidden" : null });
+  for (const el of document.querySelectorAll('[data-toggle="refs"]')) el.setAttribute("aria-expanded", String(!hidden));
+  for (const el of document.querySelectorAll("#refs-zone [data-photos-only]")) el.dataset.collapsed = String(hidden);
+  swapPhotosArea(hidden, "refs-area");
+}
+
+function setPanelHidden(key, hidden) {
+  setParams({ [key]: hidden ? "hidden" : null });
+  $(`[data-toggle-panel="${key}"]`)?.setAttribute("aria-expanded", String(!hidden));
+  const body = $(`#${key}-body`);
+  if (body) body.hidden = hidden;
+}
+
 /**
  * Swap the photo stack and the full photo grid with one smooth motion: the area eases between the two heights
  * while the outgoing view fades out over the top and the incoming one fades in. Only the area's height animates,
  * so the photo grid never relayouts mid-transition. Reduced motion swaps instantly.
  */
 let settlePhotosSwap = null;
-function swapPhotosArea(hidden) {
-  const area = $("#photos-area");
-  const strip = $("[data-photos-strip]");
-  const body = $("#photos-body");
+function swapPhotosArea(hidden, areaId = "photos-area") {
+  const area = $(`#${areaId}`);
+  const strip = area?.querySelector("[data-photos-strip]");
+  const body = area?.querySelector("#photos-body, #refs-body");
   if (!area || !strip || !body) return;
   const incoming = hidden ? strip : body;
   const outgoing = hidden ? body : strip;
@@ -2339,6 +2357,8 @@ async function loadTaste(id) {
 
 function renderTaste() {
   const t = state.taste;
+  const refsHidden = params().get("refs") === "hidden", briefHidden = params().get("brief") === "hidden", rulesHidden = params().get("rules") === "hidden";
+  const panelHead = (key, id, title, hidden) => `<button class="panel-toggle" type="button" data-toggle-panel="${key}" aria-expanded="${!hidden}" aria-controls="${key}-body"><h2 id="${id}">${title}</h2>${icon("chevron")}</button>`;
   document.title = `${t.meta.name} · Taste profile · Whim`;
   const running = state.job?.status === "running";
   const lb = t.meta.lastBuild;
@@ -2360,14 +2380,22 @@ function renderTaste() {
     })}
     ${t.stale && !running ? `<div class="notice notice-action" role="status"><span>Photos or the brief changed since these rules were built. Rebuild to bring the rules up to date.</span><button class="btn btn-small" type="button" data-action="confirm-build" ${t.references.length < 3 ? "disabled" : ""}>${icon("refresh")}Rebuild</button></div>` : ""}
 
-    <section class="panel" aria-labelledby="refs-h">
+    <section class="panel zone" aria-labelledby="refs-h" id="refs-zone">
       <div class="section-head">
         <h2 id="refs-h">Reference photos <span class="muted num" style="font-weight:400">· ${t.references.length}</span></h2>
         <div class="tools">
+          ${t.references.length ? `<span class="tools fade" data-photos-only data-collapsed="${refsHidden}"><button class="btn btn-small" type="button" data-toggle="refs" data-refs-done aria-expanded="${!refsHidden}" aria-controls="refs-body">Done</button></span>` : ""}
           <button class="btn btn-small" type="button" data-action="pick-files" aria-label="Add photos" title="Add photos" ${running ? "disabled" : ""}>${icon("plus")}<span class="btn-label">Add photos</span></button>
           <input id="ref-input" type="file" accept="image/jpeg,image/png,image/webp,image/tiff" multiple hidden>
         </div>
       </div>
+      <div class="photos-area" id="refs-area">
+      ${t.references.length ? `<div data-photos-strip ${refsHidden ? "" : "hidden"}>
+        <div><button class="photo-stack" style="--stack-count:${Math.min(8, t.references.length)}" type="button" data-toggle="refs" aria-expanded="${!refsHidden}" aria-controls="refs-body" aria-label="Show all ${t.references.length} reference photos">
+          ${t.references.slice(0, 8).map((r, i) => `<img src="${esc(r.thumb)}" alt="" loading="lazy" decoding="async" style="${thumbTilt(r.file, i)}">`).join("")}
+        </button></div>
+      </div>` : ""}
+      <div id="refs-body" ${refsHidden && t.references.length ? "hidden" : ""}>
       <div class="dropzone" id="dropzone">
         ${t.references.length
           ? `<div class="ref-grid">${t.references.map((r) => `
@@ -2380,12 +2408,16 @@ function renderTaste() {
           : `<div class="dropzone-empty">${icon("image")}<p style="margin:0">Drop 10–20 photos of interiors you love here, or use <strong>Add photos</strong>.</p></div>`}
         <ul class="upload-list" aria-live="polite">${state.uploads.map((u) => `<li class="${u.ok ? "" : "bad"}">${esc(u.text)}</li>`).join("")}</ul>
       </div>
+      </div>
+      </div>
     </section>
 
     <section class="panel" aria-labelledby="brief-h">
-      <div class="section-head" style="margin-bottom:6px"><h2 id="brief-h">Brief</h2></div>
+      <div class="section-head" style="margin-bottom:6px">${panelHead("brief", "brief-h", "Brief", briefHidden)}</div>
+      <div class="panel-body" id="brief-body" ${briefHidden ? "hidden" : ""}>
       <p class="hint" style="margin:0 0 12px">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal and use the photos to confirm and sharpen it. Select the text to edit.</p>
       ${renderTextField("brief", "brief", "Brief", state.briefDraft, { brief: true, rows: 10, placeholder: "Add a brief describing your taste…" })}
+      </div>
     </section>
 
     <section aria-labelledby="build-h" class="panel">
@@ -2407,8 +2439,8 @@ function renderTaste() {
     </section>
 
     <section class="panel" aria-labelledby="rules-h">
-      <div class="section-head" style="margin-bottom:6px"><h2 id="rules-h">Rules</h2></div>
-      <div id="rules">${renderRulesBody()}</div>
+      <div class="section-head" style="margin-bottom:6px">${panelHead("rules", "rules-h", "Rules", rulesHidden)}</div>
+      <div class="panel-body" id="rules-body" ${rulesHidden ? "hidden" : ""}><div id="rules">${renderRulesBody()}</div></div>
     </section>
 
     <div class="savebar" id="savebar" role="region" aria-label="Unsaved changes" hidden>
@@ -2834,6 +2866,14 @@ document.addEventListener("click", async (event) => {
     announce("Finish the current edit with Done or Cancel.");
     return $("[data-edit-input]")?.focus();
   }
+  const refsToggle = event.target.closest('[data-toggle="refs"]');
+  if (refsToggle) {
+    setRefsHidden(refsToggle.getAttribute("aria-expanded") === "true");
+    $(refsToggle.classList.contains("photo-stack") ? "[data-refs-done]" : "#refs-zone button.photo-stack")?.focus({ preventScroll: true });
+    return;
+  }
+  const panelToggle = event.target.closest("[data-toggle-panel]");
+  if (panelToggle) return setPanelHidden(panelToggle.dataset.togglePanel, panelToggle.getAttribute("aria-expanded") === "true");
   const toggle = event.target.closest('[data-toggle="photos"]');
   if (toggle) {
     setPhotosHidden(toggle.getAttribute("aria-expanded") === "true");
@@ -4052,9 +4092,9 @@ function fallbackSkeleton(key) {
       </div></div>
     </section>`;
   else html = `${renderDetailHeader({ kind: "taste", name: "Taste name", metadata: `<p class="stats num"><span>Taste profile</span><span>12 reference photos</span><span>30 rules</span></p>` })}
-    <section class="panel"><div class="section-head"><h2>Reference photos <span class="muted num" style="font-weight:400">· 12</span></h2><div class="tools"><button class="btn btn-small" type="button" aria-label="Add photos">${icon("plus")}<span class="btn-label">Add photos</span></button></div></div>
-      <div class="dropzone" id="dropzone"><div class="ref-grid">${Array.from({ length: 12 }, () => `<div class="ref"><img alt=""></div>`).join("")}</div><p class="hint" style="margin-top:12px">Whole rooms and close-ups of materials both help.</p></div></section>
-    <section class="panel"><div class="section-head" style="margin-bottom:6px"><h2>Brief</h2></div><p class="hint" style="margin:0 0 12px">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal and use the photos to confirm and sharpen it.</p></section>`;
+    <section class="panel zone" id="refs-zone"><div class="section-head"><h2>Reference photos <span class="muted num" style="font-weight:400">· 12</span></h2><div class="tools"><button class="btn btn-small" type="button" aria-label="Add photos">${icon("plus")}<span class="btn-label">Add photos</span></button></div></div>
+      <div class="photos-area"><div data-photos-strip><div>${photoStack(8)}</div></div></div></section>
+    <section class="panel"><div class="section-head" style="margin-bottom:6px"><button class="panel-toggle" type="button" aria-expanded="true"><h2>Brief</h2>${icon("chevron")}</button></div><p class="hint" style="margin:0 0 12px">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal and use the photos to confirm and sharpen it.</p></section>`;
   return skeletonize(html);
 }
 
