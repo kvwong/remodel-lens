@@ -1713,17 +1713,18 @@ ${appearanceScript}
     const source = imageSource(item), warmed = warmedImages.get(source);
     return warmed?.complete && warmed.naturalWidth ? source : item?.querySelector("img")?.currentSrc || item?.querySelector("img")?.src || source;
   };
-  // Warm only the likely next interactions, with bounded concurrency and cache size.
+  // Warm the likely next interactions, with bounded concurrency and cache size. Every version of
+  // the open room is warmed and decoded so flipping between them is instant.
   const warmedImages = new Map();
   let prefetchQueue = [], prefetchActive = 0;
   function prefetchImage(source) {
     if (!source || source.startsWith("data:") || warmedImages.has(source) || prefetchQueue.includes(source)) return;
-    if (prefetchQueue.length >= 4) prefetchQueue.shift();
+    if (prefetchQueue.length >= 12) prefetchQueue.pop();
     prefetchQueue.push(source);
     drainPrefetch();
   }
   function drainPrefetch() {
-    while (prefetchActive < 2 && prefetchQueue.length) {
+    while (prefetchActive < 3 && prefetchQueue.length) {
       const source = prefetchQueue.shift();
       if (warmedImages.has(source)) continue;
       const image = new Image();
@@ -1734,22 +1735,25 @@ ${appearanceScript}
       const done = (failed) => {
         if (failed) warmedImages.delete(source);
         prefetchActive--;
-        while (warmedImages.size > 8) {
-          const oldest = [...warmedImages].find(([, candidate]) => candidate.complete);
+        const keep = new Set(items.map(imageSource));
+        while (warmedImages.size > 16) {
+          const oldest = [...warmedImages].find(([key, candidate]) => candidate.complete && !keep.has(key));
           if (!oldest) break;
           warmedImages.delete(oldest[0]);
         }
         drainPrefetch();
       };
-      image.onload = () => done(false);
-      image.onerror = () => done(true);
       image.src = source;
+      // decode() also waits for the load; a decoded image paints on the first frame it is shown.
+      image.decode().then(() => done(false), () => done(!(image.complete && image.naturalWidth)));
     }
   }
   function prefetchNearby() {
     prefetchQueue = [];
+    // This room's versions first, in tap order (the next one up first), then the split comparison.
+    for (let n = 1; n < items.length; n++) prefetchImage(imageSource(items[(index + n) % items.length]));
     prefetchImage(imageSource(items[comparisonIndex()]));
-    // On metered connections, warm the comparison only.
+    // On metered connections, warm this room only.
     if (navigator.connection?.saveData) return;
     for (const direction of [1, -1]) {
       const neighbor = adjacentPhoto(direction);
