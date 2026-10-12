@@ -366,7 +366,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     res.writeHead(200, { "content-type": "application/manifest+json", "cache-control": "no-cache" });
     return res.end(JSON.stringify({
       id: "/", name: "Whim", short_name: "Whim", start_url: "/", scope: "/", display: "standalone",
-      background_color: "#f5f4f1", theme_color: "#f5f4f1",
+      background_color: "#f4f4f3", theme_color: "#f4f4f3",
       // Versioned names, so a phone that saved an older icon fetches these fresh.
       icons: [180, 192, 512].map((size) => ({ src: `/assets/brand/icon-${size}-v3.png`, sizes: `${size}x${size}`, type: "image/png", purpose: "any" })),
     }));

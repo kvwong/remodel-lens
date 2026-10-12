@@ -1,6 +1,6 @@
 /* Theme: one palette for app and exported reports. */
   :root {
-    --bg:#f5f4f1; --surface:#ffffff; --surface-2:#f5f3ef; --text:#1b1a19; --muted:#625e58;
+    --bg:#f4f4f3; --surface:#ffffff; --surface-2:#f2f2f0; --text:#1b1a19; --muted:#625e58;
     --line:rgba(27,26,25,.1); --line-strong:rgba(27,26,25,.22);
     --control-hover:var(--surface);
     /* Secondary buttons are a soft tint, not an outline, so they read on white cards and the page alike. */
