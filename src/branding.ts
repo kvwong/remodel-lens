@@ -7,6 +7,8 @@ const dataUrl = (svg: string) => `data:image/svg+xml,${encodeURIComponent(svg)}`
 
 export const WHIM_LOCKUPS = { light: asset("whim-lockup-light"), dark: asset("whim-lockup-dark") };
 const favicons = { light: dataUrl(asset("whim-mark-light")), dark: dataUrl(asset("whim-mark-dark")) };
+// Inline the home screen icon: some iPhones fail the separate icon download and fall back to a letter tile.
+const touchIcon = `data:image/png;base64,${readFileSync(new URL("./app/brand/icon-180.png", import.meta.url)).toString("base64")}`;
 
 // Outlined artwork also draws directly in PDFs, without rasterizing the logo.
 export const WHIM_PATHS = {
@@ -24,7 +26,7 @@ ${detailHeaderStyles}</style>
 <script>window.renderPageHeader = ${renderPageHeader.toString()};</script>
 <meta name="application-name" content="Whim">
 <meta name="apple-mobile-web-app-title" content="Whim">
-<link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/assets/brand/apple-touch-icon-v3.png">
+<link rel="apple-touch-icon" type="image/png" sizes="180x180" href="${touchIcon}">
 <link id="whim-favicon" rel="icon" type="image/svg+xml" sizes="any" href="${favicons.light}" data-light="${favicons.light}" data-dark="${favicons.dark}">
 <style>
   .whim-lockup { display:block; width:116px; height:28px; }
