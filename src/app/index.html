@@ -298,6 +298,9 @@
   .run-title { font-weight:500; text-decoration:none; justify-self:start; }
   a.run-title:hover { text-decoration:underline; }
   .run-meta { font-size:13px; color:var(--muted); }
+  .run-live-progress { display:grid; gap:4px; width:min(320px, 100%); margin-top:4px; }
+  .run-live-label { font-size:13px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .run-live .run-main { flex:1 1 0; }
   .run-meta span + span::before { content:"·"; margin:0 6px; opacity:.6; }
   .statuses { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:13px; }
   .status { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
@@ -1126,17 +1129,19 @@ async function loadReports() {
   const previews = await api("/api/reports").catch(() => []);
   const images = new Map(previews.map(run => [`${run.listingId}/${run.id}`, run.images]));
   for (const run of state.reports) run.images = images.get(`${run.listingId}/${run.id}`) ?? [];
+  state.running = await api("/api/running").catch(() => []);
 }
 
 function renderReports() {
   document.title = "Reports · Whim";
   $("#content").innerHTML = reportsMarkup(state.reports, state.reportErrors);
+  watchRunning();
 }
 
 function reportsMarkup(reports, errors) {
   return `<header class="head collection-head"><div><h1>Reports</h1><p class="subhead">${reports.length ? `${plural(reports.length, "report")} across ${plural(new Set(reports.map(run => run.listingId)).size, "listing")} · newest first` : "None yet"}</p></div></header>
     ${errors.length ? `<div class="notice" role="alert">Couldn't load reports for ${esc(errors.join(", "))}. <button class="btn btn-small" type="button" data-action="retry-reports">Retry</button></div>` : ""}
-    <section class="panel">${reports.length ? `<ul class="runs">${reports.map(run => runRow(run, true)).join("")}</ul>` : `<p class="muted" style="margin:0">${errors.length ? "Reports couldn't be loaded. Try again." : "No reports yet. Run a redesign from a listing to create one."}</p>`}</section>`;
+    <section class="panel">${reports.length || state.running?.length ? `<ul class="runs">${(state.running ?? []).map(runningRow).join("")}${reports.map(run => runRow(run, true)).join("")}</ul>` : `<p class="muted" style="margin:0">${errors.length ? "Reports couldn't be loaded. Try again." : "No reports yet. Run a redesign from a listing to create one."}</p>`}</section>`;
 }
 
 const sidebarItems = (kind) => kind === "listings" ? state.listings : state.tasteProfiles;
@@ -1345,7 +1350,68 @@ function renderJob() {
 /* ---------- Home ---------- */
 
 async function loadHome() {
-  state.home = await api("/api/home");
+  [state.home, state.running] = await Promise.all([api("/api/home"), api("/api/running").catch(() => [])]);
+}
+
+/** A redesign still going, shown above the finished reports with its live progress. */
+function runningRow(job) {
+  const p = job.progress ?? { total: 0, done: 0, label: "" };
+  const f = p.total ? Math.min(1, p.done / p.total) : 0;
+  const href = `?listing=${encodeURIComponent(job.listingId)}`;
+  const meta = [job.profileName ? `${esc(job.profileName)} profile` : null, job.tiers.length ? esc(job.tiers.map(tierName).join(", ")) : null].filter(Boolean).map((m) => `<span>${m}</span>`).join("");
+  return `
+    <li class="run run-live" data-running="${esc(job.id)}">
+      <div class="run-main">
+        <a class="report-listing nav-inline" href="${href}">${esc(job.listingName)}</a>
+        <a class="run-title nav-inline" href="${href}">${job.stopping ? "Stopping…" : "Redesigning now"}</a>
+        ${meta ? `<div class="run-meta">${meta}</div>` : ""}
+        <div class="run-live-progress">
+          <div class="bar" role="progressbar" aria-label="Progress for ${esc(job.listingName)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(f * 100)}"><span style="transform:scaleX(${f})"></span></div>
+          <span class="run-live-label"><span class="num">${pf.format(f)}</span> · ${esc(p.label || "Starting…")}</span>
+        </div>
+      </div>
+      <a class="btn btn-small nav-inline" href="${href}">View progress</a><span class="run-chevron" aria-hidden="true">${icon("chevron")}</span>
+    </li>`;
+}
+
+let runningTimer;
+/** While redesigns run, Home and All reports refresh their progress; a finished one turns into its report row. */
+function watchRunning() {
+  clearTimeout(runningTimer);
+  if (!state.running?.length || !["home", "reports"].includes(state.view)) return;
+  const view = state.view;
+  runningTimer = setTimeout(async () => {
+    let next;
+    try { next = await api("/api/running"); } catch { return watchRunning(); }
+    if (state.view !== view) return;
+    const same = next.length === state.running.length && next.every((job, i) => job.id === state.running[i].id);
+    state.running = next;
+    if (same) {
+      for (const job of next) {
+        // Update in place so the bar eases forward instead of jumping.
+        const row = document.querySelector(`[data-running="${CSS.escape(job.id)}"]`);
+        if (!row) continue;
+        const fresh = document.createElement("template");
+        fresh.innerHTML = runningRow(job).trim();
+        const bar = $(".bar", row), next = $(".bar", fresh.content);
+        bar.setAttribute("aria-valuenow", next.getAttribute("aria-valuenow"));
+        const fill = $("span", bar), from = new DOMMatrixReadOnly(getComputedStyle(fill).transform).a;
+        fill.style.transform = $("span", next).style.transform;
+        motion.animate(fill, { transform: [`scaleX(${from})`, fill.style.transform] }, { duration: .6 });
+        $(".run-live-label", row).innerHTML = $(".run-live-label", fresh.content).innerHTML;
+        $(".run-title", row).textContent = $(".run-title", fresh.content).textContent;
+      }
+    } else if (view === "home") {
+      await loadHome();
+      if (state.view !== "home") return;
+      $("#home-reports").innerHTML = homeReportsMarkup(state.home, state.listings.length > 0);
+    } else {
+      await loadReports();
+      if (state.view !== "reports") return;
+      renderReports();
+    }
+    watchRunning();
+  }, 3000);
 }
 
 function renderHome() {
@@ -1353,6 +1419,7 @@ function renderHome() {
   $("#content").innerHTML = homeMarkup(state.home, state.listings.length > 0);
   startReel();
   startHomeLink();
+  watchRunning();
 }
 
 function homeMarkup({ reports, totalReports, slides }, hasListings) {
@@ -1367,9 +1434,14 @@ function homeMarkup({ reports, totalReports, slides }, hasListings) {
       </section>`;
   return `${reel}
     ${homeLinkMarkup()}
-    <header class="head collection-head home-head"><div><h1>Recent reports</h1><p class="subhead">${!totalReports ? "None yet" : `${totalReports > reports.length ? `Latest ${reports.length} of ${totalReports}` : `${totalReports} ${totalReports === 1 ? "report" : "reports"}`} · newest first`}</p></div>
+    <div id="home-reports">${homeReportsMarkup({ reports, totalReports }, hasListings)}</div>`;
+}
+
+function homeReportsMarkup({ reports, totalReports }, hasListings) {
+  const running = state.running ?? [];
+  return `<header class="head collection-head home-head"><div><h1>Recent reports</h1><p class="subhead">${!totalReports ? "None yet" : `${totalReports > reports.length ? `Latest ${reports.length} of ${totalReports}` : `${totalReports} ${totalReports === 1 ? "report" : "reports"}`} · newest first`}</p></div>
       ${totalReports > reports.length ? `<a class="btn btn-small nav-inline" href="?view=reports">All reports</a>` : ""}</header>
-    <section class="panel">${reports.length ? `<ul class="runs">${reports.map(run => runRow(run, true)).join("")}</ul>` : `${hasListings
+    <section class="panel">${reports.length || running.length ? `<ul class="runs">${running.map(runningRow).join("")}${reports.map(run => runRow(run, true)).join("")}</ul>` : `${hasListings
       ? `<p class="muted" style="margin:0">No reports yet. Open a listing and run a redesign to create one.</p>`
       : `<div class="empty-start"><p class="muted" style="margin:0">Start with a listing: add photos of a home, then run a redesign to get a report.</p><button class="btn btn-primary btn-small" type="button" data-action="new-listing">${icon("plus")}New listing</button></div>`}`}</section>`;
 }
@@ -3785,6 +3857,7 @@ async function loadView() {
   state.textEdit = null;
   state.job = null;
   clearTimeout(pollTimer);
+  clearTimeout(runningTimer);
   stopReel?.();
   try {
     const [listings, profiles, tasteProfiles, status] = await Promise.all([api("/api/listings"), loadProfiles(), api("/api/taste-profiles"), api("/api/status")]);
