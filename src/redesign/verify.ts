@@ -1,7 +1,9 @@
 import sharp from "sharp";
 import { z } from "zod";
 
+import { decide, type DecisionQuestion } from "../decisions.js";
 import type { BoxTuple, RoomInventory } from "../listing/inventory.js";
+import { log } from "../files.js";
 import { generateStructured } from "../providers.js";
 import type { ChangePlan } from "./plan.js";
 
@@ -110,13 +112,71 @@ export const JudgeResult = z.object({
 });
 export type JudgeResult = z.infer<typeof JudgeResult>;
 
-export async function judge(input: {
-  model: string;
-  original: Uint8Array;
-  redesign: Uint8Array;
-  inventory: RoomInventory;
-  plan: ChangePlan;
-}): Promise<JudgeResult> {
+type JudgeInput = { model: string; original: Uint8Array; redesign: Uint8Array; inventory: RoomInventory; plan: ChangePlan };
+
+/** A clear pass needs every structural answer at least this sure; anything less goes to the full judge. */
+export const QUICK_PASS = 0.85;
+const QUICK_WIDTH = 1024;
+
+/** The Decisions API's yes/no read on the judge's structural questions, or null when it isn't a clear pass. */
+export async function quickJudge(input: JudgeInput, fetchFn: typeof fetch = fetch): Promise<JudgeResult | null> {
+  const small = (bytes: Uint8Array) => sharp(bytes).resize({ width: QUICK_WIDTH, withoutEnlargement: true }).jpeg({ quality: 82 }).toBuffer();
+  const [original, redesign] = await Promise.all([small(input.original), small(input.redesign)]);
+  const fixed = input.inventory.fixed;
+  const questions: DecisionQuestion[] = [
+    ...fixed.map((item, i): DecisionQuestion => ({ type: "predicate", name: `preserved_${i}`, instructions: `Is this fixed element from image 1 still in image 2 in the same position, size and count: ${item.kind}, ${item.description}? Judge windows and doors by the opening's wall edges; new frames, casings or trim inside the same opening still count as preserved.` })),
+    { type: "predicate", name: "openings_changed", instructions: JudgeResult.shape.openingsChanged.description! },
+    { type: "predicate", name: "camera_changed", instructions: JudgeResult.shape.cameraChanged.description! },
+    { type: "predicate", name: "room_size_changed", instructions: JudgeResult.shape.roomSizeChanged.description! },
+    { type: "score", name: "plan_adherence", instructions: "How fully did the planned changes happen in image 2?", levels: [
+      { label: "none", description: "None of the planned changes are visible." },
+      { label: "little", description: "A few planned changes, most missing." },
+      { label: "half", description: "About half of the planned changes." },
+      { label: "most", description: "Most planned changes, a few missing or different." },
+      { label: "all", description: "The planned changes happened as described." },
+    ] },
+  ];
+  const answers = await decide({
+    text: `Image 1 is a listing photo. Image 2 is meant to be a realistic remodel of the same room from the same camera. Any change to the architecture is a failure; small rendering differences a builder wouldn't notice are not.
+Planned changes (tier ${input.plan.tier}):
+${input.plan.changes.map((c) => `- ${c.element}: → ${c.proposed}`).join("\n")}
+${input.plan.removedWalls.length ? `Planned wall removals: ${input.plan.removedWalls.join("; ")}` : "No walls are planned for removal."}`,
+    images: [{ bytes: original, mediaType: "image/jpeg" }, { bytes: redesign, mediaType: "image/jpeg" }],
+    questions,
+  }, fetchFn);
+  const yes = (name: string) => { const a = answers.get(name); return a?.type === "predicate" ? a.probability : null; };
+  const kept = fixed.map((_, i) => yes(`preserved_${i}`));
+  const changed = ["openings_changed", "camera_changed", "room_size_changed"].map(yes);
+  const score = answers.get("plan_adherence");
+  if (kept.some((p) => p === null || p < QUICK_PASS) || changed.some((p) => p === null || p > 1 - QUICK_PASS) || score?.type !== "score") return null;
+  return {
+    fixedChecks: fixed.map((item) => ({ element: `${item.kind}: ${item.description}`, preserved: true, note: "" })),
+    openingsChanged: false,
+    cameraChanged: false,
+    roomSizeChanged: false,
+    planAdherence: Math.round(Math.max(0, Math.min(4, score.score)) * 2.5), // five levels (0–4) onto the judge's 0–10
+    unplannedChanges: [],
+    issues: [],
+  };
+}
+
+/**
+ * Structural check of a redesign. Unless QUICK_JUDGE=off, the Decisions API answers first; a clear pass is final, and
+ * anything doubtful or failed goes to the full vision judge, whose notes feed the retry prompt and the report.
+ */
+export async function judge(input: JudgeInput, deps: { fetch?: typeof fetch; full?: typeof fullJudge } = {}): Promise<JudgeResult> {
+  if (process.env.QUICK_JUDGE !== "off" && process.env.OPENAI_API_KEY) {
+    try {
+      const quick = await quickJudge(input, deps.fetch);
+      if (quick) return quick;
+    } catch (error) {
+      log(`Quick check unavailable (${error instanceof Error ? error.message : String(error)}); using the full judge`);
+    }
+  }
+  return (deps.full ?? fullJudge)(input);
+}
+
+export async function fullJudge(input: JudgeInput): Promise<JudgeResult> {
   return generateStructured({
     model: input.model,
     schema: JudgeResult,
