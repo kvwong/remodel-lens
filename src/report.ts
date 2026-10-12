@@ -920,7 +920,7 @@ ${appearanceScript}
   .share { position:relative; display:flex; justify-content:flex-end; align-items:center; gap:10px; }
   .dl { position:relative; }
   .dl-caret { width:14px; height:14px; margin-left:-2px; color:var(--muted) !important; --motion:rotate var(--base) var(--ease); }
-  .share-btn[aria-expanded="true"] { border-color:var(--primary); background:var(--primary-soft); }
+  .share-btn[aria-expanded="true"] { background:var(--primary-soft); }
   .share-btn[aria-expanded="true"] .dl-caret { rotate:180deg; }
   .dl-menu { position:absolute; z-index:30; top:calc(100% + 6px); right:0; width:min(280px, calc(100vw - 32px)); display:grid; padding:6px; border-radius:10px; background:var(--surface); box-shadow:var(--shadow-hover); }
   .dl-menu { transform-origin:var(--menu-origin, right) top; }
@@ -1192,7 +1192,7 @@ ${appearanceScript}
     .tabs { width:100%; } .tabs [role="tab"] { flex:1; min-width:0; padding-inline:6px; font-size:12px; justify-content:center; }
   }
 
-  .to-top { position:fixed; right:max(16px, env(safe-area-inset-right)); bottom:max(16px, env(safe-area-inset-bottom)); z-index:6; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; border:1px solid var(--line-strong); background:var(--surface); color:inherit; cursor:pointer; opacity:0; transform:translateY(8px); --motion:opacity .25s, transform .25s var(--ease); pointer-events:none; }
+  .to-top { position:fixed; right:max(16px, env(safe-area-inset-right)); bottom:max(16px, env(safe-area-inset-bottom)); z-index:6; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; border:0; background:var(--surface); box-shadow:0 4px 16px rgba(0,0,0,.14); color:inherit; cursor:pointer; opacity:0; transform:translateY(8px); --motion:opacity .25s, transform .25s var(--ease); pointer-events:none; }
   .to-top.show { opacity:1; transform:none; pointer-events:auto; }
 
   dialog.viewer { width:100%; height:100dvh; max-width:none; max-height:none; margin:0; padding:0; border:0; background:#0f0f0e; color:#efede9; }

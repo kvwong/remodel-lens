@@ -405,7 +405,7 @@
 
   .savebar { position:sticky; bottom:16px; z-index:6; display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; padding:10px 10px 10px 18px; border-radius:10px; background:var(--ink); color:var(--ink-text); box-shadow:0 2px 4px rgba(0,0,0,.08), 0 12px 32px rgba(0,0,0,.16); }
   .savebar p { margin:0; flex:1 1 220px; font-size:14px; }
-  .savebar .btn { background:transparent; color:var(--ink-text); border-color:color-mix(in srgb, var(--ink-text) 35%, transparent); }
+  .savebar .btn { background:color-mix(in srgb, var(--ink-text) 14%, transparent); color:var(--ink-text); }
   .savebar .btn-primary { background:var(--ink-text); color:var(--ink); border-color:var(--ink-text); }
   dialog.modal { border:1px solid var(--line); border-radius:12px; padding:24px; width:min(440px, calc(100vw - 32px)); background:var(--surface); color:var(--text); box-shadow:0 2px 4px rgba(0,0,0,.06), 0 16px 48px rgba(0,0,0,.16); }
   dialog.modal::backdrop { background:rgba(0,0,0,.4); }
@@ -492,8 +492,8 @@
   /* Touch: hover backgrounds stick after a tap, so only show them for real pointers. */
   @media (hover:none) {
     .btn-quiet:hover, .icon-plain:hover, .display-toggle:hover { background:transparent; }
-    .btn:hover:not(.btn-primary):not(.btn-quiet) { background:var(--surface); border-color:var(--line-strong); box-shadow:none; }
-    .savebar .btn:hover:not(.btn-primary) { background:transparent; border-color:color-mix(in srgb, var(--ink-text) 35%, transparent); }
+    .btn:hover:not(.btn-primary):not(.btn-quiet) { background:var(--btn-fill); box-shadow:none; }
+    .savebar .btn:hover:not(.btn-primary) { background:color-mix(in srgb, var(--ink-text) 14%, transparent); }
     .tier:hover:not(:has(input:checked)) { border-color:var(--line-strong); box-shadow:none; }
     .collection-link:hover { box-shadow:var(--shadow); }
     .read-text:hover { background:transparent; border-color:transparent; }
@@ -628,9 +628,9 @@
   .suggestion { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; padding:12px 14px; border-radius:8px; background:var(--surface-2); font-size:14px; }
   .suggestion p { margin:0; flex:1 1 280px; }
   .seg { display:inline-flex; gap:4px; flex-wrap:wrap; }
-  .seg button { min-height:32px; padding:4px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); font-size:13px; cursor:pointer; }
-  .seg button[aria-pressed="true"] { background:var(--primary-soft); border-color:var(--primary); color:var(--primary); font-weight:600; }
-  .seg button.bad[aria-pressed="true"] { background:var(--bad-bg); border-color:var(--bad); color:var(--bad); }
+  .seg button { min-height:32px; padding:4px 10px; border-radius:8px; border:1px solid transparent; background:var(--btn-fill); font-size:13px; cursor:pointer; }
+  .seg button[aria-pressed="true"] { background:var(--primary-soft); color:var(--primary); font-weight:600; }
+  .seg button.bad[aria-pressed="true"] { background:var(--bad-bg); color:var(--bad); }
   .tune-grid { list-style:none; margin:0; padding:0; display:grid; gap:14px; grid-template-columns:repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
   .tune-card { display:grid; gap:8px; padding:10px; border:1px solid var(--line); border-radius:10px; }
   .tune-pair { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
