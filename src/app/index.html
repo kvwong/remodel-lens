@@ -2411,6 +2411,7 @@ function renderTaste() {
   const t = state.taste;
   const refsHidden = params().get("refs") === "hidden", briefHidden = params().get("brief") === "hidden", rulesHidden = params().get("rules") === "hidden";
   const briefLine = (state.briefDraft ?? "").trim().replace(/\s+/g, " ");
+  const ruleCount = t.profile ? t.profile.categories.reduce((n, c) => n + c.rules.length, 0) : 0;
   const categoryCount = t.profile?.categories.length ?? 0;
   const previews = {
     brief: briefLine ? `<span class="clamp">${esc(briefLine)}</span>` : `<span class="clamp">No brief yet. Open this to describe your taste.</span>`,
@@ -2421,7 +2422,6 @@ function renderTaste() {
   document.title = `${t.meta.name} · Taste profile · Whim`;
   const running = state.job?.status === "running";
   const lb = t.meta.lastBuild;
-  const ruleCount = t.profile ? t.profile.categories.reduce((n, c) => n + c.rules.length, 0) : 0;
   const cost = Math.max(1, Math.round(t.references.length * 0.08 + 0.4));
   const minutes = Math.max(2, Math.round(t.references.length * 0.25 + 1));
   const open = new Set([...document.querySelectorAll("#rules details[open]")].map((d) => d.dataset.key));
