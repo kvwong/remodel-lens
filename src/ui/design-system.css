@@ -3,6 +3,8 @@
     --bg:#f5f4f1; --surface:#ffffff; --surface-2:#f5f3ef; --text:#1b1a19; --muted:#625e58;
     --line:rgba(27,26,25,.1); --line-strong:rgba(27,26,25,.22);
     --control-hover:var(--surface);
+    /* Secondary buttons are a soft tint, not an outline, so they read on white cards and the page alike. */
+    --btn-fill:rgba(27,26,25,.06); --btn-fill-hover:rgba(27,26,25,.1);
     --ink:#1b1a19; --ink-text:#fafaf9;
     /* Primary: deep forest green from the taste palette, for primary actions, selection, and progress only. */
     --primary:#2f5a44; --primary-hover:#244a37; --primary-text:#ffffff; --primary-soft:#e4eee7;
@@ -15,6 +17,7 @@
       --bg:#0e0e0d; --surface:#242321; --surface-2:#302e2b; --text:#ecebe8; --muted:#b5b0a9;
       --line:rgba(236,235,232,.2); --line-strong:rgba(236,235,232,.42);
       --control-hover:var(--surface-2);
+      --btn-fill:rgba(236,235,232,.1); --btn-fill-hover:rgba(236,235,232,.16);
       --ink:#ecebe8; --ink-text:#121211;
       --primary:#8cc3a1; --primary-hover:#a3d1b5; --primary-text:#0d1a12; --primary-soft:#223a2b;
       --ok:#8fc49f; --warn:#e0bd78; --warn-bg:#2c2414; --bad:#ee9d90; --bad-bg:#321b17;
@@ -31,8 +34,8 @@
     --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.24); }
 
 /* Buttons and busy indicators */
-  .btn, .share-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:38px; padding:6px 14px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface); cursor:pointer; font-size:14px; font-weight:500; text-decoration:none; white-space:nowrap; }
-  .btn:hover, .share-btn:hover { background:var(--control-hover); border-color:var(--text); box-shadow:var(--shadow-hover); }
+  .btn, .share-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:38px; padding:6px 14px; border-radius:8px; border:1px solid transparent; background:var(--btn-fill); cursor:pointer; font-size:14px; font-weight:500; text-decoration:none; white-space:nowrap; }
+  .btn:hover, .share-btn:hover { background:var(--btn-fill-hover); }
   .btn-primary { background:var(--primary); color:var(--primary-text); border-color:var(--primary); padding:6px 16px; font-weight:600; box-shadow:0 1px 2px rgba(20,40,28,.18); }
   .btn-primary:hover { background:var(--primary-hover); border-color:var(--primary-hover); }
   .btn-primary:active { transform:translateY(1px); }

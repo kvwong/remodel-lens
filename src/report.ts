@@ -920,7 +920,7 @@ ${appearanceScript}
   .share { position:relative; display:flex; justify-content:flex-end; align-items:center; gap:10px; }
   .dl { position:relative; }
   .dl-caret { width:14px; height:14px; margin-left:-2px; color:var(--muted) !important; --motion:rotate var(--base) var(--ease); }
-  .share-btn[aria-expanded="true"] { border-color:var(--primary); background:var(--primary-soft); }
+  .share-btn[aria-expanded="true"] { background:var(--primary-soft); }
   .share-btn[aria-expanded="true"] .dl-caret { rotate:180deg; }
   .dl-menu { position:absolute; z-index:30; top:calc(100% + 6px); right:0; width:min(280px, calc(100vw - 32px)); display:grid; padding:6px; border-radius:10px; background:var(--surface); box-shadow:var(--shadow-hover); }
   .dl-menu { transform-origin:var(--menu-origin, right) top; }
@@ -1192,11 +1192,13 @@ ${appearanceScript}
     .tabs { width:100%; } .tabs [role="tab"] { flex:1; min-width:0; padding-inline:6px; font-size:12px; justify-content:center; }
   }
 
-  .to-top { position:fixed; right:max(16px, env(safe-area-inset-right)); bottom:max(16px, env(safe-area-inset-bottom)); z-index:6; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; border:1px solid var(--line-strong); background:var(--surface); color:inherit; cursor:pointer; opacity:0; transform:translateY(8px); --motion:opacity .25s, transform .25s var(--ease); pointer-events:none; }
+  .to-top { position:fixed; right:max(16px, env(safe-area-inset-right)); bottom:max(16px, env(safe-area-inset-bottom)); z-index:6; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; border:0; background:var(--surface); box-shadow:0 4px 16px rgba(0,0,0,.14); color:inherit; cursor:pointer; opacity:0; transform:translateY(8px); --motion:opacity .25s, transform .25s var(--ease); pointer-events:none; }
   .to-top.show { opacity:1; transform:none; pointer-events:auto; }
 
   dialog.viewer { width:100%; height:100dvh; max-width:none; max-height:none; margin:0; padding:0; border:0; background:#0f0f0e; color:#efede9; }
   dialog.viewer::backdrop { background:rgba(0,0,0,.85); }
+  /* While a swipe closes the viewer, the page behind shows through right away (the dialog fades its own background). */
+  dialog.viewer.dismissing::backdrop { background:transparent; }
   /* The page behind the photo viewer stays put while it is open. */
   html:has(dialog.viewer[open]) { overflow:hidden; }
   dialog.viewer { overscroll-behavior:contain; }
@@ -1776,6 +1778,7 @@ ${appearanceScript}
     applyZoom();
     stage.style.backgroundPosition = "";
     dialog.style.backgroundColor = "";
+    dialog.classList.remove("dismissing");
     bar.style.opacity = badge.style.opacity = "";
     stage.classList.remove("reeling", "comparing", "dragging");
     drag = null;
@@ -1793,6 +1796,19 @@ ${appearanceScript}
       if ((Math.abs(x - to) < .5 && Math.abs(v) < 5) || now - started > 900) {
         springFrame = null; update(to); finish();
       } else springFrame = requestAnimationFrame(frame);
+    }
+    springFrame = requestAnimationFrame(frame);
+  }
+  // A short ease-out that carries the photo off screen; closing waits for this, not a spring's long tail.
+  function flyOut(from, to, update, finish) {
+    cancelAnimationFrame(springFrame);
+    if (motion.reduce.matches) { finish(); return; }
+    const started = performance.now();
+    function frame(now) {
+      const t = Math.min(1, (now - started) / 160), eased = 1 - (1 - t) * (1 - t);
+      update(from + (to - from) * eased);
+      if (t < 1) springFrame = requestAnimationFrame(frame);
+      else { springFrame = null; finish(); }
     }
     springFrame = requestAnimationFrame(frame);
   }
@@ -1823,7 +1839,8 @@ ${appearanceScript}
     const progress = Math.min(1, Math.abs(y) / (stage.clientHeight * .6));
     img.style.transform = "translateY(" + y + "px) scale(" + (1 - progress * .15) + ")";
     stage.style.backgroundPosition = "center calc(50% + " + y + "px)";
-    dialog.style.backgroundColor = "rgba(15,15,14," + (1 - progress * .85) + ")";
+    dialog.classList.toggle("dismissing", y !== 0);
+    dialog.style.backgroundColor = "rgba(15,15,14," + (1 - progress) + ")";
     bar.style.opacity = badge.style.opacity = String(1 - progress);
   }
   function comparisonIndex() {
@@ -1982,7 +1999,7 @@ ${appearanceScript}
     }
     if (gesture.axis === "dismiss") {
       const projected = dy + velocity * 180;
-      if (Math.abs(projected) > 110) spring(dy, Math.sign(projected) * stage.clientHeight, velocity, moveDismiss, () => dialog.close());
+      if (Math.abs(projected) > 110) flyOut(dy, Math.sign(projected) * stage.clientHeight, moveDismiss, () => dialog.close());
       else spring(dy, 0, velocity, moveDismiss, resetInteraction);
       return;
     }

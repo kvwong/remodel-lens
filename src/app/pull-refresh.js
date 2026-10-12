@@ -23,7 +23,7 @@
     if (el) return el;
     const style = document.createElement("style");
     style.textContent = `
-      .ptr { position:fixed; z-index:40; top:calc(env(safe-area-inset-top) + 28px); left:50%; width:40px; height:40px; margin-left:-20px; display:grid; place-items:center; border-radius:50%; background:var(--surface, #fff); color:var(--text, #1b1a19); border:1px solid var(--line-strong, rgba(0,0,0,.14)); box-shadow:0 4px 16px rgba(0,0,0,.14); pointer-events:none; opacity:0; transform:translateY(-56px); }
+      .ptr { position:fixed; z-index:40; top:calc(env(safe-area-inset-top) + 28px); left:50%; width:40px; height:40px; margin-left:-20px; display:grid; place-items:center; border-radius:50%; background:var(--surface, #fff); color:var(--text, #1b1a19); box-shadow:0 2px 12px rgba(0,0,0,.16); pointer-events:none; opacity:0; transform:translateY(-56px); }
       .ptr svg { width:20px; height:20px; transition:transform .18s ease; }
       .ptr[data-armed] svg { transform:rotate(180deg); }
       .ptr[data-busy] svg { display:none; }
