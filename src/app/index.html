@@ -671,22 +671,18 @@
   .reel-empty p { position:absolute; inset:0 0 40px; display:grid; place-items:center; margin:0; padding:0 24px; text-align:center; color:var(--muted); font-size:14px; pointer-events:none; }
   .reel-empty p span { padding:6px 14px; border-radius:999px; background:color-mix(in srgb, var(--bg) 88%, transparent); }
   /* The reel's bottom padding (room for a lifted card's shadow to fade out) runs under the heading; keep the heading on top and clickable. */
+  #home-reports { display:grid; gap:var(--section-gap); min-width:0; }
   .home-head { position:relative; }
   .home-head .btn { margin-left:auto; }
-  /* Listing link: one rounded composer box like the photo viewer's prompt; taste and scope pickers appear inside it once the link is valid. */
+  /* Listing link: taste and scope pickers stay available before a link is entered. */
   .link-compose { position:relative; z-index:2; display:grid; gap:6px; margin:0 0 28px; }
-  .link-box { display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; gap:6px 8px; padding:7px 7px 7px 16px; border:1px solid var(--line-strong); border-radius:18px; background:var(--surface); box-shadow:var(--shadow); --motion:border-color var(--base) var(--ease); }
+  .link-box { display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; gap:6px 8px; padding:10px 8px 8px 16px; border:1px solid var(--line); border-radius:18px; background:var(--surface); box-shadow:var(--shadow); --motion:border-color var(--base) var(--ease); }
   .link-box:focus-within { border-color:color-mix(in srgb, var(--text) 40%, var(--line-strong)); }
-  .link-box #home-link { grid-column:1; grid-row:1; min-width:0; width:100%; min-height:34px; padding:0; border:0; background:transparent; outline:none; font-size:15px; text-overflow:ellipsis; }
+  .link-box #home-link { grid-column:1 / -1; grid-row:1; min-width:0; width:100%; min-height:34px; padding:0; border:0; background:transparent; outline:none; font-size:15px; text-overflow:ellipsis; }
   #home-link:focus-visible { outline:none; } /* the box's border shows focus */
   #home-link::placeholder { color:var(--muted); }
-  .link-box .lsend { grid-column:2; grid-row:1; }
-  .link-box[data-ready] { padding:10px 8px 8px 16px; }
-  .link-box[data-ready] #home-link { grid-column:1 / -1; }
-  .link-box[data-ready] .lsend { grid-row:2; }
+  .link-box .lsend { grid-column:2; grid-row:2; }
   .link-tools { grid-column:1; grid-row:2; display:flex; flex-wrap:nowrap; align-items:center; gap:6px; min-width:0; margin-left:-8px; }
-  .link-box[data-ready] .link-tools { animation:link-tools-in var(--base) var(--ease); }
-  @keyframes link-tools-in { from { opacity:0; transform:translateY(-4px); } }
   .lpick { position:relative; min-width:0; }
   .lpick:last-child { flex:none; } /* the taste name gives way first on a narrow screen */
   .ltool { display:inline-flex; align-items:center; gap:6px; max-width:100%; min-height:32px; padding:4px 8px 4px 10px; border:0; border-radius:999px; background:var(--surface-2); color:var(--text); font-size:13px; cursor:pointer; }
@@ -1485,8 +1481,8 @@ function homeLinkMarkup() {
   return `<form class="link-compose" id="home-link-form" novalidate>
       <label class="sr-only" for="home-link">Listing link</label>
       <div class="link-box">
-        <input id="home-link" name="link" type="text" inputmode="url" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" maxlength="2000" placeholder="Paste a Redfin, Zillow or Compass link">
-        <div class="link-tools" hidden>${taste}${scope}</div>
+        <input id="home-link" name="link" type="text" inputmode="url" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" maxlength="2000" placeholder="Paste a listing link and generate report...">
+        <div class="link-tools">${taste}${scope}</div>
         <button class="lsend" type="submit" disabled aria-label="${state.profiles.length ? "Add the listing and run a redesign" : "Add the listing"}">${icon("arrowUp")}</button>
       </div>
       <p class="link-status" id="home-link-status" role="status"></p>
@@ -1495,11 +1491,11 @@ function homeLinkMarkup() {
 
 let homeLinkListeners = null;
 
-/** Wires the link box: pickers show once the link looks like a listing; submitting imports its photos and starts the redesign. */
+/** Wires the always-visible pickers; submitting a valid link imports photos and starts the redesign. */
 function startHomeLink() {
   const form = $("#home-link-form");
   if (!form) return;
-  const box = $(".link-box", form), input = $("#home-link"), tools = $(".link-tools", form), send = $(".lsend", form), status = $("#home-link-status");
+  const input = $("#home-link"), send = $(".lsend", form), status = $("#home-link-status");
   let busy = false;
   const choice = () => ({
     profile: $('input[name="home-taste"]:checked', form)?.value ?? null,
@@ -1507,10 +1503,7 @@ function startHomeLink() {
   });
   const sync = () => {
     const ready = !!listingSite(input.value);
-    box.toggleAttribute("data-ready", ready);
-    tools.hidden = !ready;
     send.disabled = busy || !ready || (state.profiles.length > 0 && !choice().tiers.length);
-    if (!ready) closeMenus();
   };
   const closeMenus = (except) => form.querySelectorAll("[data-lpick]").forEach((b) => {
     if (b === except) return;
