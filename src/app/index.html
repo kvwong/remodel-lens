@@ -1342,6 +1342,9 @@ function reelCard(slide, i, copy = false) {
 }
 
 const REEL_SPEED = 6; // pixels per second
+// A flicked reel glides on and slows like an iPhone scroll view (decay of 0.998 per ms, so about 2 per second).
+const FLING_DECAY = 2;
+const FLING_MAX = 5000; // px per second
 const reducedMotion = motion.reduce;
 let stopReel = null;
 
@@ -1379,8 +1382,8 @@ function startReel() {
     if (!reel.isConnected || !loop) { clock(false); return; }
     const dt = Math.min(delta, 64) / 1000;
     if (!still() && !document.hidden) {
-      fling *= Math.exp(-dt * 4);
-      if (Math.abs(fling) < 2) fling = 0;
+      fling *= Math.exp(-dt * FLING_DECAY);
+      if (Math.abs(fling) < 8) fling = 0;
       if (!drag) offset += (position.speed + fling) * dt;
       place();
     }
@@ -1422,8 +1425,10 @@ function startReel() {
   }, { passive: false, signal });
   viewport.addEventListener("pointerdown", event => {
     if (event.button !== 0 || (still() && event.pointerType !== "mouse")) return;
-    drag = { id: event.pointerId, type: event.pointerType, x: event.clientX, y: event.clientY, lastX: event.clientX, lastT: event.timeStamp, v: 0, moved: false };
-    dragged = false;
+    drag = { id: event.pointerId, type: event.pointerType, x: event.clientX, y: event.clientY, lastX: event.clientX, samples: [], moved: false };
+    // Touching a gliding reel stops it in place, and that tap doesn't open a report.
+    dragged = Math.abs(fling) > 60;
+    fling = 0;
   }, { signal });
   viewport.addEventListener("pointermove", event => {
     if (!drag || event.pointerId !== drag.id) return;
@@ -1439,17 +1444,22 @@ function startReel() {
       reel.toggleAttribute("data-dragging", true);
     }
     const dx = drag.lastX - event.clientX;
-    const dt = Math.max(event.timeStamp - drag.lastT, 1) / 1000;
-    drag.v = drag.v * 0.6 + (dx / dt) * 0.4;
     drag.lastX = event.clientX;
-    drag.lastT = event.timeStamp;
+    // Keep the last ~100ms of finger positions; the release speed comes from them, like a native scroller.
+    drag.samples.push([event.timeStamp, event.clientX]);
+    while (drag.samples.length > 2 && event.timeStamp - drag.samples[0][0] > 100) drag.samples.shift();
     nudge(dx);
   }, { signal });
   const release = event => {
     if (!drag || event.pointerId !== drag.id) return;
     if (drag.moved) {
       dragged = true;
-      if (!still() && event.timeStamp - drag.lastT < 80) fling = Math.max(-2400, Math.min(2400, drag.v));
+      const [first, last] = [drag.samples[0], drag.samples.at(-1)];
+      // A finger that stopped before lifting (no move in the last 80ms) lets go without a glide.
+      if (!still() && first && last !== first && event.timeStamp - last[0] < 80) {
+        const v = (first[1] - last[1]) / Math.max(last[0] - first[0], 8) * 1000;
+        fling = Math.max(-FLING_MAX, Math.min(FLING_MAX, v));
+      }
     }
     drag = null;
     reel.removeAttribute("data-dragging");

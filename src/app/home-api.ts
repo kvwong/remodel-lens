@@ -8,7 +8,7 @@ import { listRuns, RUNS_DIR, type RunSummary } from "../redesign/job.js";
 import type { PhotoResult } from "../redesign/run.js";
 import { TIER_LABELS } from "../redesign/tiers.js";
 
-const RECENT_REPORTS = 5;
+const RECENT_REPORTS = 7;
 const MAX_SLIDES = 24;
 const ROW_IMAGES = 4;
 const SLIDE_STATUSES = new Set(["verified", "review"]);

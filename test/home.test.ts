@@ -22,10 +22,10 @@ async function addRun(listing: string, id: string, startedAt: string, photos: un
   if (photos) await writeFile(path.join(dir, "results.json"), JSON.stringify(photos));
 }
 
-it("lists the five newest reports across listings and reels their passing redesigns", async () => {
+it("lists the seven newest reports across listings and reels their passing redesigns", async () => {
   const a = await store.createListing({ name: "Maple St" });
   const b = await store.createListing({ name: "Lakeview" });
-  for (let i = 1; i <= 4; i++) await addRun(a.id, `a${i}`, `2026-10-0${i}T10:00:00.000Z`, null);
+  for (let i = 1; i <= 7; i++) await addRun(a.id, `a${i}`, `2026-10-0${i}T10:00:00.000Z`, null);
   await addRun(b.id, "b-new", "2026-10-09T10:00:00.000Z", [
     { id: "p0", basename: "k.jpg", room: "kitchen", original: "k.jpg", inventory: { roomType: "kitchen" }, tiers: [tier("cosmetic", "verified", "images/k-c.png"), tier("moderate", "failed", "images/k-m.png")] },
     { id: "p1", basename: "b.jpg", room: "", original: "b.jpg", inventory: { roomType: "bathroom" }, tiers: [tier("cosmetic", "review", "images/b c.png"), tier("moderate", "error", null)] },
@@ -33,8 +33,8 @@ it("lists the five newest reports across listings and reels their passing redesi
   await addRun(b.id, "b-running", "2026-10-10T10:00:00.000Z", null, null);
 
   const home = await homeView();
-  expect(home.totalReports).toBe(5);
-  expect(home.reports.map((r) => r.id)).toEqual(["b-new", "a4", "a3", "a2", "a1"]);
+  expect(home.totalReports).toBe(8);
+  expect(home.reports.map((r) => r.id)).toEqual(["b-new", "a7", "a6", "a5", "a4", "a3", "a2"]);
   expect(home.reports[0]).toMatchObject({ listingName: "Lakeview", reportUrl: `/files/runs/${b.id}/b-new/report.html` });
   expect(home.reports[0]!.images.map((i) => i.src)).toEqual([`/thumb/runs/${b.id}/b-new/images/k-c.png?w=240`, `/thumb/runs/${b.id}/b-new/images/b%20c.png?w=240`]);
   expect(home.reports[1]!.images).toEqual([]);
