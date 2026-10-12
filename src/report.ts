@@ -1197,6 +1197,8 @@ ${appearanceScript}
 
   dialog.viewer { width:100%; height:100dvh; max-width:none; max-height:none; margin:0; padding:0; border:0; background:#0f0f0e; color:#efede9; }
   dialog.viewer::backdrop { background:rgba(0,0,0,.85); }
+  /* While a swipe closes the viewer, the page behind shows through right away (the dialog fades its own background). */
+  dialog.viewer.dismissing::backdrop { background:transparent; }
   /* The page behind the photo viewer stays put while it is open. */
   html:has(dialog.viewer[open]) { overflow:hidden; }
   dialog.viewer { overscroll-behavior:contain; }
@@ -1776,6 +1778,7 @@ ${appearanceScript}
     applyZoom();
     stage.style.backgroundPosition = "";
     dialog.style.backgroundColor = "";
+    dialog.classList.remove("dismissing");
     bar.style.opacity = badge.style.opacity = "";
     stage.classList.remove("reeling", "comparing", "dragging");
     drag = null;
@@ -1793,6 +1796,19 @@ ${appearanceScript}
       if ((Math.abs(x - to) < .5 && Math.abs(v) < 5) || now - started > 900) {
         springFrame = null; update(to); finish();
       } else springFrame = requestAnimationFrame(frame);
+    }
+    springFrame = requestAnimationFrame(frame);
+  }
+  // A short ease-out that carries the photo off screen; closing waits for this, not a spring's long tail.
+  function flyOut(from, to, update, finish) {
+    cancelAnimationFrame(springFrame);
+    if (motion.reduce.matches) { finish(); return; }
+    const started = performance.now();
+    function frame(now) {
+      const t = Math.min(1, (now - started) / 160), eased = 1 - (1 - t) * (1 - t);
+      update(from + (to - from) * eased);
+      if (t < 1) springFrame = requestAnimationFrame(frame);
+      else { springFrame = null; finish(); }
     }
     springFrame = requestAnimationFrame(frame);
   }
@@ -1823,7 +1839,8 @@ ${appearanceScript}
     const progress = Math.min(1, Math.abs(y) / (stage.clientHeight * .6));
     img.style.transform = "translateY(" + y + "px) scale(" + (1 - progress * .15) + ")";
     stage.style.backgroundPosition = "center calc(50% + " + y + "px)";
-    dialog.style.backgroundColor = "rgba(15,15,14," + (1 - progress * .85) + ")";
+    dialog.classList.toggle("dismissing", y !== 0);
+    dialog.style.backgroundColor = "rgba(15,15,14," + (1 - progress) + ")";
     bar.style.opacity = badge.style.opacity = String(1 - progress);
   }
   function comparisonIndex() {
@@ -1982,7 +1999,7 @@ ${appearanceScript}
     }
     if (gesture.axis === "dismiss") {
       const projected = dy + velocity * 180;
-      if (Math.abs(projected) > 110) spring(dy, Math.sign(projected) * stage.clientHeight, velocity, moveDismiss, () => dialog.close());
+      if (Math.abs(projected) > 110) flyOut(dy, Math.sign(projected) * stage.clientHeight, moveDismiss, () => dialog.close());
       else spring(dy, 0, velocity, moveDismiss, resetInteraction);
       return;
     }
