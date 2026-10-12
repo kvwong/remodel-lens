@@ -103,18 +103,31 @@
   .detail-admin { display:grid; gap:12px; }
   .subhead { margin:6px 0 0; color:var(--muted); font-size:14px; }
   .section-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; margin-bottom:14px; }
-  .panel-toggle { display:flex; align-items:center; gap:8px; margin:0; padding:0; border:0; background:none; color:inherit; font:inherit; cursor:pointer; text-align:left; }
-  .panel-toggle svg { flex:none; color:var(--muted); transition:transform .2s; transform:rotate(-90deg); }
-  .panel-toggle[aria-expanded="true"] svg { transform:none; }
+  /* Collapsible panel headers match the rules categories: title on the left, fold chevron at the far right (down when closed, up when open). */
+  .panel-toggle { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; min-height:32px; margin:0; padding:0; border:0; background:none; color:inherit; font:inherit; cursor:pointer; text-align:left; }
+  .panel-toggle h2 { margin:0; }
+  .panel-toggle::after { content:""; flex:none; width:7px; height:7px; border-right:1.5px solid var(--muted); border-bottom:1.5px solid var(--muted); transform:translateY(-2px) rotate(45deg); --motion:transform .2s; }
+  .panel-toggle[aria-expanded="true"]::after { transform:translateY(2px) rotate(-135deg); }
+  .section-head:has(> .panel-toggle) { margin-bottom:12px; }
+  .section-head:has(> .panel-toggle[aria-expanded="false"]) { margin-bottom:0; }
+  /* Count beside a section title: "Title · 3" on desktop, a quiet second line on phones (no stray dot). */
+  .head-count { color:var(--muted); font-weight:400; }
+  .head-count::before { content:"· "; }
+  @media (max-width:860px) { .head-count { display:block; margin-top:2px; font-size:13px; } .head-count::before { content:none; } }
+  .panel-preview { margin:8px 0 0; font-size:14px; line-height:1.45; color:var(--muted); overflow-wrap:anywhere; }
+  .panel-preview .clamp { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .panel-preview .clamp + .clamp { margin-top:2px; }
+  .panel-preview .num { font-size:13px; }
+  .panel-preview[hidden] { display:none; }
   .panel-body[hidden] { display:none; }
   .tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   [data-photos-only][data-collapsed="true"] { display:none; }
+  #refs-zone .section-head { flex-wrap:nowrap; }
+  #refs-zone .section-head h2 { min-width:0; }
+  #refs-zone .section-head > .tools { flex:none; }
   #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]), #refs-zone .section-head:has([data-photos-only][data-collapsed="true"]) { flex-wrap:nowrap; }
   #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]) h2, #refs-zone .section-head:has([data-photos-only][data-collapsed="true"]) h2 { min-width:0; }
   #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]) > .tools, #refs-zone .section-head:has([data-photos-only][data-collapsed="true"]) > .tools { flex:none; }
-  @media (max-width:600px) {
-    #photos-zone .section-head:has([data-photos-only][data-collapsed="true"]) h2 .num, #refs-zone .section-head:has([data-photos-only][data-collapsed="true"]) h2 .num { display:block; margin-top:4px; font-size:13px; }
-  }
   .hint { margin:6px 0 0; font-size:13px; color:var(--muted); max-width:68ch; }
 
   /* Collection pages and the mobile navigation shell. */
@@ -458,8 +471,8 @@
 
     /* Listing photos: two up, so a 12-photo listing is a few screens instead of a dozen. */
     #photos-zone .section-head > .tools, #refs-zone .section-head > .tools { width:auto; }
-    #photos-zone .section-head > .tools:has([data-photos-only][data-collapsed="false"]), #refs-zone .section-head > .tools:has([data-photos-only][data-collapsed="false"]) { width:100%; }
-    #photos-zone .section-head > .tools > .btn:last-of-type, #refs-zone .section-head > .tools > .btn:last-of-type { margin-left:auto; }
+    #photos-zone .section-head > .tools:has([data-photos-only][data-collapsed="false"]) { width:100%; }
+    #photos-zone .section-head > .tools > .btn:last-of-type { margin-left:auto; }
     .grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px 10px; }
     .pick { border-radius:9px; }
     .check { top:6px; left:6px; width:28px; height:28px; }
@@ -702,7 +715,7 @@
   #home-reports { display:grid; gap:var(--section-gap); min-width:0; }
   .home-head { position:relative; }
   .home-head .btn { margin-left:auto; }
-  /* Listing link: taste and scope pickers stay available before a link is entered. Same edge as the Recent reports panel (shadow, no visible border); the border shows only on focus. */
+  /* Listing link: taste and scope pickers stay available before a link is entered. Same edge as the Recent redesigns panel (shadow, no visible border); the border shows only on focus. */
   .link-compose { position:relative; z-index:2; display:grid; gap:6px; margin:0 0 28px; }
   .link-box { display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; gap:6px 8px; padding:10px 8px 8px 16px; border:1px solid transparent; border-radius:16px; background:var(--surface); box-shadow:var(--shadow); --motion:border-color var(--base) var(--ease); }
   .link-box:focus-within { border-color:color-mix(in srgb, var(--text) 40%, var(--line-strong)); }
@@ -849,7 +862,7 @@
   <a href="/" class="mobile-tab" data-mobile-tab="home" aria-label="Home"><span data-icon="home"></span></a>
   <a href="?view=listings" class="mobile-tab" data-mobile-tab="listings" aria-label="Listings"><span data-icon="list"></span></a>
   <a href="?view=tastes" class="mobile-tab" data-mobile-tab="tastes" aria-label="Tastes"><span data-icon="sparkles"></span></a>
-  <a href="?view=reports" class="mobile-tab" data-mobile-tab="reports" aria-label="Reports"><span data-icon="report"></span></a>
+  <a href="?view=reports" class="mobile-tab" data-mobile-tab="reports" aria-label="Redesigns"><span data-icon="redesigns"></span></a>
 </nav>
 <script>
 /* Before the first paint: show this page's skeleton from its last visit and light its tab. */
@@ -971,6 +984,7 @@ const ICONS = {
   home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
   sparkles: '<path d="m12 3 2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6z"/><path d="M20 2v4M18 4h4"/>',
   report: '<path d="M14 2H5a1 1 0 0 0-1 1v18a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8z"/><path d="M14 2v6h6M8 12h8M8 16h8"/>',
+  redesigns: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M12 4v16"/><path d="m3.5 17 4-4.5 3 3"/><path d="m13.5 16 3-3.5 4 4.5"/><circle cx="7.5" cy="8.5" r="1"/>',
   copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
   trash: '<path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7M14 10v7"/>',
   monitor: '<rect x="3" y="3" width="18" height="13" rx="2"/><path d="M12 16v5M8 21h8"/>',
@@ -1304,15 +1318,15 @@ async function loadReports() {
 }
 
 function renderReports() {
-  document.title = "Reports · Whim";
+  document.title = "Redesigns · Whim";
   $("#content").innerHTML = reportsMarkup(state.reports, state.reportErrors);
   watchRunning();
 }
 
 function reportsMarkup(reports, errors) {
-  return `<header class="head collection-head"><div><h1>Reports</h1><p class="subhead">${reports.length ? `${plural(reports.length, "report")} across ${plural(new Set(reports.map(run => run.listingId)).size, "listing")} · newest first` : "None yet"}</p></div></header>
-    ${errors.length ? `<div class="notice" role="alert">Couldn't load reports for ${esc(errors.join(", "))}. <button class="btn btn-small" type="button" data-action="retry-reports">Retry</button></div>` : ""}
-    <section class="panel">${reports.length || state.running?.length ? `<ul class="runs">${(state.running ?? []).map(runningRow).join("")}${reports.map(run => runRow(run, true)).join("")}</ul>` : `<p class="muted" style="margin:0">${errors.length ? "Reports couldn't be loaded. Try again." : "No reports yet. Run a redesign from a listing to create one."}</p>`}</section>`;
+  return `<header class="head collection-head"><div><h1>Redesigns</h1><p class="subhead">${reports.length ? `${plural(reports.length, "redesign")} across ${plural(new Set(reports.map(run => run.listingId)).size, "listing")} · newest first` : "None yet"}</p></div></header>
+    ${errors.length ? `<div class="notice" role="alert">Couldn't load redesigns for ${esc(errors.join(", "))}. <button class="btn btn-small" type="button" data-action="retry-reports">Retry</button></div>` : ""}
+    <section class="panel">${reports.length || state.running?.length ? `<ul class="runs">${(state.running ?? []).map(runningRow).join("")}${reports.map(run => runRow(run, true)).join("")}</ul>` : `<p class="muted" style="margin:0">${errors.length ? "Redesigns couldn't be loaded. Try again." : "No redesigns yet. Run a redesign from a listing to create one."}</p>`}</section>`;
 }
 
 const sidebarItems = (kind) => kind === "listings" ? state.listings : state.tasteProfiles;
@@ -1635,10 +1649,10 @@ function homeMarkup({ reports, totalReports, slides }, hasListings) {
 
 function homeReportsMarkup({ reports, totalReports }, hasListings) {
   const running = state.running ?? [];
-  return `<header class="head collection-head home-head"><div><h1>Recent reports</h1><p class="subhead">${!totalReports ? "None yet" : `${totalReports > reports.length ? `Latest ${reports.length} of ${totalReports}` : `${totalReports} ${totalReports === 1 ? "report" : "reports"}`} · newest first`}</p></div>
-      ${totalReports > reports.length ? `<a class="btn btn-small nav-inline" href="?view=reports">All reports</a>` : ""}</header>
+  return `<header class="head collection-head home-head"><div><h1>Recent redesigns</h1><p class="subhead">${!totalReports ? "None yet" : `${totalReports > reports.length ? `Latest ${reports.length} of ${totalReports}` : `${totalReports} ${totalReports === 1 ? "redesign" : "redesigns"}`} · newest first`}</p></div>
+      ${totalReports > reports.length ? `<a class="btn btn-small nav-inline" href="?view=reports">All redesigns</a>` : ""}</header>
     <section class="panel">${reports.length || running.length ? `<ul class="runs">${running.map(runningRow).join("")}${reports.map(run => runRow(run, true)).join("")}</ul>` : `${hasListings
-      ? `<p class="muted" style="margin:0">No reports yet. Open a listing and run a redesign to create one.</p>`
+      ? `<p class="muted" style="margin:0">No redesigns yet. Open a listing and run a redesign to create one.</p>`
       : `<div class="empty-start"><p class="muted" style="margin:0">Start with a listing: add photos of a home, then run a redesign to get a report.</p><button class="btn btn-primary btn-small" type="button" data-action="new-listing">${icon("plus")}New listing</button></div>`}`}</section>`;
 }
 
@@ -1835,7 +1849,7 @@ function reelLook(i, seed = String(i)) {
 
 /** The reel's last card: opens the full list of reports. */
 function reelMore(i, totalReports) {
-  return `<li class="reel-card reel-more" style="${reelLook(i, "all-reports")}"><a class="nav-inline" href="?view=reports">All reports<small>${totalReports} in all</small>${icon("chevron")}</a></li>`;
+  return `<li class="reel-card reel-more" style="${reelLook(i, "all-reports")}"><a class="nav-inline" href="?view=reports">All redesigns<small>${totalReports} in all</small>${icon("chevron")}</a></li>`;
 }
 
 function reelCard(slide, i) {
@@ -2136,7 +2150,7 @@ function renderListing() {
 
     <section class="panel zone" aria-labelledby="photos-h" id="photos-zone">
       <div class="section-head">
-        <h2 id="photos-h">Listing photos <span class="muted num" style="font-weight:400">· ${selected} of ${l.photos.length}</span></h2>
+        <h2 id="photos-h">Listing photos <span class="head-count num">${selected} of ${l.photos.length}</span></h2>
         <div class="tools">
           <span class="tools fade" data-photos-only data-collapsed="${photosHidden}">
             <button class="btn btn-small" type="button" data-action="all" ${selected === l.photos.length ? "disabled" : ""}>Select all</button>
@@ -2239,7 +2253,7 @@ function renderListing() {
     </section>
 
     <section class="panel zone" aria-labelledby="runs-h">
-      <div class="section-head"><h2 id="runs-h">Redesigns <span class="muted num" style="font-weight:400">· ${l.runs.length}</span></h2></div>
+      <div class="section-head"><h2 id="runs-h">Redesigns <span class="head-count num">${l.runs.length}</span></h2></div>
       ${l.runs.length
         ? `<ul class="runs">${l.runs.map(run => runRow(run)).join("")}</ul>`
         : `<p class="muted" style="margin:0">No runs yet. Reports appear here after the first redesign.</p>`}
@@ -2327,6 +2341,8 @@ function setPanelHidden(key, hidden) {
   $(`[data-toggle-panel="${key}"]`)?.setAttribute("aria-expanded", String(!hidden));
   const body = $(`#${key}-body`);
   if (body) body.hidden = hidden;
+  const preview = $(`#${key}-preview`);
+  if (preview) preview.hidden = !hidden;
 }
 
 /**
@@ -2394,7 +2410,14 @@ async function loadTaste(id) {
 function renderTaste() {
   const t = state.taste;
   const refsHidden = params().get("refs") === "hidden", briefHidden = params().get("brief") === "hidden", rulesHidden = params().get("rules") === "hidden";
-  const panelHead = (key, id, title, hidden) => `<button class="panel-toggle" type="button" data-toggle-panel="${key}" aria-expanded="${!hidden}" aria-controls="${key}-body"><h2 id="${id}">${title}</h2>${icon("chevron")}</button>`;
+  const briefLine = (state.briefDraft ?? "").trim().replace(/\s+/g, " ");
+  const categoryCount = t.profile?.categories.length ?? 0;
+  const previews = {
+    brief: briefLine ? `<span class="clamp">${esc(briefLine)}</span>` : `<span class="clamp">No brief yet. Open this to describe your taste.</span>`,
+    rules: t.profile ? `<span class="clamp num">${plural(ruleCount, "rule")} in ${categoryCount} ${categoryCount === 1 ? "category" : "categories"}</span>${t.profile.summary ? `<span class="clamp">${esc(t.profile.summary)}</span>` : ""}` : `<span class="clamp">No rules yet. Rebuild to create them.</span>`,
+  };
+  const panelPreview = (key, hidden) => `<div class="panel-preview" id="${key}-preview" ${hidden ? "" : "hidden"}>${previews[key]}</div>`;
+  const panelHead = (key, id, title, hidden) => `<button class="panel-toggle" type="button" data-toggle-panel="${key}" aria-expanded="${!hidden}" aria-controls="${key}-body"><h2 id="${id}">${title}</h2></button>`;
   document.title = `${t.meta.name} · Taste profile · Whim`;
   const running = state.job?.status === "running";
   const lb = t.meta.lastBuild;
@@ -2418,7 +2441,7 @@ function renderTaste() {
 
     <section class="panel zone" aria-labelledby="refs-h" id="refs-zone">
       <div class="section-head">
-        <h2 id="refs-h">Reference photos <span class="muted num" style="font-weight:400">· ${t.references.length}</span></h2>
+        <h2 id="refs-h">Reference photos <span class="head-count num">${t.references.length}</span></h2>
         <div class="tools">
           ${t.references.length ? `<span class="tools fade" data-photos-only data-collapsed="${refsHidden}"><button class="btn btn-small" type="button" data-toggle="refs" data-refs-done aria-expanded="${!refsHidden}" aria-controls="refs-body">Done</button></span>` : ""}
           <button class="btn btn-small" type="button" data-action="pick-files" aria-label="Add photos" title="Add photos" ${running ? "disabled" : ""}>${icon("plus")}<span class="btn-label">Add photos</span></button>
@@ -2449,7 +2472,8 @@ function renderTaste() {
     </section>
 
     <section class="panel" aria-labelledby="brief-h">
-      <div class="section-head" style="margin-bottom:6px">${panelHead("brief", "brief-h", "Brief", briefHidden)}</div>
+      <div class="section-head">${panelHead("brief", "brief-h", "Brief", briefHidden)}</div>
+      ${panelPreview("brief", briefHidden)}
       <div class="panel-body" id="brief-body" ${briefHidden ? "hidden" : ""}>
       <p class="hint" style="margin:0 0 12px">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal and use the photos to confirm and sharpen it. Select the text to edit.</p>
       ${renderTextField("brief", "brief", "Brief", state.briefDraft, { brief: true, rows: 10, placeholder: "Add a brief describing your taste…" })}
@@ -2475,7 +2499,8 @@ function renderTaste() {
     </section>
 
     <section class="panel" aria-labelledby="rules-h">
-      <div class="section-head" style="margin-bottom:6px">${panelHead("rules", "rules-h", "Rules", rulesHidden)}</div>
+      <div class="section-head">${panelHead("rules", "rules-h", "Rules", rulesHidden)}</div>
+      ${panelPreview("rules", rulesHidden)}
       <div class="panel-body" id="rules-body" ${rulesHidden ? "hidden" : ""}><div id="rules">${renderRulesBody()}</div></div>
     </section>
 
@@ -4119,7 +4144,7 @@ function fallbackSkeleton(key) {
     html = settingsShell(keysMarkup({ keys: { openai: key, anthropic: key, openrouter: key }, models: { current: { reasoning: "openai/x", analysis: [] } }, keysError: null }));
   } else if (view === "listing") html = `${renderDetailHeader({ kind: "listing", name: "Listing name", metadata: `<p class="stats"><span>City, State</span><span>A short description</span></p>` })}
     <section class="panel zone" id="photos-zone">
-      <div class="section-head"><h2>Listing photos <span class="muted num" style="font-weight:400">· 6 of 8</span></h2><div class="tools"><span class="tools fade" data-photos-only data-collapsed="true"></span><button class="btn btn-small" type="button" aria-label="Add photos">${icon("plus")}<span class="btn-label">Add photos</span></button></div></div>
+      <div class="section-head"><h2>Listing photos <span class="head-count num">6 of 8</span></h2><div class="tools"><span class="tools fade" data-photos-only data-collapsed="true"></span><button class="btn btn-small" type="button" aria-label="Add photos">${icon("plus")}<span class="btn-label">Add photos</span></button></div></div>
       <div class="photos-area"><div data-photos-strip><div>${photoStack(6)}</div></div></div>
       <hr class="zone-divider">
       <div class="run-form"><h2>Redesign</h2><div class="redesign-settings">
@@ -4128,9 +4153,9 @@ function fallbackSkeleton(key) {
       </div></div>
     </section>`;
   else html = `${renderDetailHeader({ kind: "taste", name: "Taste name", metadata: `<p class="stats num"><span>Taste profile</span><span>12 reference photos</span><span>30 rules</span></p>` })}
-    <section class="panel zone" id="refs-zone"><div class="section-head"><h2>Reference photos <span class="muted num" style="font-weight:400">· 12</span></h2><div class="tools"><button class="btn btn-small" type="button" aria-label="Add photos">${icon("plus")}<span class="btn-label">Add photos</span></button></div></div>
+    <section class="panel zone" id="refs-zone"><div class="section-head"><h2>Reference photos <span class="head-count num">12</span></h2><div class="tools"><button class="btn btn-small" type="button" aria-label="Add photos">${icon("plus")}<span class="btn-label">Add photos</span></button></div></div>
       <div class="photos-area"><div data-photos-strip><div>${photoStack(8)}</div></div></div></section>
-    <section class="panel"><div class="section-head" style="margin-bottom:6px"><button class="panel-toggle" type="button" aria-expanded="true"><h2>Brief</h2>${icon("chevron")}</button></div><p class="hint" style="margin:0 0 12px">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal and use the photos to confirm and sharpen it.</p></section>`;
+    <section class="panel"><div class="section-head"><button class="panel-toggle" type="button" aria-expanded="true"><h2>Brief</h2></button></div><p class="hint" style="margin:0 0 12px">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal and use the photos to confirm and sharpen it.</p></section>`;
   return skeletonize(html);
 }
 
