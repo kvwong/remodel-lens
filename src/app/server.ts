@@ -341,13 +341,18 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     return res.end(JSON.stringify({
       id: "/", name: "Whim", short_name: "Whim", start_url: "/", scope: "/", display: "standalone",
       background_color: "#f5f4f1", theme_color: "#f5f4f1",
-      icons: [192, 512].map((size) => ({ src: `/assets/brand/icon-${size}.png`, sizes: `${size}x${size}`, type: "image/png", purpose: "any" })),
+      // Versioned names, so a phone that saved an older icon fetches these fresh.
+      icons: [180, 192, 512].map((size) => ({ src: `/assets/brand/icon-${size}-v3.png`, sizes: `${size}x${size}`, type: "image/png", purpose: "any" })),
     }));
   }
   const appIcons: Record<string, string> = {
     "/apple-touch-icon.png": "icon-180.png",
     "/apple-touch-icon-precomposed.png": "icon-180.png",
     "/assets/brand/apple-touch-icon-v2.png": "icon-180.png",
+    "/assets/brand/apple-touch-icon-v3.png": "icon-180.png",
+    "/assets/brand/icon-180-v3.png": "icon-180.png",
+    "/assets/brand/icon-192-v3.png": "icon-192.png",
+    "/assets/brand/icon-512-v3.png": "icon-512.png",
     "/assets/brand/icon-192.png": "icon-192.png",
     "/assets/brand/icon-512.png": "icon-512.png",
   };
