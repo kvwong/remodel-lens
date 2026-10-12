@@ -253,6 +253,7 @@
   .profile-menu-sep { height:1px; margin:4px 6px; background:var(--line); }
   .profile-option-new { font-weight:500; }
   .profile-option-new .icon { opacity:1; }
+  .run-row .btn, .confirm .btn { min-width:112px; padding:6px 16px; font-weight:600; justify-content:center; }
   .run-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; padding-top:4px; }
   .estimate { font-size:14px; color:var(--muted); }
   .estimate strong { color:var(--text); font-weight:500; }
@@ -471,7 +472,7 @@
     .tier { min-height:56px; padding:12px; }
     .tier input { width:20px; height:20px; }
     .run-row { flex-direction:column; align-items:stretch; gap:10px; }
-    .run-row .btn-primary, .confirm .btn { min-height:48px; font-size:15px; }
+    .run-row .btn, .confirm .btn { min-height:48px; font-size:15px; }
     .run-row .estimate { order:-1; font-size:13px; }
     .confirm { display:grid; grid-template-columns:1fr 1fr; }
     .confirm p { grid-column:1 / -1; }
@@ -2373,7 +2374,7 @@ function renderTaste() {
             <button class="btn btn-primary" type="button" data-action="build">Rebuild now</button>
           </div>`
         : `<div class="field-row" style="margin-top:14px">
-            <button class="btn" id="build-btn" type="button" data-action="confirm-build" ${running || t.references.length < 3 ? "disabled" : ""}>${icon("refresh")}Rebuild rules</button>
+            <button class="btn btn-primary" id="build-btn" type="button" data-action="confirm-build" ${running || t.references.length < 3 ? "disabled" : ""}>${icon("refresh")}Rebuild rules</button>
             ${t.hasPrevious && !running ? `<button class="btn btn-quiet" type="button" data-action="restore-previous">Restore previous rules</button>` : ""}
             ${t.references.length < 3 ? `<span class="hint" style="margin:0">Add at least 3 photos first.</span>` : ""}
           </div>`}
