@@ -144,13 +144,13 @@
     .collection-head .btn { min-height:44px; }
     .collection-grid { grid-template-columns:minmax(0, 1fr); }
     .collection-link { min-height:108px; }
-    .mobile-tabs { position:fixed; z-index:25; bottom:max(8px, env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:4px; padding:6px; border:0; border-radius:999px; background:color-mix(in srgb, var(--surface) 94%, transparent); box-shadow:0 8px 32px rgba(0,0,0,.12), 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent); }
+    .mobile-tabs { position:fixed; z-index:25; bottom:max(8px, env(safe-area-inset-bottom)); left:max(16px, env(safe-area-inset-left)); width:calc(100% - 88px); max-width:440px; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:4px; padding:6px; border:0; border-radius:999px; background:color-mix(in srgb, var(--surface) 94%, transparent); box-shadow:0 8px 32px rgba(0,0,0,.12), 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent); }
     .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:0; min-height:52px; border-radius:999px; color:var(--muted); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; --motion:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
     .mobile-tabs .icon { width:24px; height:24px; }
     .mobile-tabs a[aria-current="page"] { background:var(--primary); color:var(--primary-text); font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.18); }
     .mobile-tabs a:active { transform:scale(.96); }
-    /* The bar's size follows the scroll: it shrinks in step with scrolling down and grows back in step with scrolling up (--nav-scale is set from the scroll position). */
-    .mobile-tabs { transform-origin:50% 100%; transform:translateX(-50%) scale(var(--nav-scale, 1)); will-change:transform; }
+    /* The bar leaves 56px free on the right for a back-to-top button. Its size follows the scroll: it shrinks in step with scrolling down and grows back in step with scrolling up (--nav-scale is set from the scroll position). */
+    .mobile-tabs { transform-origin:0 100%; transform:scale(var(--nav-scale, 1)); will-change:transform; }
     #save-status { top:calc(16px + env(safe-area-inset-top)); }
     /* Home screen app: iOS blurs the strip under the status bar, so keep the logo clear of it. */
     @media (display-mode: standalone) { .layout { padding-top:var(--standalone-top); } }
