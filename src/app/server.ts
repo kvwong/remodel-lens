@@ -17,6 +17,7 @@ import { startChange } from "../redesign/change.js";
 import { applyPicks, ORIGINAL, pickKey, readVersions, updateVersions, type VersionsFile } from "../redesign/versions.js";
 import { renderReport } from "../report.js";
 import { scrapeListing } from "../listing/scrape.js";
+import { keepInteriorPhotos } from "../listing/sort.js";
 import { motionScript } from "../motion.js";
 import { brandAppHtml } from "../branding.js";
 import { homeView } from "./home-api.js";
@@ -88,6 +89,8 @@ type Job = {
   progress: Progress;
   run: RunSummary | null;
   error: string | null;
+  /** Redesigns: what Home and All reports show while the run is going. */
+  info?: { tiers: string[]; profileName: string | null };
 };
 const jobs = new Map<string, Job>();
 /** One running job per listing or profile; different ones run in parallel. */
@@ -334,7 +337,8 @@ const ChangeBody = z.object({
   pins: z.array(z.object({ x: z.number().min(0).max(1000), y: z.number().min(0).max(1000), note: z.string().max(500) })).max(8).default([]),
   references: z.array(z.string().max(12_000_000)).max(3).default([]),
 });
-const RunBody = z.object({ tiers: z.array(z.enum(TIERS)).min(1), profile: z.string().max(60) });
+// interiorsOnly (runs started from Home's link box): sort the photos first so exteriors and floor plans are skipped.
+const RunBody = z.object({ tiers: z.array(z.enum(TIERS)).min(1), profile: z.string().max(60), interiorsOnly: z.boolean().optional() });
 const CreateProfileBody = z.object({ name: z.string().max(60), description: z.string().max(300).optional(), from: z.string().max(60).nullable().optional() });
 
 async function handle(req: IncomingMessage, res: ServerResponse) {
@@ -453,7 +457,8 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         const body = RunBody.parse(await readBody(req));
         if (restartPending) return send(res, 503, { error: RESTARTING });
         if (isRunning("redesign", parts[2])) return send(res, 409, { error: "This listing already has a redesign running. Wait for it to finish." });
-        if (!(await listProfiles()).some((p) => p.id === body.profile)) return send(res, 400, { error: "Unknown taste profile." });
+        const runProfile = (await listProfiles()).find((p) => p.id === body.profile);
+        if (!runProfile) return send(res, 400, { error: "Unknown taste profile." });
         try {
           requireKeys(resolveModels());
         } catch (error) {
@@ -462,9 +467,11 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         const listing = await readListing(dir);
         if (!listing.photos.some((p) => p.selected)) return send(res, 400, { error: "Select at least one photo." });
 
-        const job = startJob("redesign", listing.id, () =>
-          runListingRedesign({ listingDir: dir, profilePath: profileJsonPath(body.profile), tiers: body.tiers }),
-        );
+        const job = startJob("redesign", listing.id, async () => {
+          if (body.interiorsOnly) await keepInteriorPhotos(dir, resolveModels().reasoning);
+          return runListingRedesign({ listingDir: dir, profilePath: profileJsonPath(body.profile), tiers: body.tiers });
+        });
+        job.info = { tiers: body.tiers, profileName: runProfile.name };
         return send(res, 202, jobView(job));
       }
     }
@@ -647,6 +654,17 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         });
         return send(res, 200, await versionsView(runDir));
       }
+    }
+    // Redesigns still running, for the top of Home's and All reports' lists.
+    if (req.method === "GET" && parts[1] === "running" && parts.length === 2) {
+      return send(res, 200, await Promise.all(runningJobs().filter((job) => job.kind === "redesign").map(async (job) => ({
+        ...jobView(job),
+        log: [],
+        listingId: job.key,
+        listingName: (await readListing(listingDir(job.key)).catch(() => null))?.name ?? job.key,
+        tiers: job.info?.tiers ?? [],
+        profileName: job.info?.profileName ?? null,
+      }))));
     }
     if (req.method === "GET" && parts[1] === "home" && parts.length === 2) return send(res, 200, await homeView());
     if (req.method === "GET" && parts[1] === "status") {
