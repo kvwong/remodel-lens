@@ -1373,9 +1373,8 @@ ${appearanceScript}
 ${back ? `${mobileTabsCss}
   /* On a phone the tab bar carries navigation, so the logo row above the title goes. */
   @media (max-width:860px) { .report-brand { display:none; } }
-  /* The back-to-top button sits at the right of the tab bar, on the same horizontal line (both scale from the bottom edge). */
+  /* The back-to-top button sits in the room the tab bar leaves on the right, on the same horizontal line (both scale from the bottom edge). */
   @media (max-width:860px) {
-    .mobile-tabs { left:max(16px, env(safe-area-inset-left)); width:calc(100% - 32px - 56px); transform-origin:0 100%; transform:scale(var(--nav-scale, 1)); }
     .to-top { bottom:calc(max(8px, env(safe-area-inset-bottom)) + 32px * var(--nav-scale, 1) - 22px); }
   }` : ""}
 </style>
