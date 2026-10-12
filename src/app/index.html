@@ -23,7 +23,7 @@
   :focus-visible { outline:2px solid var(--text); outline-offset:2px; border-radius:6px; }
   .skip { position:absolute; left:-9999px; top:8px; z-index:10; background:var(--surface); padding:8px 12px; border-radius:12px; }
   .skip:focus { left:8px; }
-  @media (max-width:860px) { .btn-label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; } .btn:has(> .btn-label) { padding-inline:9px; } }
+  @media (max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) { .btn-label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; } .btn:has(> .btn-label) { padding-inline:9px; } }
   .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
   .muted { color:var(--muted); }
   .num { font-variant-numeric:tabular-nums; }
@@ -39,7 +39,7 @@
   .banner { margin:16px max(20px, env(safe-area-inset-left)) 0; padding:10px 14px; border-radius:12px; background:var(--warn-bg); color:var(--warn); font-size:14px; }
   .banner code { font-family:var(--mono); font-size:13px; }
   .layout { display:grid; grid-template-columns:248px minmax(0, 1fr); gap:32px; max-width:var(--page-max); min-height:100dvh; margin:0 auto; padding:var(--page-top) max(var(--page-gutter), env(safe-area-inset-left)) var(--page-top) max(var(--page-gutter), env(safe-area-inset-right)); }
-  @media (max-width: 860px) { .layout { grid-template-columns:minmax(0, 1fr); gap:24px; } }
+  @media (max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) { .layout { grid-template-columns:minmax(0, 1fr); gap:24px; } }
   .side { min-width:0; display:flex; flex-direction:column; gap:24px; align-self:start; position:sticky; top:24px; height:calc(100dvh - 48px); padding:2px 0; }
   .side-content { display:grid; grid-template-columns:minmax(0, 1fr); gap:24px; overflow-x:hidden; overflow-y:auto; min-width:0; min-height:0; padding:2px 2px 28px; margin:0; scrollbar-gutter:stable; height:100%; }
   /* Bottom row: Settings on the left, the display switch on the right. */
@@ -60,7 +60,7 @@
   .side .brand { display:flex; align-items:center; width:fit-content; padding-left:10px; cursor:pointer; min-height:32px; line-height:32px; }
   /* The logo is the Home link: a pointer on hover, and the same press scale as buttons (below). */
   .side .brand * { cursor:inherit; }
-  @media (max-width: 860px) { .side { position:static; height:auto; } .side-content { overflow-x:hidden; overflow-y:auto; } }
+  @media (max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) { .side { position:static; height:auto; } .side-content { overflow-x:hidden; overflow-y:auto; } }
   .side ul > li.muted { padding-left:10px; }
   .side-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; min-height:32px; padding-left:10px; }
   .sidebar-toggle { display:flex; align-items:center; gap:6px; padding:6px 10px; margin-left:-10px; min-height:32px; border:0; border-radius:14px; background:transparent; color:inherit; font:inherit; cursor:pointer; text-align:left; --motion:background-color var(--fast) var(--ease), color var(--fast) var(--ease); }
@@ -113,7 +113,7 @@
   /* Count beside a section title: "Title · 3" on desktop, a quiet second line on phones (no stray dot). */
   .head-count { color:var(--muted); font-weight:400; }
   .head-count::before { content:"· "; }
-  @media (max-width:860px) { .head-count { display:block; margin-top:2px; font-size:13px; } .head-count::before { content:none; } }
+  @media (max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) { .head-count { display:block; margin-top:2px; font-size:13px; } .head-count::before { content:none; } }
   .panel-preview { margin:8px 0 0; font-size:14px; line-height:1.45; color:var(--muted); overflow-wrap:anywhere; }
   .panel-preview .clamp { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .panel-preview .clamp + .clamp { margin-top:2px; }
@@ -145,7 +145,7 @@
   .report-listing { font-size:15px; font-weight:600; text-decoration:none; justify-self:start; }
   .report-listing:hover { text-decoration:underline; }
   .mobile-tabs { display:none; }
-  @media (max-width:860px) {
+  @media (max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) {
     html { scroll-padding-bottom:112px; }
     .layout { padding:var(--page-top) max(var(--page-gutter), env(safe-area-inset-left)) calc(112px + env(safe-area-inset-bottom)) max(var(--page-gutter), env(safe-area-inset-right)); gap:var(--section-gap); align-content:start; }
     .side { flex-direction:row; align-items:center; gap:8px; padding:0; }
@@ -456,7 +456,7 @@
   .side-head [data-tip]::after { left:auto; right:0; translate:0 var(--tip-y, 4px); }
   .display-setting [data-tip]::after { left:auto; right:0; translate:0 var(--tip-y, 4px); }
   /* Mobile layout (kept last so it wins over the base component rules above). */
-  @media (max-width:860px) {
+  @media (max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) {
     .savebar { bottom:calc(96px + env(safe-area-inset-bottom)); }
     .toast { bottom:calc(96px + env(safe-area-inset-bottom)); max-width:calc(100% - 32px); }
     /* The floating tab bar would ride above the on-screen keyboard and cover the field being typed in. */
@@ -526,7 +526,7 @@
     dialog.modal .field-row:last-child .btn { min-height:48px; }
   }
   .back-link, .run-chevron { display:none; }
-  @media (max-width:860px) { .back-link { display:inline-flex; } .run-chevron { display:block; } }
+  @media (max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) { .back-link { display:inline-flex; } .run-chevron { display:block; } }
   /* Touch: hover backgrounds stick after a tap, so only show them for real pointers. */
   @media (hover:none) {
     .btn-quiet:hover, .icon-plain:hover, .display-toggle:hover { background:transparent; }
@@ -543,7 +543,7 @@
   .settings-link:hover { background:var(--surface); color:var(--text); }
   .settings-link[aria-current="page"] { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
   /* On a phone Settings is a gear at the top right of Home (the display toggle moved into Settings). */
-  @media (max-width:860px) {
+  @media (max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) {
     .display-setting .display-toggle { display:none; }
     .display-setting .settings-link { width:36px; height:32px; min-height:32px; padding:0; justify-content:center; border-radius:9px; }
     .display-setting .settings-link .settings-label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
@@ -755,11 +755,21 @@
   }
   @media (max-width:600px) { .reel { --reel-card:200px; } }
   /* On a phone the reel bleeds to both window edges and the first photo keeps the page margin; set here so a skeleton lines up before the live measurement runs. */
-  @media (max-width:860px) {
+  @media (max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) {
     .reel { margin-left:calc(-1 * max(var(--page-gutter), env(safe-area-inset-left))); margin-right:calc(-1 * max(var(--page-gutter), env(safe-area-inset-right))); }
     .reel-track { padding-left:max(var(--page-gutter), env(safe-area-inset-left)); padding-right:max(var(--page-gutter), env(safe-area-inset-right)); }
   }
   /* Swiping is by hand; with reduced motion the strip scrolls natively and snaps instead. */
+  /* Desktop edge fade: an eased (smoothstep) ramp, so photos dissolve instead of hitting a hard edge. The left edge only fades once the reel has moved. */
+  .reel { --fade-l:0px; --fade-r:88px; }
+  .reel[data-moved] { --fade-l:88px; }
+  .reel[data-end] { --fade-r:0px; }
+  @media (min-width:861px) and (not ((hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px))) {
+    .reel:not([data-still]) .reel-viewport {
+      -webkit-mask-image:linear-gradient(to right,transparent 0,rgba(0,0,0,.04) calc(var(--fade-l)*.12),rgba(0,0,0,.16) calc(var(--fade-l)*.25),rgba(0,0,0,.35) calc(var(--fade-l)*.37),rgba(0,0,0,.65) calc(var(--fade-l)*.5),rgba(0,0,0,.84) calc(var(--fade-l)*.62),rgba(0,0,0,.96) calc(var(--fade-l)*.8),#000 var(--fade-l),#000 calc(100% - var(--fade-r)),rgba(0,0,0,.96) calc(100% - var(--fade-r)*.8),rgba(0,0,0,.84) calc(100% - var(--fade-r)*.62),rgba(0,0,0,.65) calc(100% - var(--fade-r)*.5),rgba(0,0,0,.35) calc(100% - var(--fade-r)*.37),rgba(0,0,0,.16) calc(100% - var(--fade-r)*.25),rgba(0,0,0,.04) calc(100% - var(--fade-r)*.12),transparent 100%);
+      mask-image:linear-gradient(to right,transparent 0,rgba(0,0,0,.04) calc(var(--fade-l)*.12),rgba(0,0,0,.16) calc(var(--fade-l)*.25),rgba(0,0,0,.35) calc(var(--fade-l)*.37),rgba(0,0,0,.65) calc(var(--fade-l)*.5),rgba(0,0,0,.84) calc(var(--fade-l)*.62),rgba(0,0,0,.96) calc(var(--fade-l)*.8),#000 var(--fade-l),#000 calc(100% - var(--fade-r)),rgba(0,0,0,.96) calc(100% - var(--fade-r)*.8),rgba(0,0,0,.84) calc(100% - var(--fade-r)*.62),rgba(0,0,0,.65) calc(100% - var(--fade-r)*.5),rgba(0,0,0,.35) calc(100% - var(--fade-r)*.37),rgba(0,0,0,.16) calc(100% - var(--fade-r)*.25),rgba(0,0,0,.04) calc(100% - var(--fade-r)*.12),transparent 100%);
+    }
+  }
   .reel-viewport { touch-action:pan-y; user-select:none; -webkit-user-select:none; }
   @media (pointer:fine) { .reel-viewport { cursor:grab; } .reel-viewport a { cursor:inherit; } .reel[data-dragging] .reel-viewport { cursor:grabbing; } }
   .reel[data-still] .reel-viewport { overflow-x:auto; touch-action:auto; scrollbar-width:none; scroll-snap-type:x proximity; }
@@ -1022,7 +1032,7 @@ function updateKeyboardNavigation() {
   if (!editing) restingViewportHeight = window.innerHeight;
   const layoutHeight = Math.max(restingViewportHeight, window.innerHeight, document.documentElement.clientHeight);
   const visibleHeight = keyboardViewport?.height ?? window.innerHeight;
-  const keyboardOpen = window.innerWidth <= 860 && editing &&
+  const keyboardOpen = matchMedia("(max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px)").matches && editing &&
     (!keyboardViewport || Math.abs(keyboardViewport.scale - 1) < .05) &&
     layoutHeight - visibleHeight > Math.max(150, layoutHeight * .2);
   document.body.toggleAttribute("data-keyboard-open", !!keyboardOpen);
@@ -1876,7 +1886,11 @@ function startReel() {
   const { signal } = listeners;
   let offset = 0, snaps = [0], max = 0, speed = 0, target = 0, springing = false, drag = null, dragged = false, wheelTimer = 0;
   const still = () => reducedMotion.matches;
-  const place = () => { track.style.transform = still() ? "" : `translateX(${-offset}px)`; };
+  const place = () => {
+    track.style.transform = still() ? "" : `translateX(${-offset}px)`;
+    reel.toggleAttribute("data-moved", offset > 4);
+    reel.toggleAttribute("data-end", offset >= max - 4);
+  };
   const measure = () => {
     const cards = [...track.children];
     const pad = cards[0].offsetLeft;
@@ -1976,7 +1990,7 @@ function startReel() {
   // Full bleed: the reel runs out to the window edge on the right (measured here); on a phone it bleeds both edges from the stylesheet. The first photo keeps the page margin.
   const bleed = () => {
     reel.style.marginLeft = reel.style.marginRight = track.style.paddingLeft = track.style.paddingRight = "";
-    if (matchMedia("(max-width:860px)").matches) return; // the stylesheet bleeds both edges on a phone
+    if (matchMedia("(max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px)").matches) return; // the stylesheet bleeds both edges on a phone
     const box = reel.getBoundingClientRect(), right = document.documentElement.clientWidth - box.right;
     reel.style.marginRight = `${-right}px`;
     track.style.paddingRight = "12px";

@@ -10,7 +10,7 @@ export type MobileTab = (typeof TABS)[number]["key"];
 
 export const mobileTabsCss = `
   .mobile-tabs { display:none; }
-  @media (max-width:860px) {
+  @media (max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) {
     body { padding-bottom:calc(112px + env(safe-area-inset-bottom)); }
     .mobile-tabs { position:fixed; z-index:25; bottom:max(8px, env(safe-area-inset-bottom)); left:max(16px, env(safe-area-inset-left)); display:grid; width:calc(100% - 88px); max-width:440px; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:4px; padding:6px; border:0; border-radius:999px; background:color-mix(in srgb, var(--surface) 82%, transparent); box-shadow:0 8px 32px rgba(0,0,0,.12), 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent); transform-origin:0 100%; transform:scale(var(--nav-scale, 1)); will-change:transform; }
     .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:52px; border-radius:999px; color:var(--muted); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; --motion:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
@@ -19,7 +19,7 @@ export const mobileTabsCss = `
     .mobile-tabs a:active { transform:scale(.96); }
   }
   @supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
-    @media (max-width:860px) { .mobile-tabs { backdrop-filter:blur(28px) saturate(1.6); -webkit-backdrop-filter:blur(28px) saturate(1.6); } }
+    @media (max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) { .mobile-tabs { backdrop-filter:blur(28px) saturate(1.6); -webkit-backdrop-filter:blur(28px) saturate(1.6); } }
   }`;
 
 export function mobileTabsHtml(active: MobileTab): string {

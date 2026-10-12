@@ -212,7 +212,7 @@
         schedule(el);
         if (record.attributeName === "open") {
           fold(el);
-          if (el.matches("dialog[open]")) enter(el, el.matches(".modal") && matchMedia("(max-width:860px)").matches);
+          if (el.matches("dialog[open]")) enter(el, el.matches(".modal") && matchMedia("(max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px)").matches);
         }
         if (record.attributeName === "hidden" && !el.hidden && el.matches(".savebar, [data-panel]")) enter(el);
       }

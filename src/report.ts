@@ -1372,9 +1372,9 @@ ${appearanceScript}
   /* Motion fades and lifts tooltip pseudo-elements through these custom properties. */
 ${back ? `${mobileTabsCss}
   /* On a phone the tab bar carries navigation, so the logo row above the title goes. */
-  @media (max-width:860px) { .report-brand { display:none; } }
+  @media (max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) { .report-brand { display:none; } }
   /* The back-to-top button sits in the room the tab bar leaves on the right, on the same horizontal line (both scale from the bottom edge). */
-  @media (max-width:860px) {
+  @media (max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) {
     .to-top { bottom:calc(max(8px, env(safe-area-inset-bottom)) + 32px * var(--nav-scale, 1) - 22px); }
   }` : ""}
 </style>

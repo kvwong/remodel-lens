@@ -86,7 +86,7 @@
 
 /* Layout grid: shared by the app shell and standalone reports. */
 :root { --page-max:1360px; --page-gutter:24px; --page-top:24px; --section-gap:24px; --card-padding:24px; --grid-gap:16px; }
-@media (max-width:860px) { :root { --page-gutter:16px; --page-top:16px; } }
+@media (max-width:860px), (hover:none) and (pointer:coarse) and (orientation:landscape) and (max-height:600px) { :root { --page-gutter:16px; --page-top:16px; } }
 /* Home screen app on iPhone: iOS blurs the strip under the status bar, so pages start this far from the top edge. Lower = closer to the blur. */
 :root { --standalone-top:28px; }
 @media (max-width:600px) { :root { --card-padding:16px; } }
