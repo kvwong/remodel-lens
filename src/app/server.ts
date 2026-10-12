@@ -114,6 +114,11 @@ function startJob(kind: Job["kind"], key: string, work: () => Promise<RunSummary
   return job;
 }
 
+/** Set by `npm run restart`: no new jobs start, and the restart waits until the running ones finish. */
+let restartPending = false;
+const RESTARTING = "The app is about to restart to pick up an update. Try again in a minute.";
+const runningJobs = () => [...jobs.values()].filter((job) => job.status === "running");
+
 function isRunning(kind: Job["kind"], key: string): boolean {
   return activeJobs.get(jobKey(kind, key))?.status === "running";
 }
@@ -446,6 +451,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       }
       if (req.method === "POST" && parts[3] === "runs") {
         const body = RunBody.parse(await readBody(req));
+        if (restartPending) return send(res, 503, { error: RESTARTING });
         if (isRunning("redesign", parts[2])) return send(res, 409, { error: "This listing already has a redesign running. Wait for it to finish." });
         if (!(await listProfiles()).some((p) => p.id === body.profile)) return send(res, 400, { error: "Unknown taste profile." });
         try {
@@ -461,6 +467,13 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         );
         return send(res, 202, jobView(job));
       }
+    }
+    // `npm run restart`: POST holds new jobs back, GET reports what is still running, DELETE lets jobs start again.
+    if (parts[1] === "restart" && parts.length === 2) {
+      if (req.method === "POST") restartPending = true;
+      else if (req.method === "DELETE") restartPending = false;
+      else if (req.method !== "GET") return send(res, 405, { error: "Method not allowed" });
+      return send(res, 200, { pending: restartPending, running: runningJobs().map((job) => ({ kind: job.kind, key: job.key, label: job.progress.label })) });
     }
     if (req.method === "POST" && parts[1] === "jobs" && parts[2] && parts[3] === "cancel") {
       const job = jobs.get(parts[2]);
@@ -568,6 +581,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       }
       if (req.method === "POST" && parts[3] === "build") {
         if (busy()) return;
+        if (restartPending) return send(res, 503, { error: RESTARTING });
         try {
           requireKeys(resolveModels());
         } catch (error) {
@@ -598,6 +612,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       const rel = `${decodeURIComponent(parts[2])}/${decodeURIComponent(parts[3])}`;
       if (req.method === "GET" && parts[4] === "versions" && parts.length === 5) return send(res, 200, await versionsView(runDir));
       if (req.method === "POST" && parts[4] === "versions" && parts.length === 5) {
+        if (restartPending) return send(res, 503, { error: RESTARTING });
         const body = ChangeBody.parse(JSON.parse((await readRaw(req, 40_000_000)).toString("utf8") || "{}"));
         const models = resolveModels();
         try {
