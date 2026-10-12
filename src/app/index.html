@@ -142,7 +142,7 @@
     .collection-grid { grid-template-columns:minmax(0, 1fr); }
     .collection-link { min-height:108px; }
     .mobile-tabs { position:fixed; z-index:25; bottom:max(8px, env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:4px; padding:6px; border:0; border-radius:999px; background:color-mix(in srgb, var(--ink) 92%, transparent); box-shadow:0 8px 32px rgba(0,0,0,.22); }
-    .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-height:56px; border-radius:999px; color:color-mix(in srgb, var(--ink-text) 68%, var(--ink)); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; --motion:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
+    .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-height:56px; border-radius:999px; color:color-mix(in srgb, var(--ink-text) 86%, var(--ink)); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; --motion:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
     .mobile-tabs .icon { width:22px; height:22px; }
     /* The bar is inverted (dark in light mode, light in dark mode), so the current tab takes the other theme's green. */
     .mobile-tabs { --tab-on:#8cc3a1; --tab-on-text:#0d1a12; }
@@ -154,7 +154,7 @@
     @media (display-mode: standalone) { .layout { padding-top:44px; } }
   }
   @supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
-    .mobile-tabs { background:color-mix(in srgb, var(--ink) 95%, transparent); backdrop-filter:blur(24px) saturate(1.5); -webkit-backdrop-filter:blur(24px) saturate(1.5); }
+    .mobile-tabs { background:color-mix(in srgb, var(--ink) 62%, transparent); backdrop-filter:blur(28px) saturate(1.6); -webkit-backdrop-filter:blur(28px) saturate(1.6); }
   }
 
   /* Controls */
