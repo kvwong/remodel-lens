@@ -770,7 +770,12 @@
 <dialog class="modal" id="new-listing-dialog" aria-labelledby="new-listing-h">
   <form method="dialog" id="new-listing-form" novalidate>
     <h2 id="new-listing-h" style="margin:0 0 16px;font-size:18px">New listing</h2>
-    <label class="field-label" for="nl-name">Name</label>
+    <div id="nl-link-field">
+      <label class="field-label" for="nl-link">Listing link or address <span class="muted" style="font-weight:400">(optional)</span></label>
+      <input type="text" id="nl-link" name="link" maxlength="2000" autocomplete="off" spellcheck="false" inputmode="url" placeholder="e.g. redfin.com/WA/… or 123 Main St, Bellevue…">
+      <p class="hint">Paste a Redfin, Zillow, or Compass link, or an address, to bring in the listing photos.</p>
+    </div>
+    <label class="field-label" for="nl-name" style="margin-top:16px" id="nl-name-label">Name</label>
     <input type="text" id="nl-name" name="name" maxlength="80" autocomplete="off" placeholder="e.g. 123 Main St…" required>
     <label class="field-label" for="nl-location" style="margin-top:16px">Location <span class="muted" style="font-weight:400">(optional)</span></label>
     <input type="text" id="nl-location" name="location" maxlength="120" autocomplete="address-level2" placeholder="e.g. Bellevue, WA…">
@@ -983,6 +988,14 @@ async function api(path, options = {}) {
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error ?? `Request failed (${res.status})`);
   return body;
+}
+
+/** With a link, the name and location come from the listing page unless typed. */
+function syncListingLink() {
+  const linked = !$("#nl-link-field").hidden && $("#nl-link").value.trim() !== "";
+  $("#nl-name").placeholder = linked ? "From the listing" : "e.g. 123 Main St…";
+  $("#nl-name-label").innerHTML = linked ? 'Name <span class="muted" style="font-weight:400">(optional)</span>' : "Name";
+  $("#nl-location").placeholder = linked ? "From the listing" : "e.g. Bellevue, WA…";
 }
 
 function announce(text) {
@@ -1604,7 +1617,7 @@ function renderListing() {
 
   $("#content").innerHTML = `
     ${renderDetailHeader({ kind: "listing", name: l.name, metadata:
-      l.location || l.source || l.description ? `<p class="stats">${[l.location?.replace(/\s*\(.*\)$/, ""), l.source, l.description].filter(Boolean).map((text) => `<span>${esc(text)}</span>`).join("")}</p>` : ""
+      l.location || l.source || l.description ? `<p class="stats">${[l.location?.replace(/\s*\(.*\)$/, ""), l.source, l.description].map((text, i) => !text ? "" : i === 1 && /^https?:\/\//.test(l.sourceUrl ?? "") ? `<span><a href="${esc(l.sourceUrl)}" target="_blank" rel="noopener">${esc(text)}</a></span>` : `<span>${esc(text)}</span>`).join("")}</p>` : ""
     })}
 
     <section class="panel zone" aria-labelledby="photos-h" id="photos-zone">
@@ -2269,6 +2282,7 @@ document.addEventListener("change", (event) => {
 
 document.addEventListener("input", (event) => {
   const t = event.target;
+  if (t.id === "nl-link") syncListingLink();
   if (t.matches("input[data-room]")) {
     const photo = state.listing.photos.find((p) => p.file === t.dataset.room);
     if (photo) photo.room = t.value;
@@ -2392,9 +2406,12 @@ document.addEventListener("click", async (event) => {
     $("#new-listing-h").textContent = editing ? "Edit listing" : "New listing";
     $("#nl-submit").textContent = editing ? "Save" : "Create listing";
     $("#nl-name").value = l?.name ?? ""; $("#nl-location").value = l?.location ?? ""; $("#nl-desc").value = l?.description ?? "";
+    $("#nl-link").value = ""; $("#nl-link-field").hidden = editing;
+    $("#nl-name-label").style.marginTop = editing ? "0" : "16px";
+    syncListingLink();
     $("#nl-error").hidden = true;
     dlg.showModal();
-    if (matchMedia("(pointer: fine)").matches) $("#nl-name").focus();
+    if (matchMedia("(pointer: fine)").matches) $(editing ? "#nl-name" : "#nl-link").focus();
     return;
   }
   if (action === "pick-photos") return $("#photo-input").click();
@@ -2500,8 +2517,27 @@ document.addEventListener("submit", async (event) => {
     event.preventDefault();
     const name = $("#nl-name").value.trim();
     const err = $("#nl-error");
-    if (!name) { err.textContent = "Give the listing a name."; err.hidden = false; $("#nl-name").focus(); return; }
+    const editing = $("#new-listing-dialog").dataset.mode === "edit";
+    const link = editing ? "" : $("#nl-link").value.trim();
+    if (!name && !link) { err.textContent = "Give the listing a name."; err.hidden = false; $("#nl-name").focus(); return; }
     const details = { name, location: $("#nl-location").value.trim() || null, description: $("#nl-desc").value.trim() };
+    if (link) {
+      const submit = $("#nl-submit");
+      submit.disabled = true; submit.textContent = "Getting photos…"; err.hidden = true;
+      try {
+        const created = await api("/api/listings/from-link", { method: "POST", body: JSON.stringify({ link, ...details, name: name || undefined }) });
+        $("#new-listing-dialog").close();
+        await navigate(`?listing=${encodeURIComponent(created.id)}`);
+        const extra = [created.skipped && `${created.skipped} duplicate${created.skipped === 1 ? "" : "s"} skipped`, created.failed && `${created.failed} couldn't download`].filter(Boolean).join(", ");
+        announce(`Added ${created.added} photo${created.added === 1 ? "" : "s"} from ${created.site}${extra ? ` (${extra})` : ""}`);
+      } catch (error) {
+        err.textContent = error.message;
+        err.hidden = false;
+      } finally {
+        submit.disabled = false; submit.textContent = "Create listing";
+      }
+      return;
+    }
     try {
       if ($("#new-listing-dialog").dataset.mode === "edit") {
         const updated = await api(`/api/listings/${encodeURIComponent(state.listing.id)}`, { method: "PATCH", body: JSON.stringify(details) });

@@ -10,12 +10,13 @@ import { z } from "zod";
 
 import { loadEnv, requireKeys, resolveModels } from "../config.js";
 import { logContext, progressContext, type Progress } from "../files.js";
-import { addListingPhoto, createListing, duplicateListing, deleteListing, restoreListing, setListingThumbnail, updateListingDetails, listingDir, listListings, LISTINGS_DIR, readListing, saveListingOrder, saveSelection, type Listing } from "../listing/listing.js";
+import { addListingPhoto, addPhotosFromWeb, createListing, createListingFromWeb, duplicateListing, deleteListing, restoreListing, setListingThumbnail, updateListingDetails, listingDir, listListings, LISTINGS_DIR, readListing, saveListingOrder, saveSelection, type Listing } from "../listing/listing.js";
 import { listProfiles, listRuns, loadProfile, runListingRedesign, RUNS_DIR, type RunSummary } from "../redesign/job.js";
 import type { PhotoResult } from "../redesign/run.js";
 import { startChange } from "../redesign/change.js";
 import { applyPicks, ORIGINAL, pickKey, readVersions, updateVersions, type VersionsFile } from "../redesign/versions.js";
 import { renderReport } from "../report.js";
+import { scrapeListing } from "../listing/scrape.js";
 import { motionScript } from "../motion.js";
 import { brandAppHtml } from "../branding.js";
 import { homeView } from "./home-api.js";
@@ -172,6 +173,7 @@ function listingJson(listing: Listing, runs: RunSummary[]) {
     id: listing.id,
     name: listing.name,
     source: listing.source,
+    sourceUrl: listing.sourceUrl,
     location: listing.location,
     description: listing.description,
     thumbnail: listing.thumbnail,
@@ -391,6 +393,11 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       const listing = await createListing(body);
       return send(res, 201, { id: listing.id });
     }
+    if (req.method === "POST" && parts[1] === "listings" && parts[2] === "from-link" && parts.length === 3) {
+      const body = z.object({ link: z.string().max(2000), name: z.string().max(80).optional(), location: z.string().max(120).nullable().optional(), description: z.string().max(300).optional() }).parse(await readBody(req));
+      const result = await createListingFromWeb(body);
+      return send(res, 201, { id: result.listing.id, site: result.site, url: result.url, found: result.found, added: result.added, skipped: result.skipped, failed: result.failed });
+    }
     if (req.method === "PUT" && parts[1] === "listings" && parts[2] === "order" && parts.length === 3) {
       const body = z.object({ ids: z.array(z.string().max(200)).max(1000) }).parse(await readBody(req));
       await saveListingOrder(body.ids);
@@ -429,6 +436,12 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         if (isRunning("redesign", parts[2])) return send(res, 409, { error: "Wait for the running redesign to finish before adding photos." });
         const file = await addListingPhoto(dir, await readRaw(req, 40_000_000));
         return send(res, 201, { file });
+      }
+      if (req.method === "POST" && parts[3] === "from-link" && parts.length === 4) {
+        if (isRunning("redesign", parts[2])) return send(res, 409, { error: "Wait for the running redesign to finish before adding photos." });
+        const body = z.object({ link: z.string().max(2000) }).parse(await readBody(req));
+        const result = await addPhotosFromWeb(dir, await scrapeListing(body.link));
+        return send(res, 200, { site: result.site, url: result.url, found: result.found, added: result.added, skipped: result.skipped, failed: result.failed });
       }
       if (req.method === "PUT" && parts[3] === "selection") {
         const body = SelectionBody.parse(await readBody(req));
