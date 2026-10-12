@@ -141,20 +141,17 @@
     .collection-head .btn { min-height:44px; }
     .collection-grid { grid-template-columns:minmax(0, 1fr); }
     .collection-link { min-height:108px; }
-    .mobile-tabs { position:fixed; z-index:25; bottom:max(8px, env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:4px; padding:6px; border:0; border-radius:999px; background:color-mix(in srgb, var(--ink) 92%, transparent); box-shadow:0 8px 32px rgba(0,0,0,.22); }
-    .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-height:56px; border-radius:999px; color:color-mix(in srgb, var(--ink-text) 86%, var(--ink)); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; --motion:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
+    .mobile-tabs { position:fixed; z-index:25; bottom:max(8px, env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:4px; padding:6px; border:0; border-radius:999px; background:color-mix(in srgb, var(--surface) 94%, transparent); box-shadow:0 8px 32px rgba(0,0,0,.16), 0 0 0 1px var(--line-strong); }
+    .mobile-tabs a { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-height:56px; border-radius:999px; color:var(--muted); text-decoration:none; font-size:11px; font-weight:500; line-height:1.2; --motion:background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease); }
     .mobile-tabs .icon { width:22px; height:22px; }
-    /* The bar is inverted (dark in light mode, light in dark mode), so the current tab takes the other theme's green. */
-    .mobile-tabs { --tab-on:#8cc3a1; --tab-on-text:#0d1a12; }
-    :root[data-theme="dark"] .mobile-tabs { --tab-on:#2f5a44; --tab-on-text:#ffffff; }
-    .mobile-tabs a[aria-current="page"] { background:var(--tab-on); color:var(--tab-on-text); font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.18); }
+    .mobile-tabs a[aria-current="page"] { background:var(--primary); color:var(--primary-text); font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.18); }
     .mobile-tabs a:active { transform:scale(.96); }
     #save-status { top:calc(16px + env(safe-area-inset-top)); }
     /* Home screen app: iOS blurs the strip under the status bar, so keep the logo clear of it. */
     @media (display-mode: standalone) { .layout { padding-top:44px; } }
   }
   @supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
-    .mobile-tabs { background:color-mix(in srgb, var(--ink) 62%, transparent); backdrop-filter:blur(28px) saturate(1.6); -webkit-backdrop-filter:blur(28px) saturate(1.6); }
+    .mobile-tabs { background:color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter:blur(28px) saturate(1.6); -webkit-backdrop-filter:blur(28px) saturate(1.6); }
   }
 
   /* Controls */
@@ -734,7 +731,7 @@
   }
   .mobile-tabs a:active, a.nav-link:active, .sidebar-toggle:active, .settings-link:active { transform:none; }
   @media (hover:hover) {
-    .mobile-tabs a:hover:not([aria-current="page"]) { background:color-mix(in srgb, var(--ink-text) 12%, transparent); color:var(--ink-text); }
+    .mobile-tabs a:hover:not([aria-current="page"]) { background:var(--surface-2); color:var(--text); }
   }
   @media (prefers-reduced-motion:reduce) {
     .mobile-tabs a, a.nav-link, .sidebar-toggle, .settings-link { transition:none; }
