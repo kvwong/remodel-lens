@@ -8,6 +8,7 @@
     "test": "vitest run",
     "app": "tsx src/app/server.ts",
     "import": "tsx src/cli/import.ts",
+    "scrape": "tsx src/cli/scrape.ts",
     "tune": "tsx src/cli/tune.ts",
     "change": "tsx src/cli/change.ts",
     "check-effort": "tsx src/cli/check-effort.ts"

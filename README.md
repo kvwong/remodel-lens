@@ -210,6 +210,18 @@ Use **Done** to collapse the photo grid into a stack; click the stack to show
 the grid again. Smaller screens show fewer whole thumbnails, and the stack
 reserves room for its hover fan so it stays clear of neighboring controls.
 
+To start from a listing online, paste a Redfin, Zillow, or Compass link (or a
+street address) into **New listing**, or use the CLI. Whim reads the page, names
+the listing after its address, and downloads the photos at full size. Sites
+sometimes refuse automated requests; when one does, Whim looks the same address
+up on Redfin or Zillow instead.
+
+```bash
+npm run scrape -- "https://www.redfin.com/WA/Bellevue/…/home/597"
+npm run scrape -- "709 143rd Ave NE, Bellevue, WA" --dry-run   # list photo URLs only
+npm run scrape -- "<link>" --id 123-main-st                     # add to an existing listing
+```
+
 You can also import photos from a local folder using the CLI. Replace the
 example path, ID, and name with your own:
 
