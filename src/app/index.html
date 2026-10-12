@@ -307,6 +307,10 @@
   .run-meta { font-size:13px; color:var(--muted); }
   .run-live-progress { display:grid; gap:4px; width:min(320px, 100%); margin-top:4px; }
   .run-live-label { font-size:13px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* Shimmer: text for work in progress, with a light band sweeping across it (the shadcn AI "Shimmer" treatment). --spread is the band's half width, scaled to the text; the delay keeps the sweep in phase when the text is re-rendered. */
+  .shimmer { --spread:40px; color:transparent; background-image:linear-gradient(90deg, transparent calc(50% - var(--spread)), var(--text), transparent calc(50% + var(--spread))), linear-gradient(var(--muted), var(--muted)); background-size:250% 100%, auto; background-repeat:no-repeat, padding-box; -webkit-background-clip:text; background-clip:text; animation:shimmer 2s linear infinite; animation-delay:var(--shimmer-delay, 0s); }
+  @keyframes shimmer { from { background-position:100% center, 0 0; } to { background-position:0% center, 0 0; } }
+  @media (prefers-reduced-motion:reduce) { .shimmer { animation:none; background:none; color:var(--muted); } }
   .run-live .run-main { flex:1 1 0; }
   .run-meta span + span::before { content:"·"; margin:0 6px; opacity:.6; }
   .statuses { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:13px; }
@@ -1226,7 +1230,7 @@ function collectionMarkup(view, items) {
     return `<li><a class="collection-link nav-inline" href="?${tastes ? "taste" : "listing"}=${encodeURIComponent(item.id)}">
       <span class="collection-preview">${preview}</span>
       <span class="collection-copy"><strong>${esc(item.name)}</strong><small class="num">${tastes ? `${item.referenceCount} photos · ${item.built ? `${item.ruleCount} rules` : "no rules yet"}` : `${item.selectedCount} of ${item.photoCount} selected`}</small>
-      ${tastes && (item.running || item.stale) ? `<small class="${item.stale ? "stale" : ""}">${item.running ? "Rebuilding…" : "Out of date"}</small>` : ""}</span>
+      ${tastes && (item.running || item.stale) ? `<small class="${item.stale ? "stale" : ""}">${item.running ? shimmer("Rebuilding…") : "Out of date"}</small>` : ""}</span>
     </a></li>`;
   }).join("")}</ul>` : `<section class="panel"><p class="muted" style="margin:0">${tastes ? "No tastes yet. Create a taste profile to collect your reference photos and brief." : "No listings yet. Create a listing to add photos of a home."}</p></section>`}`;
 }
@@ -1341,7 +1345,7 @@ function renderProfilesNav() {
   patchSidebar($("#profiles-nav"), state.tasteProfiles.length
     ? state.tasteProfiles.map((p) => `
       <li class="sidebar-row" data-sidebar-kind="taste-profiles" data-sidebar-id="${esc(p.id)}" draggable="${!state.savingOrder}"><a class="nav-link" draggable="false" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" href="?taste=${encodeURIComponent(p.id)}" ${p.id === current ? 'aria-current="page"' : ""}>
-        <span><span class="nav-name">${esc(p.name)}</span><small class="num">${p.referenceCount} photos · ${p.built ? `${p.ruleCount} rules` : "no rules yet"}${p.running ? " · rebuilding…" : p.stale ? ' · <span class="stale">out of date</span>' : ""}</small></span>
+        <span><span class="nav-name">${esc(p.name)}</span><small class="num">${p.referenceCount} photos · ${p.built ? `${p.ruleCount} rules` : "no rules yet"}${p.running ? ` · ${shimmer("rebuilding…")}` : p.stale ? ' · <span class="stale">out of date</span>' : ""}</small></span>
       </a></li>`).join("")
     : `<li class="muted" style="font-size:14px">No profiles yet.</li>`);
 }
@@ -1354,6 +1358,12 @@ function fmtDuration(ms) {
 }
 
 let lastAnnounced = -1;
+/** Text for work in progress, with the light sweep; keeps its phase across re-renders. */
+function shimmer(text) {
+  const label = String(text);
+  return `<span class="shimmer" style="--spread:${Math.max(24, label.length * 2.5)}px;--shimmer-delay:-${Date.now() % 2000}ms">${esc(label)}</span>`;
+}
+
 function jobPanel(job, doneHtml) {
   const p = job.progress ?? { total: 0, done: 0, label: "" };
   const f = job.status === "done" ? 1 : p.total ? Math.min(1, p.done / p.total) : 0;
@@ -1370,13 +1380,13 @@ function jobPanel(job, doneHtml) {
   }
   return `<div class="progress">
       <div class="progress-head">
-        <span><strong>${head}</strong> <span class="num muted" style="font-size:14px">${pf.format(f)} · ${fmtDuration(elapsed)}${eta}</span></span>
+        <span><strong>${running ? shimmer(head) : head}</strong> <span class="num muted" style="font-size:14px">${pf.format(f)} · ${fmtDuration(elapsed)}${eta}</span></span>
         ${running && !job.stopping ? `<button class="btn btn-small" type="button" data-action="stop-job">${icon("stop")}Stop</button>` : ""}
       </div>
       <div class="bar ${job.status === "error" ? "error" : ""}" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(f * 100)}" aria-valuetext="${pf.format(f)}${p.label ? `, ${esc(p.label)}` : ""}">
         <span style="transform:scaleX(${f})"></span>
       </div>
-      <p class="progress-label">${esc(job.error ?? p.label ?? "")}</p>
+      <p class="progress-label">${running && !job.error && p.label ? shimmer(p.label) : esc(job.error ?? p.label ?? "")}</p>
       ${job.status === "done" ? doneHtml ?? "" : ""}
     </div>
     <details class="log-details" ${state.logOpen ? "open" : ""}>
@@ -1475,11 +1485,11 @@ function runningRow(job) {
     <li class="run run-live" data-running="${esc(job.id)}">
       <div class="run-main">
         <a class="report-listing nav-inline" href="${href}">${esc(job.listingName)}</a>
-        <a class="run-title nav-inline" href="${href}">${job.stopping ? "Stopping…" : "Redesigning now"}</a>
+        <a class="run-title nav-inline" href="${href}">${shimmer(job.stopping ? "Stopping…" : "Redesigning now")}</a>
         ${meta ? `<div class="run-meta">${meta}</div>` : ""}
         <div class="run-live-progress">
           <div class="bar" role="progressbar" aria-label="Progress for ${esc(job.listingName)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(f * 100)}"><span style="transform:scaleX(${f})"></span></div>
-          <span class="run-live-label"><span class="num">${pf.format(f)}</span> · ${esc(p.label || "Starting…")}</span>
+          <span class="run-live-label"><span class="num">${pf.format(f)}</span> · ${shimmer(p.label || "Starting…")}</span>
         </div>
       </div>
       <a class="btn btn-small nav-inline" href="${href}">View progress</a><span class="run-chevron" aria-hidden="true">${icon("chevron")}</span>
@@ -1711,7 +1721,7 @@ function startHomeLink() {
     busy = true; closeMenus(); sync();
     send.setAttribute("aria-busy", "true"); input.readOnly = true;
     status.classList.remove("error");
-    status.textContent = `Getting photos from ${site}…`;
+    status.innerHTML = shimmer(`Getting photos from ${site}…`);
     let created;
     try {
       created = await api("/api/listings/from-link", { method: "POST", body: JSON.stringify({ link: input.value.trim() }) });
@@ -1724,7 +1734,7 @@ function startHomeLink() {
     const photos = `Added ${created.added} photo${created.added === 1 ? "" : "s"} from ${created.site}`;
     let note = `${photos}. Add a taste profile to run a redesign.`;
     if (profile) {
-      status.textContent = "Starting the redesign…";
+      status.innerHTML = shimmer("Starting the redesign…");
       try {
         await api(`/api/listings/${encodeURIComponent(created.id)}/runs`, { method: "POST", body: JSON.stringify({ tiers, profile, interiorsOnly: true }) });
         note = `${photos}. Redesign started on the interior photos.`;
