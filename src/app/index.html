@@ -199,7 +199,7 @@
   fieldset { border:0; margin:0; padding:0; min-width:0; }
   legend { font-weight:500; margin-bottom:8px; padding:0; font-size:14px; }
   .tiers { display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
-  .tier { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border:1px solid var(--line-strong); border-radius:8px; cursor:pointer; min-height:44px; --motion:border-color .15s, background .15s; }
+  .tier { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border:1px solid var(--line); border-radius:8px; background:var(--surface); box-shadow:var(--shadow); cursor:pointer; min-height:44px; --motion:border-color .15s, background .15s, box-shadow .15s; }
   .tier:hover { border-color:var(--text); box-shadow:var(--shadow-hover); }
   .tier:has(input:checked) { border-color:var(--primary); background:var(--primary-soft); }
   .tier input { width:16px; height:16px; margin:3px 0 0; flex:none; }
@@ -212,7 +212,8 @@
   .redesign-settings .tiers { grid-template-columns:1fr; }
   .redesign-settings .tier { min-height:66px; align-items:center; }
   .redesign-settings .tier input { margin:0; }
-  .profile-card { position:relative; display:grid; grid-template-rows:minmax(154px, 1fr) auto; height:var(--profile-card-height, auto); min-height:calc(154px + 50px); width:100%; border:1px solid var(--line-strong); border-radius:10px; background:var(--surface); overflow:hidden; }
+  .profile-card { position:relative; display:grid; grid-template-rows:minmax(154px, 1fr) auto; height:var(--profile-card-height, auto); min-height:calc(154px + 50px); width:100%; border:1px solid var(--line); border-radius:10px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden; --motion:border-color .15s, box-shadow .15s; }
+  .profile-card:hover { border-color:var(--line-strong); box-shadow:var(--shadow-hover); }
   .profile-preview { display:grid; grid-template-columns:2fr 1fr; grid-template-rows:minmax(0, 1fr) minmax(0, 1fr); gap:3px; min-height:154px; width:100%; background:var(--surface-2); }
   /* In the card the photos fill the space the row gives them and never grow it from their own size, so they can't run under Edit and Change. */
   .profile-card > .profile-preview { min-height:0; contain:size; overflow:hidden; }
@@ -501,7 +502,7 @@
     .btn-quiet:hover, .icon-plain:hover, .display-toggle:hover { background:transparent; }
     .btn:hover:not(.btn-primary):not(.btn-quiet) { background:var(--btn-fill); box-shadow:none; }
     .savebar .btn:hover:not(.btn-primary) { background:color-mix(in srgb, var(--ink-text) 14%, transparent); }
-    .tier:hover:not(:has(input:checked)) { border-color:var(--line-strong); box-shadow:none; }
+    .tier:hover:not(:has(input:checked)) { border-color:var(--line-strong); box-shadow:var(--shadow); }
     .collection-link:hover { box-shadow:var(--shadow); }
     .read-text:hover { background:transparent; border-color:transparent; }
     .collection-link:active { background:var(--surface-2); }
