@@ -1344,7 +1344,7 @@ ${appearanceScript}
     .viewer .viewer-bar { position:absolute; z-index:8; top:0; left:0; right:0; height:auto; grid-template-columns:minmax(0, 1fr) auto; grid-template-rows:auto; gap:12px; padding:calc(env(safe-area-inset-top) + 8px) max(12px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left)); border-bottom:0; background:rgba(15,15,14,.38); -webkit-backdrop-filter:blur(20px) saturate(1.4); backdrop-filter:blur(20px) saturate(1.4); text-shadow:0 1px 2px rgba(0,0,0,.45); }
     .viewer .viewer-title { grid-column:1; grid-row:1; }
     /* Which version is on screen; the listing photo gets a light pill so it never passes for a redesign. */
-    .viewer .viewer-badge { position:absolute; z-index:7; left:50%; bottom:calc(env(safe-area-inset-bottom) + 20px); transform:translateX(-50%); display:flex; align-items:center; gap:8px; padding:7px 12px; border-radius:999px; background:rgba(15,15,14,.55); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); color:#efede9; font-size:13px; font-weight:600; line-height:18px; white-space:nowrap; pointer-events:none; box-shadow:0 2px 10px rgba(0,0,0,.25); }
+    .viewer .viewer-badge { position:absolute; z-index:7; left:50%; bottom:calc(env(safe-area-inset-bottom) + 20px); transform:translateX(-50%); display:flex; align-items:center; gap:8px; padding:7px 12px; border-radius:999px; background:rgba(15,15,14,.55); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); color:#efede9; font-size:13px; font-weight:600; line-height:18px; white-space:nowrap; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.25); }
     .viewer .viewer-badge.original { background:#efede9; color:#0f0f0e; }
     .viewer-badge .dots { display:flex; gap:4px; }
     .viewer-badge .dots i { width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.35; }
@@ -1814,9 +1814,9 @@ ${appearanceScript}
     reel.before.style.transform = "translateX(" + (x - reel.size) + "px)";
     reel.after.style.transform = "translateX(" + (x + reel.size) + "px)";
   }
-  // Pulling the photo down closes the viewer; the page shows through as it goes.
+  // Pulling the photo up or down closes the viewer; the page shows through as it goes.
   function moveDismiss(y) {
-    const progress = Math.min(1, Math.max(0, y) / (stage.clientHeight * .6));
+    const progress = Math.min(1, Math.abs(y) / (stage.clientHeight * .6));
     img.style.transform = "translateY(" + y + "px) scale(" + (1 - progress * .15) + ")";
     stage.style.backgroundPosition = "center calc(50% + " + y + "px)";
     dialog.style.backgroundColor = "rgba(15,15,14," + (1 - progress * .85) + ")";
@@ -1833,6 +1833,15 @@ ${appearanceScript}
       ? "inset(0 " + (stage.clientWidth - split.x) + "px 0 0)"
       : "inset(0 0 0 " + split.x + "px)";
     split.divider.style.left = split.x + "px";
+  }
+  // On release the divider springs to whichever side it is past; past the middle shows the other version.
+  function settleSplit() {
+    const other = split.other;
+    const chooseOther = split.side === "left" ? split.x > stage.clientWidth / 2 : split.x < stage.clientWidth / 2;
+    const end = (split.side === "left") === chooseOther ? stage.clientWidth : 0;
+    spring(split.x, end, 0, moveSplit, () => {
+      resetInteraction(); if (chooseOther) show(other, false);
+    });
   }
   function startSplit() {
     if (!drag || drag.moved || drag.actual || !mobileViewer.matches) return;
@@ -1851,6 +1860,33 @@ ${appearanceScript}
     moveSplit(split.x);
   }
   stage.addEventListener("contextmenu", (e) => { if (mobileViewer.matches) e.preventDefault(); });
+  badge.addEventListener("contextmenu", (e) => e.preventDefault());
+  // Phones: press and hold the version label to compare in split view; sliding the finger moves
+  // the divider. A tap on the label flips the version like a tap on the photo.
+  badge.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (drag || pinch || pointers.size) return;
+    resetInteraction();
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, badge: true, moved: false, actual: false, touch: true };
+    badge.setPointerCapture(e.pointerId);
+    holdTimer = setTimeout(startSplit, 350);
+  });
+  badge.addEventListener("pointermove", (e) => {
+    if (!drag?.badge || drag.id !== e.pointerId) return;
+    const dx = e.clientX - drag.x;
+    if (drag.axis === "split") moveSplit(drag.splitStart + dx);
+    else if (Math.hypot(dx, e.clientY - drag.y) > 8) { drag.moved = true; clearTimeout(holdTimer); }
+  });
+  const endBadge = (e) => {
+    if (!drag?.badge || drag.id !== e.pointerId) return;
+    clearTimeout(holdTimer);
+    const gesture = drag;
+    drag = null;
+    if (split) { settleSplit(); return; }
+    if (e.type === "pointerup" && !gesture.moved && items.length > 1) show(index + 1, true);
+  };
+  badge.addEventListener("pointerup", endBadge);
+  badge.addEventListener("pointercancel", endBadge);
   stage.addEventListener("pointerdown", (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1866,7 +1902,6 @@ ${appearanceScript}
       actual: stage.classList.contains("actual"), touch: e.pointerType !== "mouse", moved: false, image: e.target === img,
       axis: null, time: performance.now(), lastX: e.clientX, lastY: e.clientY, velocity: 0, zoomed: zoom.s > 1, zoom: { ...zoom } };
     stage.setPointerCapture(e.pointerId);
-    if (drag.touch && mobileViewer.matches && !drag.actual && !drag.zoomed) holdTimer = setTimeout(startSplit, 350);
   });
   stage.addEventListener("pointermove", (e) => {
     if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1900,8 +1935,7 @@ ${appearanceScript}
     }
     if (!drag.axis) {
       if (Math.abs(dx) > Math.abs(dy) * 1.2) { drag.axis = "rooms"; startReel(); }
-      else if (dy > 0 && dy > Math.abs(dx) * 1.2) drag.axis = "dismiss";
-      else if (Math.abs(dy) > Math.abs(dx) * 1.2) drag.axis = "none";
+      else if (Math.abs(dy) > Math.abs(dx) * 1.2) drag.axis = "dismiss";
     }
     const now = performance.now(), dt = now - drag.time;
     if (drag.axis === "rooms") {
@@ -1911,7 +1945,7 @@ ${appearanceScript}
     }
     if (drag.axis === "dismiss") {
       if (dt > 0) drag.velocity = .65 * ((e.clientY - drag.lastY) / dt) + .35 * drag.velocity;
-      moveDismiss(Math.max(0, dy));
+      moveDismiss(dy);
     }
     drag.time = now; drag.lastX = e.clientX; drag.lastY = e.clientY;
   });
@@ -1930,15 +1964,7 @@ ${appearanceScript}
     drag = null;
     if (!gesture || gesture.id !== e.pointerId) return;
     const dx = e.clientX - gesture.x, dy = e.clientY - gesture.y;
-    if (split) {
-      const other = split.other;
-      const chooseOther = split.side === "left" ? split.x > stage.clientWidth / 2 : split.x < stage.clientWidth / 2;
-      const end = (split.side === "left") === chooseOther ? stage.clientWidth : 0;
-      spring(split.x, end, 0, moveSplit, () => {
-        resetInteraction(); if (chooseOther) show(other, false);
-      });
-      return;
-    }
+    if (split) { settleSplit(); return; }
     const velocity = performance.now() - gesture.time < 100 ? Math.max(-3, Math.min(3, gesture.velocity)) : 0;
     if (reel) {
       const projected = reel.offset + velocity * 180;
@@ -1951,12 +1977,11 @@ ${appearanceScript}
       return;
     }
     if (gesture.axis === "dismiss") {
-      const y = Math.max(0, dy);
-      if (y + velocity * 180 > 110) spring(y, stage.clientHeight, velocity, moveDismiss, () => dialog.close());
-      else spring(y, 0, velocity, moveDismiss, resetInteraction);
+      const projected = dy + velocity * 180;
+      if (Math.abs(projected) > 110) spring(dy, Math.sign(projected) * stage.clientHeight, velocity, moveDismiss, () => dialog.close());
+      else spring(dy, 0, velocity, moveDismiss, resetInteraction);
       return;
     }
-    if (gesture.axis === "none") return;
     if (gesture.zoomed && gesture.moved) return;
     // Phones: a tap flips to the next version of this photo (listing photo, then each redesign).
     if (!gesture.moved && gesture.touch && mobileViewer.matches) {
@@ -1965,7 +1990,7 @@ ${appearanceScript}
     }
     if (gesture.touch && !gesture.actual && Math.max(Math.abs(dx), Math.abs(dy)) >= 45) {
       if (Math.abs(dx) > Math.abs(dy) * 1.2) nextPhoto(dx < 0 ? 1 : -1);
-      else if (dy > 0 && dy > Math.abs(dx) * 1.2) dialog.close();
+      else if (Math.abs(dy) > Math.abs(dx) * 1.2) dialog.close();
       return;
     }
     if (!gesture.moved && !mobileViewer.matches && iterPinClick?.(e)) return;
