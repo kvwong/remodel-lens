@@ -2330,14 +2330,14 @@ function setPhotosHidden(hidden) {
 }
 
 function setRefsHidden(hidden) {
-  setParams({ refs: hidden ? "hidden" : null });
+  setParams({ refs: hidden ? null : "open" });
   for (const el of document.querySelectorAll('[data-toggle="refs"]')) el.setAttribute("aria-expanded", String(!hidden));
   for (const el of document.querySelectorAll("#refs-zone [data-photos-only]")) el.dataset.collapsed = String(hidden);
   swapPhotosArea(hidden, "refs-area");
 }
 
 function setPanelHidden(key, hidden) {
-  setParams({ [key]: hidden ? "hidden" : null });
+  setParams({ [key]: hidden ? null : "open" });
   $(`[data-toggle-panel="${key}"]`)?.setAttribute("aria-expanded", String(!hidden));
   const body = $(`#${key}-body`);
   if (body) body.hidden = hidden;
@@ -2409,7 +2409,8 @@ async function loadTaste(id) {
 
 function renderTaste() {
   const t = state.taste;
-  const refsHidden = params().get("refs") === "hidden", briefHidden = params().get("brief") === "hidden", rulesHidden = params().get("rules") === "hidden";
+  // Taste pages open with every section collapsed; opening one is remembered in the URL (?refs=open, ?brief=open, ?rules=open).
+  const refsHidden = params().get("refs") !== "open", briefHidden = params().get("brief") !== "open", rulesHidden = params().get("rules") !== "open";
   const briefLine = (state.briefDraft ?? "").trim().replace(/\s+/g, " ");
   const ruleCount = t.profile ? t.profile.categories.reduce((n, c) => n + c.rules.length, 0) : 0;
   const categoryCount = t.profile?.categories.length ?? 0;
@@ -2432,7 +2433,7 @@ function renderTaste() {
       metadata: `<p class="stats num">
         <span>Taste profile</span>
         <span>${t.references.length} reference photos</span>
-        <span>${t.profile ? `${ruleCount} rules` : "No rules yet"}</span>
+        <span>${t.profile ? plural(ruleCount, "rule") : "No rules yet"}</span>
         ${lb ? `<span>${lb.source === "pipeline" ? "Built" : "Rules set"} ${esc(fmtDate(lb.at))}</span>` : ""}
         ${t.meta.description ? `<span>${esc(t.meta.description)}</span>` : ""}
       </p>`
@@ -2441,7 +2442,7 @@ function renderTaste() {
 
     <section class="panel zone" aria-labelledby="refs-h" id="refs-zone">
       <div class="section-head">
-        <h2 id="refs-h">Reference photos <span class="head-count num">${t.references.length}</span></h2>
+        <h2 id="refs-h">Reference photos</h2>
         <div class="tools">
           ${t.references.length ? `<span class="tools fade" data-photos-only data-collapsed="${refsHidden}"><button class="btn btn-small" type="button" data-toggle="refs" data-refs-done aria-expanded="${!refsHidden}" aria-controls="refs-body">Done</button></span>` : ""}
           <button class="btn btn-small" type="button" data-action="pick-files" aria-label="Add photos" title="Add photos" ${running ? "disabled" : ""}>${icon("plus")}<span class="btn-label">Add photos</span></button>
@@ -4153,9 +4154,11 @@ function fallbackSkeleton(key) {
       </div></div>
     </section>`;
   else html = `${renderDetailHeader({ kind: "taste", name: "Taste name", metadata: `<p class="stats num"><span>Taste profile</span><span>12 reference photos</span><span>30 rules</span></p>` })}
-    <section class="panel zone" id="refs-zone"><div class="section-head"><h2>Reference photos <span class="head-count num">12</span></h2><div class="tools"><button class="btn btn-small" type="button" aria-label="Add photos">${icon("plus")}<span class="btn-label">Add photos</span></button></div></div>
+    <section class="panel zone" id="refs-zone"><div class="section-head"><h2>Reference photos</h2><div class="tools"><button class="btn btn-small" type="button" aria-label="Add photos">${icon("plus")}<span class="btn-label">Add photos</span></button></div></div>
       <div class="photos-area"><div data-photos-strip><div>${photoStack(8)}</div></div></div></section>
-    <section class="panel"><div class="section-head"><button class="panel-toggle" type="button" aria-expanded="true"><h2>Brief</h2></button></div><p class="hint" style="margin:0 0 12px">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal and use the photos to confirm and sharpen it.</p></section>`;
+    <section class="panel"><div class="section-head"><button class="panel-toggle" type="button" aria-expanded="false"><h2>Brief</h2></button></div><div class="panel-preview"><span class="clamp">Describe your taste in your own words. Rebuilds treat the brief as the strongest signal.</span></div></section>
+    <section class="panel"><h2>Rules from photos and brief</h2><p class="hint">Two vision models study each reference, then merge what they see with your brief into the rules below.</p><div class="field-row" style="margin-top:14px"><button class="btn btn-primary" type="button">${icon("refresh")}Rebuild rules</button></div></section>
+    <section class="panel"><div class="section-head"><button class="panel-toggle" type="button" aria-expanded="false"><h2>Rules</h2></button></div><div class="panel-preview"><span class="clamp num">30 rules in 8 categories</span></div></section>`;
   return skeletonize(html);
 }
 
