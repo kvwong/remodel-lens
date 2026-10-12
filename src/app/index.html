@@ -148,7 +148,7 @@
     .mobile-tabs a[aria-current="page"] { background:var(--primary); color:var(--primary-text); font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.18); }
     .mobile-tabs a:active { transform:scale(.96); }
     /* The bar's size follows the scroll: it shrinks in step with scrolling down and grows back in step with scrolling up (--nav-scale is set from the scroll position). */
-    .mobile-tabs { transform-origin:50% 100%; transform:translateX(-50%) scale(var(--nav-scale, 1)); }
+    .mobile-tabs { transform-origin:50% 100%; transform:translateX(-50%) scale(var(--nav-scale, 1)); will-change:transform; }
     #save-status { top:calc(16px + env(safe-area-inset-top)); }
     /* Home screen app: iOS blurs the strip under the status bar, so keep the logo clear of it. */
     @media (display-mode: standalone) { .layout { padding-top:44px; } }
@@ -253,6 +253,7 @@
   .profile-menu-sep { height:1px; margin:4px 6px; background:var(--line); }
   .profile-option-new { font-weight:500; }
   .profile-option-new .icon { opacity:1; }
+  .run-row .btn, .confirm .btn { min-width:112px; padding:6px 16px; font-weight:600; justify-content:center; }
   .run-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; padding-top:4px; }
   .estimate { font-size:14px; color:var(--muted); }
   .estimate strong { color:var(--text); font-weight:500; }
@@ -471,7 +472,7 @@
     .tier { min-height:56px; padding:12px; }
     .tier input { width:20px; height:20px; }
     .run-row { flex-direction:column; align-items:stretch; gap:10px; }
-    .run-row .btn-primary, .confirm .btn { min-height:48px; font-size:15px; }
+    .run-row .btn, .confirm .btn { min-height:48px; font-size:15px; }
     .run-row .estimate { order:-1; font-size:13px; }
     .confirm { display:grid; grid-template-columns:1fr 1fr; }
     .confirm p { grid-column:1 / -1; }
@@ -1188,14 +1189,18 @@ document.addEventListener("pointerup", (e) => {
 (() => {
   const SMALLEST = .82, RANGE = 120, rate = (1 - SMALLEST) / RANGE;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)");
-  let last = scrollY, scale = 1, ticking = false;
+  const bar = document.querySelector(".mobile-tabs");
+  let last = scrollY, scale = 1, written = 1, ticking = false;
   const update = () => {
     ticking = false;
+    if (!bar) return;
     const y = Math.max(0, Math.min(scrollY, document.documentElement.scrollHeight - innerHeight));
     // Never smaller than the distance from the top allows, so the top of the page is always full size.
     scale = reduce.matches ? 1 : Math.min(1, Math.max(scale - (y - last) * rate, SMALLEST, 1 - y * rate));
     last = y;
-    document.body.style.setProperty("--nav-scale", scale.toFixed(4));
+    // Set on the bar itself, not the body, so a scroll frame restyles one element instead of the whole page, and skip writes that change nothing.
+    const next = Math.round(scale * 1000) / 1000;
+    if (next !== written) { written = next; bar.style.setProperty("--nav-scale", String(next)); }
   };
   addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
 })();
@@ -1465,7 +1470,7 @@ function renderJob() {
     const button = $('#run-form button[type="submit"]:not([data-confirmed])');
     if (button) {
       button.disabled = running || !selectedTiers().length;
-      button.innerHTML = `${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Run redesign`;
+      button.innerHTML = `${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Start`;
     }
     renderJobInto($("#job"), state.job, state.job?.reportUrl ? `<p style="margin:4px 0 0"><a class="btn" href="${esc(state.job.reportUrl)}">Open report</a></p>` : "");
   } else {
@@ -2155,11 +2160,11 @@ function renderListing() {
           ? `<div class="confirm" role="group" aria-labelledby="confirm-text">
               <p id="confirm-text">This starts <strong>${nf.format(est.n)} redesigns</strong> and takes ${fmtMinutes(est.minutes)}.${tiers.includes("major") ? " Structural images are speculative." : ""}</p>
               <button class="btn" type="button" data-action="cancel-confirm">Cancel</button>
-              <button class="btn btn-primary" type="submit" data-confirmed="1">Start run</button>
+              <button class="btn btn-primary" type="submit" data-confirmed="1">Start</button>
             </div>`
           : `<div class="run-row">
               <button class="btn" type="button" data-action="close-redesign">Cancel</button>
-              <button class="btn btn-primary" type="submit" ${running || !tiers.length ? "disabled" : ""} aria-describedby="run-help">${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Run redesign</button>
+              <button class="btn btn-primary" type="submit" ${running || !tiers.length ? "disabled" : ""} aria-describedby="run-help">${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Start</button>
               <span id="run-help" class="estimate num">${est.n
                 ? `<strong>${nf.format(est.n)} ${est.n === 1 ? "redesign" : "redesigns"}</strong> · ${fmtMinutes(est.minutes)}`
                 : !l.photos.length ? "Add photos to get started." : !tiers.length ? "Choose at least one scope to run." : "Select at least one photo."}</span>
@@ -2174,7 +2179,7 @@ function renderListing() {
     </section>
 
     <section class="panel zone" aria-labelledby="runs-h">
-      <div class="section-head"><h2 id="runs-h">Past runs <span class="muted num" style="font-weight:400">· ${l.runs.length}</span></h2></div>
+      <div class="section-head"><h2 id="runs-h">Redesigns <span class="muted num" style="font-weight:400">· ${l.runs.length}</span></h2></div>
       ${l.runs.length
         ? `<ul class="runs">${l.runs.map(run => runRow(run)).join("")}</ul>`
         : `<p class="muted" style="margin:0">No runs yet. Reports appear here after the first redesign.</p>`}
@@ -2234,7 +2239,7 @@ function updateSelection(files, selected) {
   const tiers = selectedTiers();
   const est = runEstimate(count, tiers.length);
   const running = state.job?.status === "running";
-  const row = `<div class="run-row"><button class="btn btn-primary" type="submit" ${running || !tiers.length || !count ? "disabled" : ""} aria-describedby="run-help">${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Run redesign</button><span id="run-help" class="estimate num">${est.n ? `<strong>${nf.format(est.n)} ${est.n === 1 ? "redesign" : "redesigns"}</strong> · ${fmtMinutes(est.minutes)}` : !tiers.length ? "Choose at least one scope to run." : "Select at least one photo."}</span></div>`;
+  const row = `<div class="run-row"><button class="btn btn-primary" type="submit" ${running || !tiers.length || !count ? "disabled" : ""} aria-describedby="run-help">${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}Start</button><span id="run-help" class="estimate num">${est.n ? `<strong>${nf.format(est.n)} ${est.n === 1 ? "redesign" : "redesigns"}</strong> · ${fmtMinutes(est.minutes)}` : !tiers.length ? "Choose at least one scope to run." : "Select at least one photo."}</span></div>`;
   if (state.redesignOpen) $("#run-form .confirm, #run-form .run-row").outerHTML = row;
   else {
     const open = $('[data-action="open-redesign"]');
@@ -2373,7 +2378,7 @@ function renderTaste() {
             <button class="btn btn-primary" type="button" data-action="build">Rebuild now</button>
           </div>`
         : `<div class="field-row" style="margin-top:14px">
-            <button class="btn" id="build-btn" type="button" data-action="confirm-build" ${running || t.references.length < 3 ? "disabled" : ""}>${icon("refresh")}Rebuild rules</button>
+            <button class="btn btn-primary" id="build-btn" type="button" data-action="confirm-build" ${running || t.references.length < 3 ? "disabled" : ""}>${icon("refresh")}Rebuild rules</button>
             ${t.hasPrevious && !running ? `<button class="btn btn-quiet" type="button" data-action="restore-previous">Restore previous rules</button>` : ""}
             ${t.references.length < 3 ? `<span class="hint" style="margin:0">Add at least 3 photos first.</span>` : ""}
           </div>`}
