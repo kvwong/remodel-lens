@@ -20,6 +20,7 @@ import { scrapeListing } from "../listing/scrape.js";
 import { motionScript } from "../motion.js";
 import { brandAppHtml } from "../branding.js";
 import { homeView } from "./home-api.js";
+import { isSameOrigin } from "./origin.js";
 import { labelAttempt, settingsView, testKey, tuningView, updateSettings } from "./settings-api.js";
 import { pdfFilename, renderReportPdf, type PdfDetail } from "../report-pdf.js";
 import { htmlFilename, renderReportHtml } from "../report-html.js";
@@ -370,11 +371,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     return res.end(pullRefreshScript);
   }
 
-  // Writes must come from this page, not from another site in the same browser.
-  if (req.method !== "GET" && req.method !== "HEAD") {
-    const origin = req.headers.origin;
-    if (origin && origin !== `http://${req.headers.host}`) return send(res, 403, { error: "Cross-origin request refused" });
-  }
+  if (req.method !== "GET" && req.method !== "HEAD" && !isSameOrigin(req.headers)) return send(res, 403, { error: "Cross-origin request refused" });
 
   if (parts[0] === "api") {
     if (req.method === "GET" && parts[1] === "reports" && parts.length === 2) return send(res, 200, (await homeView(true)).reports);
