@@ -1087,7 +1087,7 @@ ${appearanceScript}
   .seg { display:inline-flex; padding:3px; border:1px solid var(--line-strong); border-radius:12px; background:var(--surface); }
   .seg button { font:inherit; font-size:13px; font-weight:500; min-height:32px; padding:4px 12px; border:0; border-radius:9px; background:transparent; color:var(--text); cursor:pointer; touch-action:manipulation; }
   .seg button:hover { background:var(--surface-2); }
-  .seg button[aria-pressed="true"] { background:var(--primary-fill); color:var(--primary-text); font-weight:600; box-shadow:var(--primary-shadow); }
+  .seg button[aria-pressed="true"] { background:var(--primary); color:var(--primary-text); font-weight:600; }
   .seg-label { font-size:13px; color:var(--muted); }
 
   /* Rooms */
@@ -1101,7 +1101,7 @@ ${appearanceScript}
   .tabs { display:inline-flex; padding:3px; border:1px solid var(--line-strong); border-radius:12px; background:var(--surface); }
   .tabs [role="tab"] { display:inline-flex; align-items:center; gap:6px; font:inherit; font-size:13px; font-weight:500; min-height:34px; padding:4px 12px; border:0; border-radius:9px; background:transparent; color:var(--text); cursor:pointer; touch-action:manipulation; }
   .tabs [role="tab"]:hover { background:var(--surface-2); }
-  .tabs [role="tab"][aria-selected="true"] { background:var(--primary-fill); color:var(--primary-text); font-weight:600; box-shadow:var(--primary-shadow); }
+  .tabs [role="tab"][aria-selected="true"] { background:var(--primary); color:var(--primary-text); font-weight:600; }
   .pair { display:grid; gap:12px; grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .frame { margin:0; min-width:0; }
   /* Version dropdowns sit over the bottom-right corner of the image, on the report and in the inspector. */
@@ -1219,7 +1219,7 @@ ${appearanceScript}
   .viewer-title .status > span:not(.status-meaning) { color:#efede9; }
   .viewer-title .status-meaning { color:rgba(239,237,233,.6); }
   .viewer-title .s-verified { color:#8fc49f; } .viewer-title .s-review { color:#e0bd78; } .viewer-title .s-failed, .viewer-title .s-error { color:#ee9d90; }
-  .viewer .seg { background:rgba(255,255,255,.08); } .viewer .seg button { color:rgba(239,237,233,.7); } .viewer .seg button[aria-pressed="true"] { background:#efede9; color:#0f0f0e; box-shadow:none; }
+  .viewer .seg { background:rgba(255,255,255,.08); } .viewer .seg button { color:rgba(239,237,233,.7); } .viewer .seg button[aria-pressed="true"] { background:#efede9; color:#0f0f0e; }
   .viewer button:focus-visible { outline:2px solid #efede9; outline-offset:-3px; border-radius:9px; }
   .viewer .seg button[aria-pressed="true"]:focus-visible { outline-color:#0f0f0e; }
   .viewer-actions { display:flex; gap:6px; align-items:center; }
