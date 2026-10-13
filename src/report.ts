@@ -873,17 +873,16 @@ export function renderReport(input: {
     input.pdf && { label: "PDF", links: input.pdf, kind: "PDF" },
     input.html && { label: "HTML", links: input.html, kind: "web page" },
   ].filter((d) => !!d);
-  // Share sits beside Download and offers the same files; the script reveals it only where the
-  // browser has a share sheet that can take files (it needs https on a phone).
-  const reportMenu = (id: string, verb: "Download" | "Share", attribute: string, extra: string) => `<div class="dl-menu" id="${id}" hidden>${formats.map((d) => `<div class="dl-format"><span class="dl-heading">${d.label}</span>
-      <a href="${esc(d.links.summary)}" ${attribute}="summary ${d.kind}" aria-label="${verb} ${d.label} summary"${extra}>Summary</a>
-      <a href="${esc(d.links.full)}" ${attribute}="full scope ${d.kind}" aria-label="${verb} ${d.label} full scope"${extra}>Full scope</a></div>`).join("")}</div>`;
+  // Share sits beside Download and sends the link to this report; the script reveals it only where
+  // the browser has a share sheet (it needs https on a phone) or can copy the link.
+  const reportMenu = (id: string, attribute: string, extra: string) => `<div class="dl-menu" id="${id}" hidden>${formats.map((d) => `<div class="dl-format"><span class="dl-heading">${d.label}</span>
+      <a href="${esc(d.links.summary)}" ${attribute}="summary ${d.kind}" aria-label="Download ${d.label} summary"${extra}>Summary</a>
+      <a href="${esc(d.links.full)}" ${attribute}="full scope ${d.kind}" aria-label="Download ${d.label} full scope"${extra}>Full scope</a></div>`).join("")}</div>`;
   const downloads = input.pdf || input.html ? `<div class="share"><div class="dl">
     <button class="share-btn" type="button" aria-label="Download report" title="Download report" aria-expanded="false" aria-controls="dl-report">${icon("download")}</button>
-    ${reportMenu("dl-report", "Download", "data-download", " download")}
+    ${reportMenu("dl-report", "data-download", " download")}
     </div><div class="dl dl-share" hidden>
-    <button class="share-btn" type="button" aria-label="Share report" title="Share report" aria-expanded="false" aria-controls="dl-share">${icon("share")}</button>
-    ${reportMenu("dl-share", "Share", "data-share", "")}
+    <button class="share-btn" type="button" aria-label="Share link to report" title="Share link to report">${icon("share")}</button>
     </div><span class="share-status" role="status" aria-live="polite"></span></div>` : "";
 
   return `<!doctype html>
@@ -2161,8 +2160,8 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
 
   /* Download menus: each button opens its Summary / Full scope choices. */
   const shareMenu = document.querySelector(".dl-share");
-  if (shareMenu && typeof navigator.share === "function" && typeof navigator.canShare === "function") shareMenu.hidden = false;
-  const dlButtons = [...document.querySelectorAll(".dl > button")];
+  if (shareMenu && (typeof navigator.share === "function" || navigator.clipboard?.writeText)) shareMenu.hidden = false;
+  const dlButtons = [...document.querySelectorAll(".dl:not(.dl-share) > button")];
   function positionDownloadMenu(button) {
     const menu = document.getElementById(button.getAttribute("aria-controls"));
     menu.style.translate = "";
@@ -2231,44 +2230,17 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     }
   }));
 
-  /* Share: the same files as Download, handed to the share sheet. A long report can outlast the tap's
-     permission to share, so a file that finished preparing is kept and the next tap shares it at once. */
-  const sharedFiles = new Map();
-  document.querySelectorAll("a[data-share]").forEach((link) => link.addEventListener("click", async (e) => {
-    e.preventDefault();
-    if (link.getAttribute("aria-busy") === "true") return;
-    const kind = link.dataset.share;
-    const button = link.closest(".dl")?.querySelector("button");
-    closeMenus();
-    button?.focus();
-    const send = async (file) => {
-      try { await navigator.share({ files: [file], title: file.name }); return true; }
-      catch (err) { if (err?.name === "AbortError") return true; throw err; }
-    };
+  /* Share: hand the share sheet this report's link, to message or copy. Without a share sheet the
+     link is copied. */
+  shareMenu?.querySelector("button").addEventListener("click", async () => {
+    const data = { title: document.title, url: location.href.split("#")[0] };
     try {
-      if (sharedFiles.has(link.href)) { shareStatus.textContent = ""; await send(sharedFiles.get(link.href)); return; }
-      link.setAttribute("aria-busy", "true");
-      button?.setAttribute("aria-busy", "true");
-      shareStatus.textContent = "Preparing the " + kind + "…";
-      const res = await fetch(link.href);
-      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "HTTP " + res.status);
-      const name = /filename[*]=UTF-8''([^;]+)/.exec(res.headers.get("content-disposition") || "")?.[1];
-      const blob = await res.blob();
-      const file = new File([blob], name ? decodeURIComponent(name) : "report", { type: blob.type });
-      if (!navigator.canShare({ files: [file] })) throw new Error("this browser can't share that file");
-      sharedFiles.set(link.href, file);
-      try { await send(file); shareStatus.textContent = ""; }
-      catch (err) {
-        if (err?.name !== "NotAllowedError") throw err;
-        shareStatus.textContent = "The " + kind + " is ready. Choose it again to share.";
-      }
+      if (typeof navigator.share === "function") await navigator.share(data);
+      else { await navigator.clipboard.writeText(data.url); shareStatus.textContent = "Link copied."; }
     } catch (err) {
-      shareStatus.textContent = "Couldn't share the " + kind + ": " + err.message;
-    } finally {
-      link.removeAttribute("aria-busy");
-      button?.removeAttribute("aria-busy");
+      if (err?.name !== "AbortError") shareStatus.textContent = "Couldn't share the link: " + err.message;
     }
-  }));
+  });
 
   const toTop = document.querySelector(".to-top");
   let ticking = false;
