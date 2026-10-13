@@ -81,6 +81,7 @@ const ICON_PATHS = {
   arrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   arrowUp: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
   download: '<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>',
+  share: '<path d="M12 15V4"/><path d="m8 8 4-4 4 4"/><path d="M6 12v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7"/>',
   chevronDown: '<path d="m6 9 6 6 6-6"/>',
   pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   pin: '<path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11Z"/><circle cx="12" cy="10" r="2.2"/>',
@@ -868,14 +869,21 @@ export function renderReport(input: {
     <p class="end-links">${back ? `<a href="${back.href}" data-back>${icon("arrowLeft")}${back.label}</a>` : ""}<a href="#top">${icon("arrowUp")}Back to top</a></p>
   </section>`;
 
+  const formats = [
+    input.pdf && { label: "PDF", links: input.pdf, kind: "PDF" },
+    input.html && { label: "HTML", links: input.html, kind: "web page" },
+  ].filter((d) => !!d);
+  // Share sits beside Download and offers the same files; the script reveals it only where the
+  // browser has a share sheet that can take files (it needs https on a phone).
+  const reportMenu = (id: string, verb: "Download" | "Share", attribute: string, extra: string) => `<div class="dl-menu" id="${id}" hidden>${formats.map((d) => `<div class="dl-format"><span class="dl-heading">${d.label}</span>
+      <a href="${esc(d.links.summary)}" ${attribute}="summary ${d.kind}" aria-label="${verb} ${d.label} summary"${extra}>Summary</a>
+      <a href="${esc(d.links.full)}" ${attribute}="full scope ${d.kind}" aria-label="${verb} ${d.label} full scope"${extra}>Full scope</a></div>`).join("")}</div>`;
   const downloads = input.pdf || input.html ? `<div class="share"><div class="dl">
     <button class="share-btn" type="button" aria-label="Download report" title="Download report" aria-expanded="false" aria-controls="dl-report">${icon("download")}</button>
-    <div class="dl-menu" id="dl-report" hidden>${[
-      input.pdf && { label: "PDF", links: input.pdf, kind: "PDF" },
-      input.html && { label: "HTML", links: input.html, kind: "web page" },
-    ].filter((d) => !!d).map((d) => `<div class="dl-format"><span class="dl-heading">${d.label}</span>
-      <a href="${esc(d.links.summary)}" data-download="summary ${d.kind}" aria-label="Download ${d.label} summary" download>Summary</a>
-      <a href="${esc(d.links.full)}" data-download="full scope ${d.kind}" aria-label="Download ${d.label} full scope" download>Full scope</a></div>`).join("")}</div>
+    ${reportMenu("dl-report", "Download", "data-download", " download")}
+    </div><div class="dl dl-share" hidden>
+    <button class="share-btn" type="button" aria-label="Share report" title="Share report" aria-expanded="false" aria-controls="dl-share">${icon("share")}</button>
+    ${reportMenu("dl-share", "Share", "data-share", "")}
     </div><span class="share-status" role="status" aria-live="polite"></span></div>` : "";
 
   return `<!doctype html>
@@ -2152,6 +2160,8 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   } catch {}
 
   /* Download menus: each button opens its Summary / Full scope choices. */
+  const shareMenu = document.querySelector(".dl-share");
+  if (shareMenu && typeof navigator.share === "function" && typeof navigator.canShare === "function") shareMenu.hidden = false;
   const dlButtons = [...document.querySelectorAll(".dl > button")];
   function positionDownloadMenu(button) {
     const menu = document.getElementById(button.getAttribute("aria-controls"));
@@ -2215,6 +2225,45 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
       shareStatus.textContent = kind[0].toUpperCase() + kind.slice(1) + " downloaded.";
     } catch (err) {
       shareStatus.textContent = "Couldn't make the " + kind + ": " + err.message;
+    } finally {
+      link.removeAttribute("aria-busy");
+      button?.removeAttribute("aria-busy");
+    }
+  }));
+
+  /* Share: the same files as Download, handed to the share sheet. A long report can outlast the tap's
+     permission to share, so a file that finished preparing is kept and the next tap shares it at once. */
+  const sharedFiles = new Map();
+  document.querySelectorAll("a[data-share]").forEach((link) => link.addEventListener("click", async (e) => {
+    e.preventDefault();
+    if (link.getAttribute("aria-busy") === "true") return;
+    const kind = link.dataset.share;
+    const button = link.closest(".dl")?.querySelector("button");
+    closeMenus();
+    button?.focus();
+    const send = async (file) => {
+      try { await navigator.share({ files: [file], title: file.name }); return true; }
+      catch (err) { if (err?.name === "AbortError") return true; throw err; }
+    };
+    try {
+      if (sharedFiles.has(link.href)) { shareStatus.textContent = ""; await send(sharedFiles.get(link.href)); return; }
+      link.setAttribute("aria-busy", "true");
+      button?.setAttribute("aria-busy", "true");
+      shareStatus.textContent = "Preparing the " + kind + "…";
+      const res = await fetch(link.href);
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "HTTP " + res.status);
+      const name = /filename[*]=UTF-8''([^;]+)/.exec(res.headers.get("content-disposition") || "")?.[1];
+      const blob = await res.blob();
+      const file = new File([blob], name ? decodeURIComponent(name) : "report", { type: blob.type });
+      if (!navigator.canShare({ files: [file] })) throw new Error("this browser can't share that file");
+      sharedFiles.set(link.href, file);
+      try { await send(file); shareStatus.textContent = ""; }
+      catch (err) {
+        if (err?.name !== "NotAllowedError") throw err;
+        shareStatus.textContent = "The " + kind + " is ready. Choose it again to share.";
+      }
+    } catch (err) {
+      shareStatus.textContent = "Couldn't share the " + kind + ": " + err.message;
     } finally {
       link.removeAttribute("aria-busy");
       button?.removeAttribute("aria-busy");
