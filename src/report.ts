@@ -1579,13 +1579,19 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   const img = document.createElement("img");
   img.alt = "";
   img.decoding = "async";
+  // After a swipe the panel that slid in stays over the stage until the full photo is ready, so
+  // the stage never drops to its black background in between.
+  let landed = null;
+  const dropLanded = () => { landed?.remove(); landed = null; };
   const finishImage = () => {
+    dropLanded();
     img.style.visibility = "";
     stage.style.backgroundImage = "";
     stage.setAttribute("aria-busy", "false");
   };
   img.addEventListener("error", () => {
     // Keep the preview visible when the original cannot be fetched.
+    dropLanded();
     stage.setAttribute("aria-busy", "false");
   });
   const tabsEl = dialog.querySelector(".viewer-tabs");
@@ -1658,7 +1664,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   }
 
   function show(i, keepZoom) {
-    resetInteraction();
+    resetInteraction(); dropLanded();
     index = (i + items.length) % items.length;
     const item = items[index];
     if (item.dataset.status) comparedRedesign = index;
@@ -2062,8 +2068,12 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
       const direction = projected < 0 ? 1 : -1;
       const target = direction === 1 ? reel.next : reel.previous;
       const advance = target && Math.abs(projected) > reel.size * .22;
+      const landing = direction === 1 ? reel.after : reel.before;
       spring(reel.offset, advance ? -direction * reel.size : 0, velocity, moveReel, () => {
-        resetInteraction(); if (advance) target.click();
+        resetInteraction();
+        if (!advance) return;
+        target.click();
+        if (img.style.visibility === "hidden") { landing.style.transform = ""; stage.append(landing); landed = landing; }
       });
       return;
     }
@@ -2114,7 +2124,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     dialog.close();
   });
   dialog.addEventListener("close", () => {
-    resetInteraction(); pointers.clear(); prefetchQueue = []; img.remove(); trigger?.focus({ preventScroll: true });
+    resetInteraction(); pointers.clear(); prefetchQueue = []; dropLanded(); img.remove(); trigger?.focus({ preventScroll: true });
     if (!closingFromHistory && history.state?.whimViewer) history.back();
     closingFromHistory = false;
   });
