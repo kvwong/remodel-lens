@@ -81,6 +81,7 @@ const ICON_PATHS = {
   arrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   arrowUp: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
   download: '<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>',
+  share: '<path d="M12 15V4"/><path d="m8 8 4-4 4 4"/><path d="M6 12v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7"/>',
   chevronDown: '<path d="m6 9 6 6 6-6"/>',
   pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   pin: '<path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11Z"/><circle cx="12" cy="10" r="2.2"/>',
@@ -868,14 +869,20 @@ export function renderReport(input: {
     <p class="end-links">${back ? `<a href="${back.href}" data-back>${icon("arrowLeft")}${back.label}</a>` : ""}<a href="#top">${icon("arrowUp")}Back to top</a></p>
   </section>`;
 
+  const formats = [
+    input.pdf && { label: "PDF", links: input.pdf, kind: "PDF" },
+    input.html && { label: "HTML", links: input.html, kind: "web page" },
+  ].filter((d) => !!d);
+  // Share sits beside Download and sends the link to this report; the script reveals it only where
+  // the browser has a share sheet (it needs https on a phone) or can copy the link.
+  const reportMenu = (id: string, attribute: string, extra: string) => `<div class="dl-menu" id="${id}" hidden>${formats.map((d) => `<div class="dl-format"><span class="dl-heading">${d.label}</span>
+      <a href="${esc(d.links.summary)}" ${attribute}="summary ${d.kind}" aria-label="Download ${d.label} summary"${extra}>Summary</a>
+      <a href="${esc(d.links.full)}" ${attribute}="full scope ${d.kind}" aria-label="Download ${d.label} full scope"${extra}>Full scope</a></div>`).join("")}</div>`;
   const downloads = input.pdf || input.html ? `<div class="share"><div class="dl">
     <button class="share-btn" type="button" aria-label="Download report" title="Download report" aria-expanded="false" aria-controls="dl-report">${icon("download")}</button>
-    <div class="dl-menu" id="dl-report" hidden>${[
-      input.pdf && { label: "PDF", links: input.pdf, kind: "PDF" },
-      input.html && { label: "HTML", links: input.html, kind: "web page" },
-    ].filter((d) => !!d).map((d) => `<div class="dl-format"><span class="dl-heading">${d.label}</span>
-      <a href="${esc(d.links.summary)}" data-download="summary ${d.kind}" aria-label="Download ${d.label} summary" download>Summary</a>
-      <a href="${esc(d.links.full)}" data-download="full scope ${d.kind}" aria-label="Download ${d.label} full scope" download>Full scope</a></div>`).join("")}</div>
+    ${reportMenu("dl-report", "data-download", " download")}
+    </div><div class="dl dl-share" hidden>
+    <button class="share-btn" type="button" aria-label="Share link to report" title="Share link to report">${icon("share")}</button>
     </div><span class="share-status" role="status" aria-live="polite"></span></div>` : "";
 
   return `<!doctype html>
@@ -2152,7 +2159,9 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   } catch {}
 
   /* Download menus: each button opens its Summary / Full scope choices. */
-  const dlButtons = [...document.querySelectorAll(".dl > button")];
+  const shareMenu = document.querySelector(".dl-share");
+  if (shareMenu && (typeof navigator.share === "function" || navigator.clipboard?.writeText)) shareMenu.hidden = false;
+  const dlButtons = [...document.querySelectorAll(".dl:not(.dl-share) > button")];
   function positionDownloadMenu(button) {
     const menu = document.getElementById(button.getAttribute("aria-controls"));
     menu.style.translate = "";
@@ -2220,6 +2229,18 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
       button?.removeAttribute("aria-busy");
     }
   }));
+
+  /* Share: hand the share sheet this report's link, to message or copy. Without a share sheet the
+     link is copied. */
+  shareMenu?.querySelector("button").addEventListener("click", async () => {
+    const data = { title: document.title, url: location.href.split("#")[0] };
+    try {
+      if (typeof navigator.share === "function") await navigator.share(data);
+      else { await navigator.clipboard.writeText(data.url); shareStatus.textContent = "Link copied."; }
+    } catch (err) {
+      if (err?.name !== "AbortError") shareStatus.textContent = "Couldn't share the link: " + err.message;
+    }
+  });
 
   const toTop = document.querySelector(".to-top");
   let ticking = false;
