@@ -1363,12 +1363,8 @@ ${appearanceScript}
   .viewer-split { position:absolute; inset:0; z-index:5; pointer-events:none; background-position:center; background-repeat:no-repeat; background-size:contain; }
   .viewer-divider { position:absolute; top:0; bottom:0; width:2px; z-index:6; background:white; box-shadow:0 0 8px #0008; pointer-events:none; }
   .viewer-stage.comparing { cursor:ew-resize; overflow:hidden; }
-  /* Press and hold on a phone: the photo settles back a little to say "let go to share". */
-  .viewer-stage img { transition:scale .2s var(--ease), filter .2s var(--ease); }
-  .viewer-stage.share-ready img { scale:.96; filter:brightness(.85); }
-  @media (prefers-reduced-motion: reduce) { .viewer-stage img { transition:none; } }
-  /* Without the Web Share API (e.g. plain http), let the phone's own image menu (Save, Share) open instead. */
-  .viewer.native-callout .viewer-stage img { -webkit-touch-callout:default; }
+  /* Press and hold the photo on a phone opens the phone's own image menu (Share, Save to Photos, Copy). */
+  .viewer .viewer-stage img { -webkit-touch-callout:default; }
   .viewer-stage.comparing img { pointer-events:none; }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; } }
 
@@ -1600,28 +1596,6 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     void badge.offsetWidth; // restart the pop on every flip
     badge.classList.add("pop");
   }
-  // Phones: press and hold the photo, then let go, to open the share sheet with the image file. The
-  // file is fetched when a version is shown so the share call can run inside the release gesture.
-  const canShare = typeof navigator.share === "function";
-  if (!canShare) dialog.classList.add("native-callout");
-  let shareFile = null;
-  function prepareShare(item) {
-    if (!canShare || !mobileViewer.matches) return;
-    const source = imageSource(item);
-    if (shareFile?.source === source) return;
-    const current = shareFile = { source, file: null };
-    fetch(source).then((r) => r.ok ? r.blob() : Promise.reject()).then((blob) => {
-      const type = blob.type || "image/png";
-      const name = item.dataset.label.replace(/ · /g, " - ").replace(/[\\/:*?"<>|]/g, "") + "." + (type.split("/")[1] || "png").replace("jpeg", "jpg");
-      current.file = new File([blob], name, { type });
-    }).catch(() => {});
-  }
-  function shareImage() {
-    const item = items[index], file = shareFile?.source === imageSource(item) ? shareFile.file : null;
-    const data = file && navigator.canShare?.({ files: [file] }) ? { files: [file] }
-      : { title: item.dataset.label, url: new URL(imageSource(item), location.href).href };
-    navigator.share(data).catch(() => {});
-  }
   const title = dialog.querySelector("#viewer-title");
   const statusEl = dialog.querySelector("#viewer-status");
   const fitBtn = dialog.querySelector('[data-viewer="fit"]');
@@ -1666,7 +1640,6 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
       : '<span class="viewer-plain">As photographed for the listing</span>';
     tabsEl.querySelectorAll("button").forEach((b, n) => b.setAttribute("aria-pressed", String(n === index)));
     updateBadge();
-    prepareShare(item);
     if (!keepZoom) setZoom(false);
     else if (img.complete) centerImage();
     iterShow?.(item);
@@ -1818,7 +1791,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     dialog.style.backgroundColor = "";
     dialog.classList.remove("dismissing");
     bar.style.opacity = badge.style.opacity = "";
-    stage.classList.remove("reeling", "comparing", "dragging", "share-ready");
+    stage.classList.remove("reeling", "comparing", "dragging");
     drag = null;
   }
   // Critically damped-ish spring in pixels: velocity carries through the release.
@@ -1918,7 +1891,8 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     stage.classList.add("comparing");
     moveSplit(split.x);
   }
-  stage.addEventListener("contextmenu", (e) => { if (mobileViewer.matches && !(e.target === img && !canShare)) e.preventDefault(); });
+  // The photo keeps the phone's own long-press menu; the rest of the stage doesn't get one.
+  stage.addEventListener("contextmenu", (e) => { if (mobileViewer.matches && e.target !== img) e.preventDefault(); });
   badge.addEventListener("contextmenu", (e) => e.preventDefault());
   // Phones: press and hold the version label to compare in split view; sliding the finger moves
   // the divider. A tap on the label flips the version like a tap on the photo.
@@ -1961,9 +1935,6 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
       actual: stage.classList.contains("actual"), touch: e.pointerType !== "mouse", moved: false, image: e.target === img,
       axis: null, time: performance.now(), lastX: e.clientX, lastY: e.clientY, velocity: 0, zoomed: zoom.s > 1, zoom: { ...zoom } };
     stage.setPointerCapture(e.pointerId);
-    if (canShare && drag.touch && drag.image && mobileViewer.matches && !drag.actual) {
-      holdTimer = setTimeout(() => { if (drag && !drag.moved) { drag.share = true; stage.classList.add("share-ready"); } }, 500);
-    }
   });
   stage.addEventListener("pointermove", (e) => {
     if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1982,10 +1953,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     if (!drag || drag.id !== e.pointerId) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (drag.axis === "split") { moveSplit(drag.splitStart + dx); return; }
-    if (Math.hypot(dx, dy) > 8) {
-      drag.moved = true; clearTimeout(holdTimer);
-      if (drag.share) { drag.share = false; stage.classList.remove("share-ready"); }
-    }
+    if (Math.hypot(dx, dy) > 8) { drag.moved = true; clearTimeout(holdTimer); }
     if (drag.actual && drag.moved) {
       stage.classList.add("dragging");
       stage.scrollLeft = drag.left - dx;
@@ -2048,7 +2016,6 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
       return;
     }
     if (gesture.zoomed && gesture.moved) return;
-    if (gesture.share) { stage.classList.remove("share-ready"); shareImage(); return; }
     // Phones: a tap on the right half flips to the next version of this photo (listing photo, then
     // each redesign), a tap on the left half to the previous one.
     if (!gesture.moved && gesture.touch && mobileViewer.matches) {
