@@ -15,10 +15,10 @@ export const smoothCss = `
   .side { view-transition-name:whim-side; }
   ::view-transition-group(whim-photo) { animation-duration:.36s; z-index:2; }
   ::view-transition-old(whim-photo), ::view-transition-new(whim-photo) { height:100%; object-fit:cover; }
-  /* Photos show a quiet placeholder tone while loading, then sharpen in. */
+  /* Photos show a quiet placeholder tone while loading, then fade in over it. */
   img:not([data-shown]):not([src^="data:"]) { background-color:color-mix(in srgb, var(--line) 55%, transparent); }
-  img[data-shown="fade"] { animation:whim-photo-in .38s cubic-bezier(.2,.8,.2,1); }
-  @keyframes whim-photo-in { from { filter:blur(10px); opacity:.4; } }
+  img[data-shown="fade"] { animation:whim-photo-in .22s ease-out; }
+  @keyframes whim-photo-in { from { opacity:0; } }
   @media (prefers-reduced-motion: reduce) {
     @view-transition { navigation:none; }
     img[data-shown="fade"] { animation:none; }
