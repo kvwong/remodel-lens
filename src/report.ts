@@ -1710,7 +1710,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   }
   function nextPhoto(direction) { adjacentPhoto(direction)?.click(); }
   const mobileViewer = matchMedia("(max-width: 860px), (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 600px)");
-  let drag = null, holdTimer = null, springFrame = null, reel = null, split = null;
+  let drag = null, holdTimer = null, menuTimer = null, springFrame = null, reel = null, split = null;
   const pointers = new Map(); // pointerId -> latest position, for pinch zoom
   // Phone pinch zoom: a transform on the image that survives version flips but not room changes.
   let zoom = { s: 1, x: 0, y: 0 }, pinch = null;
@@ -1937,6 +1937,8 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
       actual: stage.classList.contains("actual"), touch: e.pointerType !== "mouse", moved: false, image: e.target === img,
       axis: null, time: performance.now(), lastX: e.clientX, lastY: e.clientY, velocity: 0, zoomed: zoom.s > 1, zoom: { ...zoom } };
     stage.setPointerCapture(e.pointerId);
+    // A still hold on the photo opens the phone's image menu; black out the photo behind it.
+    if (mobileViewer.matches && drag.touch && drag.image && !drag.zoomed) openImageMenu(450);
   });
   stage.addEventListener("pointermove", (e) => {
     if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1955,7 +1957,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     if (!drag || drag.id !== e.pointerId) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (drag.axis === "split") { moveSplit(drag.splitStart + dx); return; }
-    if (Math.hypot(dx, dy) > 8) { drag.moved = true; clearTimeout(holdTimer); }
+    if (Math.hypot(dx, dy) > 8) { drag.moved = true; clearTimeout(holdTimer); clearTimeout(menuTimer); }
     if (drag.actual && drag.moved) {
       stage.classList.add("dragging");
       stage.scrollLeft = drag.left - dx;
@@ -1987,6 +1989,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   stage.addEventListener("pointerup", (e) => {
     pointers.delete(e.pointerId);
     clearTimeout(holdTimer);
+    clearTimeout(menuTimer);
     if (pinch) {
       if (pointers.size < 2) {
         pinch = null; drag = null;
@@ -2039,21 +2042,22 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     // Normal release also loses capture; let the settling spring finish.
     if (drag?.id === e.pointerId) resetInteraction();
   };
-  // A long press on the photo hands the touch to the phone's own image menu (the touch is
-  // cancelled). Once the menu has lifted its preview, black out the photo behind it so only the
-  // preview shows; the next touch, or leaving the app, brings it back.
-  let menuTimer = null;
-  const openImageMenu = () => {
+  // A long press on the photo opens the phone's own image menu, whose preview is drawn from the
+  // image itself, so the photo behind it can go black and only the preview shows. The next touch,
+  // or leaving the app, brings it back.
+  const openImageMenu = (delay) => {
     clearTimeout(menuTimer);
-    menuTimer = setTimeout(() => stage.classList.add("menu-open"), 120);
+    menuTimer = setTimeout(() => stage.classList.add("menu-open"), delay);
   };
   const closeImageMenu = () => { clearTimeout(menuTimer); stage.classList.remove("menu-open"); };
   stage.addEventListener("pointercancel", (e) => {
     if (mobileViewer.matches && drag?.id === e.pointerId && drag.image && drag.touch && !drag.moved && !drag.zoomed
-      && performance.now() - drag.time > 350) openImageMenu();
+      && performance.now() - drag.time > 250) openImageMenu(0);
   });
-  img.addEventListener("contextmenu", () => { if (mobileViewer.matches) openImageMenu(); });
-  for (const type of ["touchstart", "pointerdown"]) document.addEventListener(type, closeImageMenu, { capture:true, passive:true });
+  img.addEventListener("contextmenu", () => { if (mobileViewer.matches) openImageMenu(0); });
+  // touchstart comes after pointerdown, so it only uncovers the photo and leaves a new hold's timer alone.
+  document.addEventListener("pointerdown", closeImageMenu, { capture:true, passive:true });
+  document.addEventListener("touchstart", () => stage.classList.remove("menu-open"), { capture:true, passive:true });
   window.addEventListener("focus", closeImageMenu);
   document.addEventListener("visibilitychange", closeImageMenu);
   stage.addEventListener("pointercancel", cancelGesture);
