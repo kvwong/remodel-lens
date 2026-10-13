@@ -108,7 +108,7 @@ export function changePrompt(input: {
   ].join("\n");
 }
 
-const PinChecks = z.object({
+export const PinChecks = z.object({
   pins: z.array(z.object({ pin: z.number().int().describe("Pin number, from 1"), result: z.enum(["done", "partial", "missed"]), note: z.string() })),
   markersDrawn: z.boolean().describe("True if the result shows red circles, numbers, or markers that were only meant as directions."),
 });

@@ -1534,6 +1534,7 @@ async function pollJob() {
     pollTimer = setTimeout(pollJob, 2000);
     return;
   }
+  state.runError = null; // an "already running" refusal from while it ran no longer applies
   if (state.view === "listing") {
     const listing = await api(`/api/listings/${encodeURIComponent(state.listing.id)}`);
     if (seq !== loadSeq) return;

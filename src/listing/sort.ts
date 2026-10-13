@@ -76,7 +76,7 @@ export async function decidePhoto(image: ImageInput, fetchFn: Fetch = fetch): Pr
   };
 }
 
-const PhotoSort = z.object({
+export const PhotoSort = z.object({
   photos: z.array(z.object({
     id: z.string().describe("The photo's label, e.g. photo_3"),
     kind: z.enum(PHOTO_KINDS),
