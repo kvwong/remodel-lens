@@ -1,25 +1,40 @@
 /* Theme: one palette for app and exported reports. */
   :root {
-    --bg:#f4f4f3; --surface:#ffffff; --surface-2:#f2f2f0; --text:#1b1a19; --muted:#625e58;
+    --bg:#f4f4f3; --surface:#ffffff; --surface-2:#f2f2f0; --text:#1b1a19; --muted:#6b665f;
     --line:rgba(27,26,25,.1); --line-strong:rgba(27,26,25,.22);
     --control-hover:var(--surface);
-    /* Secondary buttons are a soft tint, not an outline, so they read on white cards and the page alike. */
-    --btn-fill:rgba(27,26,25,.06); --btn-fill-hover:rgba(27,26,25,.1);
+    /* Secondary buttons are raised tiles: a touch lighter than the page, hairline edge, tight drop
+       shadow (same depth as panels) and a faint top highlight, so they read as keys on white cards and the page alike. */
+    --btn-fill:#fbfbfa; --btn-fill-hover:#ffffff; --btn-fill-press:#f0f0ee;
+    --btn-shadow:0 0 0 .5px rgba(0,0,0,.09), 0 1px 2px rgba(0,0,0,.06), 0 2px 4px rgba(0,0,0,.03), inset 0 1px 0 rgba(255,255,255,.95);
+    --btn-shadow-hover:0 0 0 .5px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.08), 0 2px 5px rgba(0,0,0,.05), inset 0 1px 0 #fff;
+    --btn-shadow-press:0 0 0 .5px rgba(0,0,0,.1), 0 1px 1px rgba(0,0,0,.04), inset 0 1px 2px rgba(0,0,0,.06);
     --ink:#1b1a19; --ink-text:#fafaf9;
     /* Primary: a warm near-black, so buttons stay neutral next to whatever palette the photos show. --brand is the logo green. */
     --primary:#2b2825; --primary-hover:#1a1816; --primary-text:#faf8f5; --primary-soft:#ebe7e1; --brand:#2f5a44;
+    /* The solid button is raised the same way: a slight top-lit gradient, hairline and highlight. */
+    --primary-fill:linear-gradient(180deg, #3a3632, #2b2825); --primary-fill-hover:linear-gradient(180deg, #312d2a, #1f1d1b);
+    --primary-shadow:0 0 0 .5px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.14), 0 2px 4px rgba(0,0,0,.05), inset 0 1px 0 rgba(255,255,255,.14);
+    --primary-shadow-press:0 0 0 .5px rgba(0,0,0,.6), inset 0 1px 2px rgba(0,0,0,.3);
     --accent:var(--primary); --accent-soft:var(--primary-soft);
     --ok:#3d6a4c; --warn:#8a6216; --warn-bg:#f7f0e2; --bad:#9a3b2f; --bad-bg:#f7ebe8;
     --font:"Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono:ui-monospace, "SF Mono", Menlo, monospace;
   }
   :root[data-theme="dark"] {
-      --bg:#0e0e0d; --surface:#242321; --surface-2:#302e2b; --text:#ecebe8; --muted:#b5b0a9;
+      --bg:#0e0e0d; --surface:#242321; --surface-2:#302e2b; --text:#ecebe8; --muted:#aaa59e;
       --line:rgba(236,235,232,.2); --line-strong:rgba(236,235,232,.42);
       --control-hover:var(--surface-2);
-      --btn-fill:rgba(236,235,232,.1); --btn-fill-hover:rgba(236,235,232,.16);
+      --btn-fill:#2a2927; --btn-fill-hover:#312f2d; --btn-fill-press:#222120;
+      --btn-shadow:0 0 0 .5px rgba(255,255,255,.12), 0 1px 2px rgba(0,0,0,.3), 0 2px 4px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.07);
+      --btn-shadow-hover:0 0 0 .5px rgba(255,255,255,.16), 0 1px 2px rgba(0,0,0,.35), 0 2px 5px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.09);
+      --btn-shadow-press:0 0 0 .5px rgba(255,255,255,.1), inset 0 1px 2px rgba(0,0,0,.4);
       --ink:#ecebe8; --ink-text:#121211;
       --primary:#ebe6df; --primary-hover:#fbf8f3; --primary-text:#1b1917; --primary-soft:#34302b; --brand:#8cc3a1;
+      /* Off-white rather than white, with a hairline and highlight so it reads raised, not flat. */
+      --primary-fill:linear-gradient(180deg, #f1ede7, #e0dbd3); --primary-fill-hover:linear-gradient(180deg, #f8f5f0, #e8e3dc);
+      --primary-shadow:0 0 0 .5px rgba(255,255,255,.55), 0 1px 2px rgba(0,0,0,.3), 0 2px 4px rgba(0,0,0,.2), inset 0 1px 0 #fff, inset 0 -1px 0 rgba(0,0,0,.08);
+      --primary-shadow-press:0 0 0 .5px rgba(255,255,255,.45), inset 0 1px 2px rgba(0,0,0,.18);
       --ok:#8fc49f; --warn:#e0bd78; --warn-bg:#2c2414; --bad:#ee9d90; --bad-bg:#321b17;
   }
   :root { color-scheme:light; }
@@ -35,13 +50,15 @@
     --shadow-hover:0 2px 4px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.24); }
 
 /* Buttons and busy indicators */
-  .btn, .share-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:38px; padding:6px 14px; border-radius:12px; border:1px solid transparent; background:var(--btn-fill); cursor:pointer; font-size:14px; font-weight:500; text-decoration:none; white-space:nowrap; }
-  .btn:hover, .share-btn:hover { background:var(--btn-fill-hover); }
-  .btn-primary { background:var(--primary); color:var(--primary-text); border-color:var(--primary); padding:6px 16px; font-weight:600; box-shadow:0 1px 2px rgba(20,40,28,.18); }
-  .btn-primary:hover { background:var(--primary-hover); border-color:var(--primary-hover); }
-  .btn-primary:active { transform:translateY(1px); }
-  .btn-quiet { border-color:transparent; background:transparent; padding-inline:8px; }
-  .btn-quiet:hover { background:var(--surface-2); border-color:transparent; }
+  .btn, .share-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:38px; padding:6px 14px; border-radius:12px; border:1px solid transparent; background:var(--btn-fill); box-shadow:var(--btn-shadow); cursor:pointer; font-size:14px; font-weight:500; text-decoration:none; white-space:nowrap; }
+  .btn:hover, .share-btn:hover { background:var(--btn-fill-hover); box-shadow:var(--btn-shadow-hover); }
+  .btn:active:not(:disabled), .share-btn:active { background:var(--btn-fill-press); box-shadow:var(--btn-shadow-press); }
+  .btn-primary { background:var(--primary-fill); color:var(--primary-text); border-color:transparent; padding:6px 16px; font-weight:600; box-shadow:var(--primary-shadow); }
+  .btn-primary:hover { background:var(--primary-fill-hover); border-color:transparent; box-shadow:var(--primary-shadow); }
+  .btn-primary:active:not(:disabled) { background:var(--primary-fill); box-shadow:var(--primary-shadow-press); transform:translateY(1px); }
+  .btn-quiet { border-color:transparent; background:transparent; box-shadow:none; padding-inline:8px; }
+  .btn-quiet:hover { background:var(--surface-2); border-color:transparent; box-shadow:none; }
+  .btn:disabled { box-shadow:none; }
   .btn-small { min-height:32px; padding:4px 10px; font-size:13px; }
   .btn:disabled { opacity:.45; cursor:not-allowed; }
   .spinner { width:14px; height:14px; border-radius:50%; border:2px solid currentColor; border-right-color:transparent; }
