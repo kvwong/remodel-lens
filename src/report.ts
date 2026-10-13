@@ -1363,10 +1363,12 @@ ${appearanceScript}
   .viewer-split { position:absolute; inset:0; z-index:5; pointer-events:none; background-position:center; background-repeat:no-repeat; background-size:contain; }
   .viewer-divider { position:absolute; top:0; bottom:0; width:2px; z-index:6; background:white; box-shadow:0 0 8px #0008; pointer-events:none; }
   .viewer-stage.comparing { cursor:ew-resize; overflow:hidden; }
-  /* Press and hold the photo on a phone opens the phone's own image menu (Share, Save to Photos, Copy). */
-  .viewer .viewer-stage img { -webkit-touch-callout:default; }
-  .viewer-stage.menu-open { background-image:none !important; }
-  .viewer-stage.menu-open img, .viewer-stage.menu-open .vpins { opacity:0; }
+  /* Press and hold on a phone: the photo settles back a little to say "let go to share". */
+  .viewer-stage img { transition:scale .2s var(--ease), filter .2s var(--ease); }
+  .viewer-stage.share-ready img { scale:.96; filter:brightness(.85); }
+  @media (prefers-reduced-motion: reduce) { .viewer-stage img { transition:none; } }
+  /* Without the Web Share API (plain http), let the phone's own image menu (Save, Share) open instead. */
+  .viewer.native-callout .viewer-stage img { -webkit-touch-callout:default; }
   .menu-log { display:none; position:fixed; left:8px; right:8px; top:calc(env(safe-area-inset-top) + 64px); z-index:50; background:rgba(0,0,0,.72); color:#9fe0b5; border-radius:10px; padding:6px 8px; font:10px/1.35 ui-monospace, Menlo, monospace; pointer-events:auto; }
   .menu-log pre { margin:0; white-space:pre-wrap; user-select:text; -webkit-user-select:text; }
   .menu-log button { float:right; font:600 11px system-ui; color:#fff; background:rgba(255,255,255,.18); border:0; border-radius:8px; padding:6px 10px; }
@@ -1602,6 +1604,57 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     void badge.offsetWidth; // restart the pop on every flip
     badge.classList.add("pop");
   }
+  // Temporary on-screen event log for the press-and-hold share, shown on phones only. Remove once it works.
+  const menuLog = [], menuT0 = performance.now();
+  const menuLogBox = document.createElement("div");
+  menuLogBox.className = "menu-log";
+  menuLogBox.innerHTML = '<button type="button">Copy log</button><pre></pre>';
+  dialog.append(menuLogBox);
+  const mlog = (text) => {
+    menuLog.push(String(Math.round(performance.now() - menuT0)).padStart(6) + "  " + text);
+    menuLogBox.querySelector("pre").textContent = menuLog.slice(-8).join("\\n");
+  };
+  menuLogBox.querySelector("button").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const text = navigator.userAgent.replace(/\\s*\\(KHTML.*$/, "") + (matchMedia("(display-mode: standalone)").matches || navigator.standalone ? " standalone" : "") + "\\n" + menuLog.join("\\n");
+    const label = e.currentTarget;
+    const done = () => { label.textContent = "Copied"; };
+    const fallback = () => { const pre = menuLogBox.querySelector("pre"); pre.textContent = text; const range = document.createRange(); range.selectNodeContents(pre); getSelection().removeAllRanges(); getSelection().addRange(range); label.textContent = "Selected"; };
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+  });
+  for (const type of ["pointerdown", "pointerup", "pointercancel", "gotpointercapture", "lostpointercapture", "touchstart", "touchend", "touchcancel", "contextmenu", "click"]) {
+    document.addEventListener(type, (e) => {
+      if (!dialog.open || e.target.closest?.(".menu-log")) return;
+      const t = e.target === img ? "photo" : e.target === stage ? "stage" : (e.target.className || e.target.tagName || "doc");
+      mlog(type + " " + t + (type === "pointerdown" ? " mv=" + mobileViewer.matches + " zoom=" + zoom.s : ""));
+    }, { capture:true, passive:true });
+  }
+  for (const type of ["focus", "blur", "resize", "pageshow", "pagehide", "orientationchange"]) window.addEventListener(type, () => { if (dialog.open) mlog("window " + type); });
+  document.addEventListener("visibilitychange", () => { if (dialog.open) mlog("visibility " + document.visibilityState); });
+  // Phones: press and hold the photo, then let go, to open the share sheet with the image file. Safari
+  // only allows sharing from a release, and not after an await, so the file is fetched ahead of time.
+  const canShare = typeof navigator.share === "function";
+  if (!canShare) dialog.classList.add("native-callout");
+  let shareFile = null;
+  function prepareShare(item) {
+    if (!canShare || !mobileViewer.matches) return;
+    const source = imageSource(item);
+    if (shareFile?.source === source) return;
+    const current = shareFile = { source, file: null };
+    fetch(source).then((r) => r.ok ? r.blob() : Promise.reject(new Error("fetch " + r.status))).then((blob) => {
+      const type = blob.type || "image/png";
+      const name = item.dataset.label.replace(/ · /g, " - ").replace(/[\\/:*?"<>|]/g, "") + "." + (type.split("/")[1] || "png").replace("jpeg", "jpg");
+      current.file = new File([blob], name, { type });
+      mlog("share file ready " + name + " " + Math.round(blob.size / 1024) + "KB");
+    }).catch((err) => mlog("share file failed " + (err?.message || err)));
+  }
+  function shareImage() {
+    const item = items[index], file = shareFile?.source === imageSource(item) ? shareFile.file : null;
+    const data = file && navigator.canShare?.({ files: [file] }) ? { files: [file] }
+      : { title: item.dataset.label, url: new URL(imageSource(item), location.href).href };
+    mlog("share call " + (data.files ? "file" : "link only (file " + (file ? "not shareable" : "not ready") + ")"));
+    navigator.share(data).then(() => mlog("share done"), (err) => mlog("share " + (err?.name || err)));
+  }
   const title = dialog.querySelector("#viewer-title");
   const statusEl = dialog.querySelector("#viewer-status");
   const fitBtn = dialog.querySelector('[data-viewer="fit"]');
@@ -1646,6 +1699,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
       : '<span class="viewer-plain">As photographed for the listing</span>';
     tabsEl.querySelectorAll("button").forEach((b, n) => b.setAttribute("aria-pressed", String(n === index)));
     updateBadge();
+    prepareShare(item);
     if (!keepZoom) setZoom(false);
     else if (img.complete) centerImage();
     iterShow?.(item);
@@ -1714,7 +1768,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   }
   function nextPhoto(direction) { adjacentPhoto(direction)?.click(); }
   const mobileViewer = matchMedia("(max-width: 860px), (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 600px)");
-  let drag = null, holdTimer = null, menuTimer = null, springFrame = null, reel = null, split = null;
+  let drag = null, holdTimer = null, springFrame = null, reel = null, split = null;
   const pointers = new Map(); // pointerId -> latest position, for pinch zoom
   // Phone pinch zoom: a transform on the image that survives version flips but not room changes.
   let zoom = { s: 1, x: 0, y: 0 }, pinch = null;
@@ -1797,7 +1851,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     dialog.style.backgroundColor = "";
     dialog.classList.remove("dismissing");
     bar.style.opacity = badge.style.opacity = "";
-    stage.classList.remove("reeling", "comparing", "dragging");
+    stage.classList.remove("reeling", "comparing", "dragging", "share-ready");
     drag = null;
   }
   // Critically damped-ish spring in pixels: velocity carries through the release.
@@ -1898,7 +1952,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     moveSplit(split.x);
   }
   // The photo keeps the phone's own long-press menu; the rest of the stage doesn't get one.
-  stage.addEventListener("contextmenu", (e) => { if (mobileViewer.matches && e.target !== img) e.preventDefault(); });
+  stage.addEventListener("contextmenu", (e) => { if (mobileViewer.matches && !(e.target === img && !canShare)) e.preventDefault(); });
   badge.addEventListener("contextmenu", (e) => e.preventDefault());
   // Phones: press and hold the version label to compare in split view; sliding the finger moves
   // the divider. A tap on the label flips the version like a tap on the photo.
@@ -1941,8 +1995,10 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
       actual: stage.classList.contains("actual"), touch: e.pointerType !== "mouse", moved: false, image: e.target === img,
       axis: null, time: performance.now(), down: performance.now(), lastX: e.clientX, lastY: e.clientY, velocity: 0, zoomed: zoom.s > 1, zoom: { ...zoom } };
     stage.setPointerCapture(e.pointerId);
-    // A still hold on the photo opens the phone's image menu; black out the photo behind it.
-    if (mobileViewer.matches && drag.touch && drag.image && !drag.zoomed) openImageMenu(450);
+    // A still hold on the photo arms the share sheet, which opens when the finger lifts.
+    if (canShare && mobileViewer.matches && drag.touch && drag.image && !drag.actual && !drag.zoomed) {
+      holdTimer = setTimeout(() => { if (drag && !drag.moved) { drag.share = true; stage.classList.add("share-ready"); mlog("share-ready"); } }, 450);
+    }
   });
   stage.addEventListener("pointermove", (e) => {
     if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1961,7 +2017,10 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     if (!drag || drag.id !== e.pointerId) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (drag.axis === "split") { moveSplit(drag.splitStart + dx); return; }
-    if (Math.hypot(dx, dy) > 8) { if (menuTimer && !drag.moved) mlog("moved, timer cleared"); drag.moved = true; clearTimeout(holdTimer); clearTimeout(menuTimer); }
+    if (Math.hypot(dx, dy) > 8) {
+      drag.moved = true; clearTimeout(holdTimer);
+      if (drag.share) { drag.share = false; stage.classList.remove("share-ready"); mlog("moved, share cancelled"); }
+    }
     if (drag.actual && drag.moved) {
       stage.classList.add("dragging");
       stage.scrollLeft = drag.left - dx;
@@ -1993,11 +2052,6 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   stage.addEventListener("pointerup", (e) => {
     pointers.delete(e.pointerId);
     clearTimeout(holdTimer);
-    // A release reaching the page means the phone's menu didn't take the touch, so the photo comes back.
-    const held = stage.classList.contains("menu-open");
-    const swallow = swallowTap; swallowTap = false;
-    if (swallow) mlog("tap swallowed");
-    closeImageMenu();
     if (pinch) {
       if (pointers.size < 2) {
         pinch = null; drag = null;
@@ -2009,6 +2063,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     const gesture = drag;
     drag = null;
     if (!gesture || gesture.id !== e.pointerId) return;
+    if (gesture.share) { stage.classList.remove("share-ready"); shareImage(); return; }
     const dx = e.clientX - gesture.x, dy = e.clientY - gesture.y;
     if (split) { settleSplit(); return; }
     const velocity = performance.now() - gesture.time < 100 ? Math.max(-3, Math.min(3, gesture.velocity)) : 0;
@@ -2032,7 +2087,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     // Phones: a tap on the right half flips to the next version of this photo (listing photo, then
     // each redesign), a tap on the left half to the previous one.
     if (!gesture.moved && gesture.touch && mobileViewer.matches) {
-      if (held || swallow || performance.now() - gesture.time >= 450) return;
+      if (performance.now() - gesture.time >= 450) return;
       const box = stage.getBoundingClientRect();
       if (items.length > 1) show(index + (e.clientX < box.left + box.width / 2 ? -1 : 1), true);
       return;
@@ -2051,85 +2106,6 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     // Normal release also loses capture; let the settling spring finish.
     if (drag?.id === e.pointerId) resetInteraction();
   };
-  // A long press on the photo opens the phone's own image menu, whose preview is drawn from the
-  // image itself, so the photo behind it can go black and only the preview shows. iOS holds the
-  // touch's events back while the menu is up and sends its end (up or cancel) once the menu closes,
-  // so any end of the touch brings the photo back.
-  // Temporary on-screen event log for the long-press blackout, shown on phones only. Remove once fixed.
-  const menuLog = [], menuT0 = performance.now();
-  const menuLogBox = document.createElement("div");
-  menuLogBox.className = "menu-log";
-  menuLogBox.innerHTML = '<button type="button">Copy log</button><pre></pre>';
-  dialog.append(menuLogBox);
-  const mlog = (text) => {
-    menuLog.push(String(Math.round(performance.now() - menuT0)).padStart(6) + "  " + text);
-    menuLogBox.querySelector("pre").textContent = menuLog.slice(-8).join("\\n");
-  };
-  menuLogBox.querySelector("button").addEventListener("click", (e) => {
-    e.stopPropagation();
-    const text = navigator.userAgent.replace(/\\s*\\(KHTML.*$/, "") + (matchMedia("(display-mode: standalone)").matches || navigator.standalone ? " standalone" : "") + "\\n" + menuLog.join("\\n");
-    const label = e.currentTarget;
-    const done = () => { label.textContent = "Copied"; };
-    const fallback = () => { const pre = menuLogBox.querySelector("pre"); pre.textContent = text; const range = document.createRange(); range.selectNodeContents(pre); getSelection().removeAllRanges(); getSelection().addRange(range); label.textContent = "Selected"; };
-    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
-  });
-  for (const type of ["pointerdown", "pointerup", "pointercancel", "gotpointercapture", "lostpointercapture", "touchstart", "touchend", "touchcancel", "contextmenu", "click"]) {
-    document.addEventListener(type, (e) => {
-      if (!dialog.open || e.target.closest?.(".menu-log")) return;
-      const t = e.target === img ? "photo" : e.target === stage ? "stage" : (e.target.className || e.target.tagName || "doc");
-      mlog(type + " " + t + (type === "pointerdown" ? " mv=" + mobileViewer.matches + " zoom=" + zoom.s : ""));
-    }, { capture:true, passive:true });
-  }
-  for (const type of ["focus", "blur", "resize", "pageshow", "pagehide", "orientationchange"]) window.addEventListener(type, () => { if (dialog.open) mlog("window " + type); });
-  for (const type of ["selectionchange", "scroll", "gesturestart", "gestureend", "dragstart", "pointermove", "mousemove", "webkitmouseforcewillbegin", "touchforcechange", "keydown"]) {
-    let last = 0;
-    document.addEventListener(type, () => { const now = performance.now(); if (dialog.open && now - last > 400) { last = now; mlog("ev " + type); } }, { capture:true, passive:true });
-  }
-  let lastFrame = performance.now(), focusNow = document.hasFocus();
-  (function frame(now) {
-    if (dialog.open && now - lastFrame > 150) mlog("frames paused " + Math.round(now - lastFrame) + "ms");
-    lastFrame = now;
-    if (dialog.open && document.hasFocus() !== focusNow) { focusNow = !focusNow; mlog("hasFocus " + focusNow); }
-    requestAnimationFrame(frame);
-  })(performance.now());
-  document.addEventListener("visibilitychange", () => { if (dialog.open) mlog("visibility " + document.visibilityState); });
-  const openImageMenu = (delay) => {
-    clearTimeout(menuTimer);
-    mlog("menu timer set");
-    menuTimer = setTimeout(() => { menuTimer = null; stage.classList.add("menu-open"); mlog("BLACK on, img opacity " + getComputedStyle(img).opacity); }, delay);
-  };
-  // On the iPhone the system takes the touch about 200ms into a still hold on the photo (the image
-  // menu starts to lift), so the page gets a cancel well before the 450ms timer. That cancel is the
-  // signal to black the photo out, and the cancel events that follow must not bring it back. Nothing
-  // reaches the page when the menu closes, so the next touch (or the page coming back) restores it,
-  // and that touch is swallowed so it doesn't also flip the version.
-  let menuCancelBlack = false, swallowTap = false;
-  const keepBlack = new Set(["pointercancel", "lostpointercapture", "touchcancel", "touchend"]);
-  const closeImageMenu = (e) => {
-    if (menuCancelBlack && e && keepBlack.has(e.type)) { mlog("keep black (" + e.type + ")"); return; }
-    const wasBlack = stage.classList.contains("menu-open");
-    if (menuTimer || wasBlack) mlog("restore by " + (e?.type || "code") + (wasBlack ? " (was black)" : " (timer cleared)"));
-    if (wasBlack && menuCancelBlack && e && ["pointerdown", "touchstart", "mousedown", "click"].includes(e.type) && e.target instanceof Node && stage.contains(e.target)) swallowTap = true;
-    if (!e) swallowTap = false;
-    clearTimeout(menuTimer); menuTimer = null; menuCancelBlack = false; stage.classList.remove("menu-open");
-  };
-  stage.addEventListener("pointercancel", (e) => {
-    if (menuTimer && drag?.id === e.pointerId && drag.image && !drag.moved && performance.now() - drag.down >= 120) {
-      clearTimeout(menuTimer); menuTimer = null; menuCancelBlack = true; stage.classList.add("menu-open");
-      mlog("BLACK on by pointercancel after " + Math.round(performance.now() - drag.down) + "ms");
-      return;
-    }
-    closeImageMenu(e);
-  });
-  stage.addEventListener("lostpointercapture", closeImageMenu);
-  for (const type of ["click", "mousedown"]) document.addEventListener(type, closeImageMenu, { capture:true, passive:true });
-  for (const type of ["touchend", "touchcancel"]) document.addEventListener(type, closeImageMenu, { capture:true, passive:true });
-  // touchstart comes after pointerdown, so it only uncovers the photo and leaves a new hold's timer alone.
-  document.addEventListener("pointerdown", closeImageMenu, { capture:true, passive:true });
-  document.addEventListener("touchstart", (e) => { if (stage.classList.contains("menu-open")) closeImageMenu(e); }, { capture:true, passive:true });
-  window.addEventListener("focus", closeImageMenu);
-  window.addEventListener("pageshow", closeImageMenu);
-  document.addEventListener("visibilitychange", closeImageMenu);
   stage.addEventListener("pointercancel", cancelGesture);
   stage.addEventListener("lostpointercapture", cancelGesture);
   mobileViewer.addEventListener("change", resetInteraction);
@@ -2148,7 +2124,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     dialog.close();
   });
   dialog.addEventListener("close", () => {
-    resetInteraction(); closeImageMenu(); pointers.clear(); prefetchQueue = []; img.remove(); trigger?.focus({ preventScroll: true });
+    resetInteraction(); pointers.clear(); prefetchQueue = []; img.remove(); trigger?.focus({ preventScroll: true });
     if (!closingFromHistory && history.state?.whimViewer) history.back();
     closingFromHistory = false;
   });
