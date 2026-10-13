@@ -1939,7 +1939,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     if (pointers.size > 1) return;
     drag = { id: e.pointerId, x: e.clientX, y: e.clientY, left: stage.scrollLeft, top: stage.scrollTop,
       actual: stage.classList.contains("actual"), touch: e.pointerType !== "mouse", moved: false, image: e.target === img,
-      axis: null, time: performance.now(), lastX: e.clientX, lastY: e.clientY, velocity: 0, zoomed: zoom.s > 1, zoom: { ...zoom } };
+      axis: null, time: performance.now(), down: performance.now(), lastX: e.clientX, lastY: e.clientY, velocity: 0, zoomed: zoom.s > 1, zoom: { ...zoom } };
     stage.setPointerCapture(e.pointerId);
     // A still hold on the photo opens the phone's image menu; black out the photo behind it.
     if (mobileViewer.matches && drag.touch && drag.image && !drag.zoomed) openImageMenu(450);
@@ -1995,6 +1995,8 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     clearTimeout(holdTimer);
     // A release reaching the page means the phone's menu didn't take the touch, so the photo comes back.
     const held = stage.classList.contains("menu-open");
+    const swallow = swallowTap; swallowTap = false;
+    if (swallow) mlog("tap swallowed");
     closeImageMenu();
     if (pinch) {
       if (pointers.size < 2) {
@@ -2030,7 +2032,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     // Phones: a tap on the right half flips to the next version of this photo (listing photo, then
     // each redesign), a tap on the left half to the previous one.
     if (!gesture.moved && gesture.touch && mobileViewer.matches) {
-      if (held || performance.now() - gesture.time >= 450) return;
+      if (held || swallow || performance.now() - gesture.time >= 450) return;
       const box = stage.getBoundingClientRect();
       if (items.length > 1) show(index + (e.clientX < box.left + box.width / 2 ? -1 : 1), true);
       return;
@@ -2078,22 +2080,53 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
       mlog(type + " " + t + (type === "pointerdown" ? " mv=" + mobileViewer.matches + " zoom=" + zoom.s : ""));
     }, { capture:true, passive:true });
   }
-  for (const type of ["focus", "blur", "resize", "pageshow", "pagehide"]) window.addEventListener(type, () => { if (dialog.open) mlog("window " + type); });
+  for (const type of ["focus", "blur", "resize", "pageshow", "pagehide", "orientationchange"]) window.addEventListener(type, () => { if (dialog.open) mlog("window " + type); });
+  for (const type of ["selectionchange", "scroll", "gesturestart", "gestureend", "dragstart", "pointermove", "mousemove", "webkitmouseforcewillbegin", "touchforcechange", "keydown"]) {
+    let last = 0;
+    document.addEventListener(type, () => { const now = performance.now(); if (dialog.open && now - last > 400) { last = now; mlog("ev " + type); } }, { capture:true, passive:true });
+  }
+  let lastFrame = performance.now(), focusNow = document.hasFocus();
+  (function frame(now) {
+    if (dialog.open && now - lastFrame > 150) mlog("frames paused " + Math.round(now - lastFrame) + "ms");
+    lastFrame = now;
+    if (dialog.open && document.hasFocus() !== focusNow) { focusNow = !focusNow; mlog("hasFocus " + focusNow); }
+    requestAnimationFrame(frame);
+  })(performance.now());
   document.addEventListener("visibilitychange", () => { if (dialog.open) mlog("visibility " + document.visibilityState); });
   const openImageMenu = (delay) => {
     clearTimeout(menuTimer);
     mlog("menu timer set");
     menuTimer = setTimeout(() => { menuTimer = null; stage.classList.add("menu-open"); mlog("BLACK on, img opacity " + getComputedStyle(img).opacity); }, delay);
   };
+  // On the iPhone the system takes the touch about 200ms into a still hold on the photo (the image
+  // menu starts to lift), so the page gets a cancel well before the 450ms timer. That cancel is the
+  // signal to black the photo out, and the cancel events that follow must not bring it back. Nothing
+  // reaches the page when the menu closes, so the next touch (or the page coming back) restores it,
+  // and that touch is swallowed so it doesn't also flip the version.
+  let menuCancelBlack = false, swallowTap = false;
+  const keepBlack = new Set(["pointercancel", "lostpointercapture", "touchcancel", "touchend"]);
   const closeImageMenu = (e) => {
-    if (menuTimer || stage.classList.contains("menu-open")) mlog("restore by " + (e?.type || "code") + (stage.classList.contains("menu-open") ? " (was black)" : " (timer cleared)"));
-    clearTimeout(menuTimer); menuTimer = null; stage.classList.remove("menu-open");
+    if (menuCancelBlack && e && keepBlack.has(e.type)) { mlog("keep black (" + e.type + ")"); return; }
+    const wasBlack = stage.classList.contains("menu-open");
+    if (menuTimer || wasBlack) mlog("restore by " + (e?.type || "code") + (wasBlack ? " (was black)" : " (timer cleared)"));
+    if (wasBlack && menuCancelBlack && e && ["pointerdown", "touchstart", "mousedown", "click"].includes(e.type) && e.target instanceof Node && stage.contains(e.target)) swallowTap = true;
+    if (!e) swallowTap = false;
+    clearTimeout(menuTimer); menuTimer = null; menuCancelBlack = false; stage.classList.remove("menu-open");
   };
-  for (const type of ["pointercancel", "lostpointercapture"]) stage.addEventListener(type, closeImageMenu);
+  stage.addEventListener("pointercancel", (e) => {
+    if (menuTimer && drag?.id === e.pointerId && drag.image && !drag.moved && performance.now() - drag.down >= 120) {
+      clearTimeout(menuTimer); menuTimer = null; menuCancelBlack = true; stage.classList.add("menu-open");
+      mlog("BLACK on by pointercancel after " + Math.round(performance.now() - drag.down) + "ms");
+      return;
+    }
+    closeImageMenu(e);
+  });
+  stage.addEventListener("lostpointercapture", closeImageMenu);
+  for (const type of ["click", "mousedown"]) document.addEventListener(type, closeImageMenu, { capture:true, passive:true });
   for (const type of ["touchend", "touchcancel"]) document.addEventListener(type, closeImageMenu, { capture:true, passive:true });
   // touchstart comes after pointerdown, so it only uncovers the photo and leaves a new hold's timer alone.
   document.addEventListener("pointerdown", closeImageMenu, { capture:true, passive:true });
-  document.addEventListener("touchstart", () => { if (stage.classList.contains("menu-open")) mlog("restore by touchstart"); stage.classList.remove("menu-open"); }, { capture:true, passive:true });
+  document.addEventListener("touchstart", (e) => { if (stage.classList.contains("menu-open")) closeImageMenu(e); }, { capture:true, passive:true });
   window.addEventListener("focus", closeImageMenu);
   window.addEventListener("pageshow", closeImageMenu);
   document.addEventListener("visibilitychange", closeImageMenu);
