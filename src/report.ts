@@ -2046,18 +2046,16 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     if (drag?.id === e.pointerId) resetInteraction();
   };
   // A long press on the photo opens the phone's own image menu, whose preview is drawn from the
-  // image itself, so the photo behind it can go black and only the preview shows. The next touch,
-  // or leaving the app, brings it back.
+  // image itself, so the photo behind it can go black and only the preview shows. iOS holds the
+  // touch's events back while the menu is up and sends its end (up or cancel) once the menu closes,
+  // so any end of the touch brings the photo back.
   const openImageMenu = (delay) => {
     clearTimeout(menuTimer);
     menuTimer = setTimeout(() => stage.classList.add("menu-open"), delay);
   };
   const closeImageMenu = () => { clearTimeout(menuTimer); stage.classList.remove("menu-open"); };
-  stage.addEventListener("pointercancel", (e) => {
-    if (mobileViewer.matches && drag?.id === e.pointerId && drag.image && drag.touch && !drag.moved && !drag.zoomed
-      && performance.now() - drag.time > 250) openImageMenu(0);
-  });
-  img.addEventListener("contextmenu", () => { if (mobileViewer.matches) openImageMenu(0); });
+  for (const type of ["pointercancel", "lostpointercapture"]) stage.addEventListener(type, closeImageMenu);
+  for (const type of ["touchend", "touchcancel"]) document.addEventListener(type, closeImageMenu, { capture:true, passive:true });
   // touchstart comes after pointerdown, so it only uncovers the photo and leaves a new hold's timer alone.
   document.addEventListener("pointerdown", closeImageMenu, { capture:true, passive:true });
   document.addEventListener("touchstart", () => stage.classList.remove("menu-open"), { capture:true, passive:true });
