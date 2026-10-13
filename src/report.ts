@@ -873,15 +873,15 @@ export function renderReport(input: {
     input.pdf && { label: "PDF", links: input.pdf, kind: "PDF" },
     input.html && { label: "HTML", links: input.html, kind: "web page" },
   ].filter((d) => !!d);
-  // Share sits beside Download and sends the link to this report; the script reveals it only where
-  // the browser has a share sheet (it needs https on a phone) or can copy the link.
+  // Share sits beside Download and sends the link to this report: the share sheet where the browser
+  // has one (it needs https on a phone), otherwise the link is copied.
   const reportMenu = (id: string, attribute: string, extra: string) => `<div class="dl-menu" id="${id}" hidden>${formats.map((d) => `<div class="dl-format"><span class="dl-heading">${d.label}</span>
       <a href="${esc(d.links.summary)}" ${attribute}="summary ${d.kind}" aria-label="Download ${d.label} summary"${extra}>Summary</a>
       <a href="${esc(d.links.full)}" ${attribute}="full scope ${d.kind}" aria-label="Download ${d.label} full scope"${extra}>Full scope</a></div>`).join("")}</div>`;
   const downloads = input.pdf || input.html ? `<div class="share"><div class="dl">
     <button class="share-btn" type="button" aria-label="Download report" title="Download report" aria-expanded="false" aria-controls="dl-report">${icon("download")}</button>
     ${reportMenu("dl-report", "data-download", " download")}
-    </div><div class="dl dl-share" hidden>
+    </div><div class="dl dl-share">
     <button class="share-btn" type="button" aria-label="Share link to report" title="Share link to report">${icon("share")}</button>
     </div><span class="share-status" role="status" aria-live="polite"></span></div>` : "";
 
@@ -940,12 +940,14 @@ ${appearanceScript}
   .dl-hint { font-size:13px; font-weight:400; color:var(--muted); }
   .share-btn .icon { color:var(--primary); }
   /* Below the buttons without taking space, so the buttons stay on the baseline while a PDF is prepared. */
-  .share-status { position:absolute; top:100%; right:0; margin-top:6px; white-space:nowrap; font-size:13px; color:var(--muted); }
+  /* Progress and result text for Download and Share floats as a small toast, so it never pushes or covers the header. */
+  .share-status { position:fixed; z-index:60; top:calc(max(12px, env(safe-area-inset-top)) + 8px); left:50%; translate:-50% 0; width:max-content; max-width:calc(100vw - 32px); box-sizing:border-box; padding:9px 14px; border-radius:999px; background:var(--surface); box-shadow:var(--shadow-hover); font-size:13px; color:var(--text); text-align:center; text-wrap:balance; pointer-events:none; animation:whim-toast .18s var(--ease); }
   .share-status:empty { display:none; }
+  @keyframes whim-toast { from { opacity:0; translate:-50% -6px; } }
+  @media (prefers-reduced-motion: reduce) { .share-status { animation:none; } }
   @media (max-width: 900px) {
     .dl { position:relative; }
     .dl-menu { right:0; left:auto; }
-    .share-status { position:static; flex-basis:100%; margin:0; white-space:normal; }
   }
   @media (max-width: 680px) { .dl { flex:1 1 0; } .share-btn { width:100%; justify-content:center; } .dl-menu { width:min(280px, calc(100vw - 32px)); } }
   .page-head > .notice { flex-basis:100%; margin:16px 0 0; }
@@ -954,7 +956,6 @@ ${appearanceScript}
     .page-head.whim-detail-header .detail-actions .share { justify-content:flex-end; flex-wrap:nowrap; }
     .page-head .dl { position:relative; flex:none; }
     .page-head .dl-menu { left:auto; right:0; }
-    .page-head .share-status { position:absolute; top:100%; right:0; }
   }
 
   .status { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; white-space:nowrap; }
@@ -970,7 +971,6 @@ ${appearanceScript}
   .page-head .detail-title .share-btn { display:grid; place-items:center; width:44px; height:44px; min-height:44px; padding:0; border:0; border-radius:14px; background:transparent; color:var(--primary); }
   .page-head .detail-title .share-btn:hover, .page-head .detail-title .share-btn[aria-expanded="true"] { background:var(--surface); }
   .page-head .detail-title .share-btn .icon { width:20px; height:20px; }
-  .page-head .detail-title .share-status { position:absolute; top:100%; right:0; width:min(280px, calc(100vw - 32px)); margin-top:6px; white-space:normal; }
   .dl-heading { display:block; padding:6px 10px 2px; color:var(--muted); font-size:12px; font-weight:500; }
   .dl-format + .dl-format { border-top:1px solid var(--line); margin-top:4px; padding-top:4px; }
   /* Overview: image-led plates with gallery-label captions */
@@ -2160,7 +2160,6 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
 
   /* Download menus: each button opens its Summary / Full scope choices. */
   const shareMenu = document.querySelector(".dl-share");
-  if (shareMenu && (typeof navigator.share === "function" || navigator.clipboard?.writeText)) shareMenu.hidden = false;
   const dlButtons = [...document.querySelectorAll(".dl:not(.dl-share) > button")];
   function positionDownloadMenu(button) {
     const menu = document.getElementById(button.getAttribute("aria-controls"));
@@ -2201,6 +2200,13 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
 
   /* Downloads: fetch first so the page can say it's working (a long report takes a few seconds). */
   const shareStatus = document.querySelector(".share-status");
+  // Messages clear themselves; "Preparing" stays until the result replaces it.
+  let statusTimer;
+  const say = (text, hold = 4500) => {
+    clearTimeout(statusTimer);
+    shareStatus.textContent = text;
+    if (text && hold) statusTimer = setTimeout(() => { shareStatus.textContent = ""; }, hold);
+  };
   document.querySelectorAll("a[data-download]").forEach((link) => link.addEventListener("click", async (e) => {
     e.preventDefault();
     if (link.getAttribute("aria-busy") === "true") return;
@@ -2210,7 +2216,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     button?.focus();
     link.setAttribute("aria-busy", "true");
     button?.setAttribute("aria-busy", "true");
-    shareStatus.textContent = "Preparing the " + kind + "…";
+    say("Preparing the " + kind + "…", 0);
     try {
       const res = await fetch(link.href);
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "HTTP " + res.status);
@@ -2221,24 +2227,39 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
-      shareStatus.textContent = kind[0].toUpperCase() + kind.slice(1) + " downloaded.";
+      say(kind[0].toUpperCase() + kind.slice(1) + " downloaded.");
     } catch (err) {
-      shareStatus.textContent = "Couldn't make the " + kind + ": " + err.message;
+      say("Couldn't make the " + kind + ": " + err.message, 8000);
     } finally {
       link.removeAttribute("aria-busy");
       button?.removeAttribute("aria-busy");
     }
   }));
 
-  /* Share: hand the share sheet this report's link, to message or copy. Without a share sheet the
-     link is copied. */
+  /* Share: hand the share sheet this report's link, to message or copy. Plain http has no share sheet
+     or clipboard API, so the link is copied the old way, and as a last resort shown to copy by hand. */
+  const copyLink = async (url) => {
+    if (navigator.clipboard?.writeText) { try { await navigator.clipboard.writeText(url); return true; } catch {} }
+    const focused = document.activeElement;
+    const box = Object.assign(document.createElement("textarea"), { value: url, readOnly: true });
+    box.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.append(box);
+    box.select();
+    box.setSelectionRange(0, url.length);
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch {}
+    box.remove();
+    focused?.focus?.({ preventScroll: true });
+    return ok;
+  };
   shareMenu?.querySelector("button").addEventListener("click", async () => {
     const data = { title: document.title, url: location.href.split("#")[0] };
     try {
       if (typeof navigator.share === "function") await navigator.share(data);
-      else { await navigator.clipboard.writeText(data.url); shareStatus.textContent = "Link copied."; }
+      else if (await copyLink(data.url)) say("Link copied.");
+      else prompt("Copy this link", data.url);
     } catch (err) {
-      if (err?.name !== "AbortError") shareStatus.textContent = "Couldn't share the link: " + err.message;
+      if (err?.name !== "AbortError") say("Couldn't share the link: " + err.message, 8000);
     }
   });
 
