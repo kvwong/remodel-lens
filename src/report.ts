@@ -1367,6 +1367,10 @@ ${appearanceScript}
   .viewer .viewer-stage img { -webkit-touch-callout:default; }
   .viewer-stage.menu-open { background-image:none !important; }
   .viewer-stage.menu-open img, .viewer-stage.menu-open .vpins { opacity:0; }
+  .menu-log { display:none; position:fixed; left:8px; right:8px; top:calc(env(safe-area-inset-top) + 64px); z-index:50; background:rgba(0,0,0,.72); color:#9fe0b5; border-radius:10px; padding:6px 8px; font:10px/1.35 ui-monospace, Menlo, monospace; pointer-events:auto; }
+  .menu-log pre { margin:0; white-space:pre-wrap; user-select:text; -webkit-user-select:text; }
+  .menu-log button { float:right; font:600 11px system-ui; color:#fff; background:rgba(255,255,255,.18); border:0; border-radius:8px; padding:6px 10px; }
+  @media (max-width:860px) { .menu-log { display:block; } }
   .viewer-stage.comparing img { pointer-events:none; }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; } }
 
@@ -1957,7 +1961,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     if (!drag || drag.id !== e.pointerId) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (drag.axis === "split") { moveSplit(drag.splitStart + dx); return; }
-    if (Math.hypot(dx, dy) > 8) { drag.moved = true; clearTimeout(holdTimer); clearTimeout(menuTimer); }
+    if (Math.hypot(dx, dy) > 8) { if (menuTimer && !drag.moved) mlog("moved, timer cleared"); drag.moved = true; clearTimeout(holdTimer); clearTimeout(menuTimer); }
     if (drag.actual && drag.moved) {
       stage.classList.add("dragging");
       stage.scrollLeft = drag.left - dx;
@@ -2049,16 +2053,47 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   // image itself, so the photo behind it can go black and only the preview shows. iOS holds the
   // touch's events back while the menu is up and sends its end (up or cancel) once the menu closes,
   // so any end of the touch brings the photo back.
+  // Temporary on-screen event log for the long-press blackout, shown on phones only. Remove once fixed.
+  const menuLog = [], menuT0 = performance.now();
+  const menuLogBox = document.createElement("div");
+  menuLogBox.className = "menu-log";
+  menuLogBox.innerHTML = '<button type="button">Copy log</button><pre></pre>';
+  dialog.append(menuLogBox);
+  const mlog = (text) => {
+    menuLog.push(String(Math.round(performance.now() - menuT0)).padStart(6) + "  " + text);
+    menuLogBox.querySelector("pre").textContent = menuLog.slice(-8).join("\\n");
+  };
+  menuLogBox.querySelector("button").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const text = navigator.userAgent.replace(/\\s*\\(KHTML.*$/, "") + (matchMedia("(display-mode: standalone)").matches || navigator.standalone ? " standalone" : "") + "\\n" + menuLog.join("\\n");
+    const label = e.currentTarget;
+    const done = () => { label.textContent = "Copied"; };
+    const fallback = () => { const pre = menuLogBox.querySelector("pre"); pre.textContent = text; const range = document.createRange(); range.selectNodeContents(pre); getSelection().removeAllRanges(); getSelection().addRange(range); label.textContent = "Selected"; };
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+  });
+  for (const type of ["pointerdown", "pointerup", "pointercancel", "gotpointercapture", "lostpointercapture", "touchstart", "touchend", "touchcancel", "contextmenu", "click"]) {
+    document.addEventListener(type, (e) => {
+      if (!dialog.open || e.target.closest?.(".menu-log")) return;
+      const t = e.target === img ? "photo" : e.target === stage ? "stage" : (e.target.className || e.target.tagName || "doc");
+      mlog(type + " " + t + (type === "pointerdown" ? " mv=" + mobileViewer.matches + " zoom=" + zoom.s : ""));
+    }, { capture:true, passive:true });
+  }
+  for (const type of ["focus", "blur", "resize", "pageshow", "pagehide"]) window.addEventListener(type, () => { if (dialog.open) mlog("window " + type); });
+  document.addEventListener("visibilitychange", () => { if (dialog.open) mlog("visibility " + document.visibilityState); });
   const openImageMenu = (delay) => {
     clearTimeout(menuTimer);
-    menuTimer = setTimeout(() => stage.classList.add("menu-open"), delay);
+    mlog("menu timer set");
+    menuTimer = setTimeout(() => { menuTimer = null; stage.classList.add("menu-open"); mlog("BLACK on, img opacity " + getComputedStyle(img).opacity); }, delay);
   };
-  const closeImageMenu = () => { clearTimeout(menuTimer); stage.classList.remove("menu-open"); };
+  const closeImageMenu = (e) => {
+    if (menuTimer || stage.classList.contains("menu-open")) mlog("restore by " + (e?.type || "code") + (stage.classList.contains("menu-open") ? " (was black)" : " (timer cleared)"));
+    clearTimeout(menuTimer); menuTimer = null; stage.classList.remove("menu-open");
+  };
   for (const type of ["pointercancel", "lostpointercapture"]) stage.addEventListener(type, closeImageMenu);
   for (const type of ["touchend", "touchcancel"]) document.addEventListener(type, closeImageMenu, { capture:true, passive:true });
   // touchstart comes after pointerdown, so it only uncovers the photo and leaves a new hold's timer alone.
   document.addEventListener("pointerdown", closeImageMenu, { capture:true, passive:true });
-  document.addEventListener("touchstart", () => stage.classList.remove("menu-open"), { capture:true, passive:true });
+  document.addEventListener("touchstart", () => { if (stage.classList.contains("menu-open")) mlog("restore by touchstart"); stage.classList.remove("menu-open"); }, { capture:true, passive:true });
   window.addEventListener("focus", closeImageMenu);
   window.addEventListener("pageshow", closeImageMenu);
   document.addEventListener("visibilitychange", closeImageMenu);
