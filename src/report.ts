@@ -1623,8 +1623,11 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     // The tap that dismisses the share sheet reaches the page before the sheet reports it closed, so
     // taps are ignored until a moment after it settles.
     shareUntil = Infinity;
-    const settled = () => { shareUntil = performance.now() + 350; };
-    navigator.share(data).then(settled, settled);
+    const settled = () => { shareUntil = performance.now() + 350; stage.classList.remove("share-ready"); };
+    let attempt;
+    try { attempt = navigator.share(data); } catch (err) { attempt = Promise.reject(err); }
+    attempt.then(settled, settled);
+    return attempt;
   }
   const title = dialog.querySelector("#viewer-title");
   const statusEl = dialog.querySelector("#viewer-status");
@@ -1968,7 +1971,18 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     stage.setPointerCapture(e.pointerId);
     // A still hold on the photo arms the share sheet, which opens when the finger lifts.
     if (canShare && mobileViewer.matches && drag.touch && drag.image && !drag.actual && !drag.zoomed) {
-      holdTimer = setTimeout(() => { if (drag && !drag.moved) { drag.share = true; stage.classList.add("share-ready"); } }, 450);
+      // Try to open the sheet as soon as the hold registers, still inside the touch's gesture window. If
+      // Safari refuses without a lift, the hold stays armed and the sheet opens on release instead.
+      holdTimer = setTimeout(() => {
+        const mine = drag;
+        if (!mine || mine.moved) return;
+        mine.share = true; mine.shared = true; stage.classList.add("share-ready");
+        shareImage().catch((err) => {
+          if (err?.name === "AbortError") return;
+          mine.shared = false;
+          if (drag === mine && !mine.moved) stage.classList.add("share-ready");
+        });
+      }, 450);
     }
   });
   stage.addEventListener("pointermove", (e) => {
@@ -2034,7 +2048,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     const gesture = drag;
     drag = null;
     if (!gesture || gesture.id !== e.pointerId) return;
-    if (gesture.share) { stage.classList.remove("share-ready"); shareImage(); return; }
+    if (gesture.share) { stage.classList.remove("share-ready"); if (!gesture.shared) shareImage().catch(() => {}); return; }
     const dx = e.clientX - gesture.x, dy = e.clientY - gesture.y;
     if (split) { settleSplit(); return; }
     const velocity = performance.now() - gesture.time < 100 ? Math.max(-3, Math.min(3, gesture.velocity)) : 0;
