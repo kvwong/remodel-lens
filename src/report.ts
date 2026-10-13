@@ -1365,6 +1365,8 @@ ${appearanceScript}
   .viewer-stage.comparing { cursor:ew-resize; overflow:hidden; }
   /* Press and hold the photo on a phone opens the phone's own image menu (Share, Save to Photos, Copy). */
   .viewer .viewer-stage img { -webkit-touch-callout:default; }
+  .viewer-stage.menu-open { background-image:none !important; }
+  .viewer-stage.menu-open img, .viewer-stage.menu-open .vpins { opacity:0; }
   .viewer-stage.comparing img { pointer-events:none; }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; } }
 
@@ -2037,6 +2039,23 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     // Normal release also loses capture; let the settling spring finish.
     if (drag?.id === e.pointerId) resetInteraction();
   };
+  // A long press on the photo hands the touch to the phone's own image menu (the touch is
+  // cancelled). Once the menu has lifted its preview, black out the photo behind it so only the
+  // preview shows; the next touch, or leaving the app, brings it back.
+  let menuTimer = null;
+  const openImageMenu = () => {
+    clearTimeout(menuTimer);
+    menuTimer = setTimeout(() => stage.classList.add("menu-open"), 120);
+  };
+  const closeImageMenu = () => { clearTimeout(menuTimer); stage.classList.remove("menu-open"); };
+  stage.addEventListener("pointercancel", (e) => {
+    if (mobileViewer.matches && drag?.id === e.pointerId && drag.image && drag.touch && !drag.moved && !drag.zoomed
+      && performance.now() - drag.time > 350) openImageMenu();
+  });
+  img.addEventListener("contextmenu", () => { if (mobileViewer.matches) openImageMenu(); });
+  for (const type of ["touchstart", "pointerdown"]) document.addEventListener(type, closeImageMenu, { capture:true, passive:true });
+  window.addEventListener("focus", closeImageMenu);
+  document.addEventListener("visibilitychange", closeImageMenu);
   stage.addEventListener("pointercancel", cancelGesture);
   stage.addEventListener("lostpointercapture", cancelGesture);
   mobileViewer.addEventListener("change", resetInteraction);
@@ -2055,7 +2074,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     dialog.close();
   });
   dialog.addEventListener("close", () => {
-    resetInteraction(); pointers.clear(); prefetchQueue = []; img.remove(); trigger?.focus({ preventScroll: true });
+    resetInteraction(); closeImageMenu(); pointers.clear(); prefetchQueue = []; img.remove(); trigger?.focus({ preventScroll: true });
     if (!closingFromHistory && history.state?.whimViewer) history.back();
     closingFromHistory = false;
   });
