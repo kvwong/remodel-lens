@@ -2233,6 +2233,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
      or clipboard API, so the link is copied the old way, and as a last resort shown to copy by hand. */
   const copyLink = async (url) => {
     if (navigator.clipboard?.writeText) { try { await navigator.clipboard.writeText(url); return true; } catch {} }
+    const focused = document.activeElement;
     const box = Object.assign(document.createElement("textarea"), { value: url, readOnly: true });
     box.style.cssText = "position:fixed;top:0;left:0;opacity:0";
     document.body.append(box);
@@ -2241,6 +2242,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     let ok = false;
     try { ok = document.execCommand("copy"); } catch {}
     box.remove();
+    focused?.focus?.({ preventScroll: true });
     return ok;
   };
   shareMenu?.querySelector("button").addEventListener("click", async () => {
