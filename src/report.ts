@@ -1989,7 +1989,9 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   stage.addEventListener("pointerup", (e) => {
     pointers.delete(e.pointerId);
     clearTimeout(holdTimer);
-    clearTimeout(menuTimer);
+    // A release reaching the page means the phone's menu didn't take the touch, so the photo comes back.
+    const held = stage.classList.contains("menu-open");
+    closeImageMenu();
     if (pinch) {
       if (pointers.size < 2) {
         pinch = null; drag = null;
@@ -2024,6 +2026,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     // Phones: a tap on the right half flips to the next version of this photo (listing photo, then
     // each redesign), a tap on the left half to the previous one.
     if (!gesture.moved && gesture.touch && mobileViewer.matches) {
+      if (held || performance.now() - gesture.time >= 450) return;
       const box = stage.getBoundingClientRect();
       if (items.length > 1) show(index + (e.clientX < box.left + box.width / 2 ? -1 : 1), true);
       return;
@@ -2059,6 +2062,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   document.addEventListener("pointerdown", closeImageMenu, { capture:true, passive:true });
   document.addEventListener("touchstart", () => stage.classList.remove("menu-open"), { capture:true, passive:true });
   window.addEventListener("focus", closeImageMenu);
+  window.addEventListener("pageshow", closeImageMenu);
   document.addEventListener("visibilitychange", closeImageMenu);
   stage.addEventListener("pointercancel", cancelGesture);
   stage.addEventListener("lostpointercapture", cancelGesture);
