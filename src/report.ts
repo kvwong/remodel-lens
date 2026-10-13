@@ -873,15 +873,15 @@ export function renderReport(input: {
     input.pdf && { label: "PDF", links: input.pdf, kind: "PDF" },
     input.html && { label: "HTML", links: input.html, kind: "web page" },
   ].filter((d) => !!d);
-  // Share sits beside Download and sends the link to this report; the script reveals it only where
-  // the browser has a share sheet (it needs https on a phone) or can copy the link.
+  // Share sits beside Download and sends the link to this report: the share sheet where the browser
+  // has one (it needs https on a phone), otherwise the link is copied.
   const reportMenu = (id: string, attribute: string, extra: string) => `<div class="dl-menu" id="${id}" hidden>${formats.map((d) => `<div class="dl-format"><span class="dl-heading">${d.label}</span>
       <a href="${esc(d.links.summary)}" ${attribute}="summary ${d.kind}" aria-label="Download ${d.label} summary"${extra}>Summary</a>
       <a href="${esc(d.links.full)}" ${attribute}="full scope ${d.kind}" aria-label="Download ${d.label} full scope"${extra}>Full scope</a></div>`).join("")}</div>`;
   const downloads = input.pdf || input.html ? `<div class="share"><div class="dl">
     <button class="share-btn" type="button" aria-label="Download report" title="Download report" aria-expanded="false" aria-controls="dl-report">${icon("download")}</button>
     ${reportMenu("dl-report", "data-download", " download")}
-    </div><div class="dl dl-share" hidden>
+    </div><div class="dl dl-share">
     <button class="share-btn" type="button" aria-label="Share link to report" title="Share link to report">${icon("share")}</button>
     </div><span class="share-status" role="status" aria-live="polite"></span></div>` : "";
 
@@ -2160,7 +2160,6 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
 
   /* Download menus: each button opens its Summary / Full scope choices. */
   const shareMenu = document.querySelector(".dl-share");
-  if (shareMenu && (typeof navigator.share === "function" || navigator.clipboard?.writeText)) shareMenu.hidden = false;
   const dlButtons = [...document.querySelectorAll(".dl:not(.dl-share) > button")];
   function positionDownloadMenu(button) {
     const menu = document.getElementById(button.getAttribute("aria-controls"));
@@ -2230,13 +2229,26 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     }
   }));
 
-  /* Share: hand the share sheet this report's link, to message or copy. Without a share sheet the
-     link is copied. */
+  /* Share: hand the share sheet this report's link, to message or copy. Plain http has no share sheet
+     or clipboard API, so the link is copied the old way, and as a last resort shown to copy by hand. */
+  const copyLink = async (url) => {
+    if (navigator.clipboard?.writeText) { try { await navigator.clipboard.writeText(url); return true; } catch {} }
+    const box = Object.assign(document.createElement("textarea"), { value: url, readOnly: true });
+    box.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.append(box);
+    box.select();
+    box.setSelectionRange(0, url.length);
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch {}
+    box.remove();
+    return ok;
+  };
   shareMenu?.querySelector("button").addEventListener("click", async () => {
     const data = { title: document.title, url: location.href.split("#")[0] };
     try {
       if (typeof navigator.share === "function") await navigator.share(data);
-      else { await navigator.clipboard.writeText(data.url); shareStatus.textContent = "Link copied."; }
+      else if (await copyLink(data.url)) shareStatus.textContent = "Link copied.";
+      else prompt("Copy this link", data.url);
     } catch (err) {
       if (err?.name !== "AbortError") shareStatus.textContent = "Couldn't share the link: " + err.message;
     }
