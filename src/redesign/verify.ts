@@ -108,7 +108,7 @@ export const JudgeResult = z.object({
   cameraChanged: z.boolean().describe("Viewpoint, crop, or perspective noticeably different."),
   roomSizeChanged: z.boolean().describe("Room is visibly larger or smaller, or the ceiling height changed. Removing planned decorative coffers or soffits does not count."),
   planAdherence: z.number().int().describe("0–10: did the planned changes happen as described?"),
-  scopeExceeded: z.boolean().default(false).describe("True when visible changes exceed the allowed remodel scope. Explain the offending changes in issues and unplannedChanges."),
+  scopeExceeded: z.boolean().describe("True when visible changes exceed the allowed remodel scope. Explain the offending changes in issues and unplannedChanges."),
   unplannedChanges: z.array(z.string()),
   issues: z.array(z.string()),
 });
