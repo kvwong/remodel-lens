@@ -940,12 +940,14 @@ ${appearanceScript}
   .dl-hint { font-size:13px; font-weight:400; color:var(--muted); }
   .share-btn .icon { color:var(--primary); }
   /* Below the buttons without taking space, so the buttons stay on the baseline while a PDF is prepared. */
-  .share-status { position:absolute; top:100%; right:0; margin-top:6px; white-space:nowrap; font-size:13px; color:var(--muted); }
+  /* Progress and result text for Download and Share floats as a small toast, so it never pushes or covers the header. */
+  .share-status { position:fixed; z-index:60; top:calc(max(12px, env(safe-area-inset-top)) + 8px); left:50%; translate:-50% 0; width:max-content; max-width:calc(100vw - 32px); box-sizing:border-box; padding:9px 14px; border-radius:999px; background:var(--surface); box-shadow:var(--shadow-hover); font-size:13px; color:var(--text); text-align:center; text-wrap:balance; pointer-events:none; animation:whim-toast .18s var(--ease); }
   .share-status:empty { display:none; }
+  @keyframes whim-toast { from { opacity:0; translate:-50% -6px; } }
+  @media (prefers-reduced-motion: reduce) { .share-status { animation:none; } }
   @media (max-width: 900px) {
     .dl { position:relative; }
     .dl-menu { right:0; left:auto; }
-    .share-status { position:static; flex-basis:100%; margin:0; white-space:normal; }
   }
   @media (max-width: 680px) { .dl { flex:1 1 0; } .share-btn { width:100%; justify-content:center; } .dl-menu { width:min(280px, calc(100vw - 32px)); } }
   .page-head > .notice { flex-basis:100%; margin:16px 0 0; }
@@ -954,7 +956,6 @@ ${appearanceScript}
     .page-head.whim-detail-header .detail-actions .share { justify-content:flex-end; flex-wrap:nowrap; }
     .page-head .dl { position:relative; flex:none; }
     .page-head .dl-menu { left:auto; right:0; }
-    .page-head .share-status { position:absolute; top:100%; right:0; }
   }
 
   .status { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; white-space:nowrap; }
@@ -970,7 +971,6 @@ ${appearanceScript}
   .page-head .detail-title .share-btn { display:grid; place-items:center; width:44px; height:44px; min-height:44px; padding:0; border:0; border-radius:14px; background:transparent; color:var(--primary); }
   .page-head .detail-title .share-btn:hover, .page-head .detail-title .share-btn[aria-expanded="true"] { background:var(--surface); }
   .page-head .detail-title .share-btn .icon { width:20px; height:20px; }
-  .page-head .detail-title .share-status { position:absolute; top:100%; right:0; width:min(280px, calc(100vw - 32px)); margin-top:6px; white-space:normal; }
   .dl-heading { display:block; padding:6px 10px 2px; color:var(--muted); font-size:12px; font-weight:500; }
   .dl-format + .dl-format { border-top:1px solid var(--line); margin-top:4px; padding-top:4px; }
   /* Overview: image-led plates with gallery-label captions */
@@ -2200,6 +2200,13 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
 
   /* Downloads: fetch first so the page can say it's working (a long report takes a few seconds). */
   const shareStatus = document.querySelector(".share-status");
+  // Messages clear themselves; "Preparing" stays until the result replaces it.
+  let statusTimer;
+  const say = (text, hold = 4500) => {
+    clearTimeout(statusTimer);
+    shareStatus.textContent = text;
+    if (text && hold) statusTimer = setTimeout(() => { shareStatus.textContent = ""; }, hold);
+  };
   document.querySelectorAll("a[data-download]").forEach((link) => link.addEventListener("click", async (e) => {
     e.preventDefault();
     if (link.getAttribute("aria-busy") === "true") return;
@@ -2209,7 +2216,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     button?.focus();
     link.setAttribute("aria-busy", "true");
     button?.setAttribute("aria-busy", "true");
-    shareStatus.textContent = "Preparing the " + kind + "…";
+    say("Preparing the " + kind + "…", 0);
     try {
       const res = await fetch(link.href);
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "HTTP " + res.status);
@@ -2220,9 +2227,9 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
-      shareStatus.textContent = kind[0].toUpperCase() + kind.slice(1) + " downloaded.";
+      say(kind[0].toUpperCase() + kind.slice(1) + " downloaded.");
     } catch (err) {
-      shareStatus.textContent = "Couldn't make the " + kind + ": " + err.message;
+      say("Couldn't make the " + kind + ": " + err.message, 8000);
     } finally {
       link.removeAttribute("aria-busy");
       button?.removeAttribute("aria-busy");
@@ -2249,10 +2256,10 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     const data = { title: document.title, url: location.href.split("#")[0] };
     try {
       if (typeof navigator.share === "function") await navigator.share(data);
-      else if (await copyLink(data.url)) shareStatus.textContent = "Link copied.";
+      else if (await copyLink(data.url)) say("Link copied.");
       else prompt("Copy this link", data.url);
     } catch (err) {
-      if (err?.name !== "AbortError") shareStatus.textContent = "Couldn't share the link: " + err.message;
+      if (err?.name !== "AbortError") say("Couldn't share the link: " + err.message, 8000);
     }
   });
 
