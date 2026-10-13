@@ -1360,7 +1360,9 @@ ${appearanceScript}
   }
   .viewer-stage.reeling { overflow:hidden; }
   .viewer-neighbor { position:absolute; inset:0; background:#0f0f0e; background-position:center; background-repeat:no-repeat; background-size:contain; pointer-events:none; will-change:transform; }
-  .viewer-split { position:absolute; inset:0; z-index:5; pointer-events:none; background-position:center; background-repeat:no-repeat; background-size:contain; }
+  .viewer-split { position:absolute; inset:0; z-index:5; pointer-events:none; }
+  .viewer-split img { position:absolute; inset:0; }
+  img.viewer-neighbor, .viewer-split img { width:100%; height:100%; object-fit:contain; }
   .viewer-divider { position:absolute; top:0; bottom:0; width:2px; z-index:6; background:white; box-shadow:0 0 8px #0008; pointer-events:none; }
   .viewer-stage.comparing { cursor:ew-resize; overflow:hidden; }
   /* Press and hold on a phone: the photo settles back a little to say "let go to share". */
@@ -1579,8 +1581,9 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   const img = document.createElement("img");
   img.alt = "";
   img.decoding = "async";
-  // After a swipe the panel that slid in stays over the stage until the full photo is ready, so
-  // the stage never drops to its black background in between.
+  // While the full photo loads (on open, and after a swipe or tap to another photo) a real <img> of
+  // the already-loaded preview sits over the stage. A CSS background takes a frame to paint on the
+  // phone, which showed as a flash of black.
   let landed = null;
   const dropLanded = () => { landed?.remove(); landed = null; };
   const finishImage = () => {
@@ -1656,11 +1659,20 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   }).observe(stage);
 
   function loadViewerImage(source, preview) {
+    dropLanded();
     stage.style.backgroundImage = preview ? "url(" + JSON.stringify(preview) + ")" : "";
     img.style.visibility = "hidden";
     stage.setAttribute("aria-busy", "true");
     img.src = source;
-    if (img.complete && img.naturalWidth) finishImage();
+    if (img.complete && img.naturalWidth) return finishImage();
+    if (preview) {
+      landed = document.createElement("img");
+      landed.className = "viewer-neighbor";
+      landed.alt = "";
+      landed.draggable = false;
+      landed.src = preview;
+      stage.append(landed);
+    }
   }
 
   function show(i, keepZoom) {
@@ -1670,7 +1682,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     if (item.dataset.status) comparedRedesign = index;
     if (!img.isConnected) stage.append(img);
     const preview = item.querySelector("img");
-    loadViewerImage(item.dataset.src || preview.src, preview?.currentSrc || preview?.src);
+    loadViewerImage(item.dataset.src || preview.src, previewSource(item) || preview?.currentSrc || preview?.src);
     img.alt = item.dataset.label;
     title.textContent = item.dataset.label;
     const s = STATUS[item.dataset.status];
@@ -1869,9 +1881,10 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     springFrame = requestAnimationFrame(frame);
   }
   function makeNeighbor(item) {
-    const el = document.createElement("div");
+    // A real <img>: a CSS background takes a frame to paint on the phone, which showed as black.
+    const el = document.createElement(item ? "img" : "div");
     el.className = "viewer-neighbor";
-    if (item) el.style.backgroundImage = "url(" + JSON.stringify(previewSource(item)) + ")";
+    if (item) { el.alt = ""; el.draggable = false; el.src = previewSource(item); }
     stage.append(el);
     return el;
   }
@@ -1926,9 +1939,12 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     if (other < 0 || other === index) return;
     const layer = document.createElement("div"), divider = document.createElement("div");
     layer.className = "viewer-split"; divider.className = "viewer-divider";
-    layer.style.backgroundImage = "url(" + JSON.stringify(imageSource(items[other])) + ")";
-    // A loaded preview appears immediately while the full image is fetched.
-    layer.style.backgroundImage += ", url(" + JSON.stringify(previewSource(items[other])) + ")";
+    // A loaded preview appears immediately while the full image is fetched on top of it.
+    for (const source of [previewSource(items[other]), imageSource(items[other])]) {
+      const half = document.createElement("img");
+      half.alt = ""; half.draggable = false; half.src = source;
+      layer.append(half);
+    }
     stage.append(layer, divider);
     const x = Math.max(0, Math.min(stage.clientWidth, drag.x - stage.getBoundingClientRect().left));
     split = { layer, divider, other, x, side: x < stage.clientWidth / 2 ? "left" : "right" };
@@ -2068,12 +2084,8 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
       const direction = projected < 0 ? 1 : -1;
       const target = direction === 1 ? reel.next : reel.previous;
       const advance = target && Math.abs(projected) > reel.size * .22;
-      const landing = direction === 1 ? reel.after : reel.before;
       spring(reel.offset, advance ? -direction * reel.size : 0, velocity, moveReel, () => {
-        resetInteraction();
-        if (!advance) return;
-        target.click();
-        if (img.style.visibility === "hidden") { landing.style.transform = ""; stage.append(landing); landed = landing; }
+        resetInteraction(); if (advance) target.click();
       });
       return;
     }
