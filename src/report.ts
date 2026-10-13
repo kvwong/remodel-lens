@@ -1736,7 +1736,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     const g = groups.indexOf(items[index]?.dataset.group);
     if (g < 0 || groups.length < 2) return null;
     const version = items[index].dataset.label.split(" · ").pop();
-    const nextGroup = groups[(g + direction + groups.length) % groups.length];
+    const nextGroup = groups[(((g + direction) % groups.length) + groups.length) % groups.length];
     const next = photos.filter((z) => z.dataset.group === nextGroup);
     return next.find((z) => z.dataset.label.endsWith(" · " + version)) ?? next[0];
   }
@@ -1766,7 +1766,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   let prefetchQueue = [], prefetchActive = 0;
   function prefetchImage(source) {
     if (!source || source.startsWith("data:") || warmedImages.has(source) || prefetchQueue.includes(source)) return;
-    if (prefetchQueue.length >= 12) prefetchQueue.pop();
+    if (prefetchQueue.length >= 24) prefetchQueue.pop();
     prefetchQueue.push(source);
     drainPrefetch();
   }
@@ -1783,7 +1783,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
         if (failed) warmedImages.delete(source);
         prefetchActive--;
         const keep = new Set(items.map(imageSource));
-        while (warmedImages.size > 16) {
+        while (warmedImages.size > 40) {
           const oldest = [...warmedImages].find(([key, candidate]) => candidate.complete && !keep.has(key));
           if (!oldest) break;
           warmedImages.delete(oldest[0]);
@@ -1802,10 +1802,14 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     prefetchImage(imageSource(items[comparisonIndex()]));
     // On metered connections, warm this room only.
     if (navigator.connection?.saveData) return;
-    for (const direction of [1, -1]) {
-      const neighbor = adjacentPhoto(direction);
-      prefetchImage(imageSource(neighbor));
-      prefetchImage(previewSource(neighbor));
+    // Then the rooms either side, nearest first, four each way (both directions interleaved so a
+    // swipe back is as ready as a swipe forward).
+    for (let step = 1; step <= 4; step++) {
+      for (const direction of [step, -step]) {
+        const neighbor = adjacentPhoto(direction);
+        prefetchImage(imageSource(neighbor));
+        if (step === 1) prefetchImage(previewSource(neighbor));
+      }
     }
   }
   function prefetchIntent(e) {
