@@ -1369,10 +1369,6 @@ ${appearanceScript}
   @media (prefers-reduced-motion: reduce) { .viewer-stage img { transition:none; } }
   /* Without the Web Share API (plain http), let the phone's own image menu (Save, Share) open instead. */
   .viewer.native-callout .viewer-stage img { -webkit-touch-callout:default; }
-  .menu-log { display:none; position:fixed; left:8px; right:8px; top:calc(env(safe-area-inset-top) + 64px); z-index:50; background:rgba(0,0,0,.72); color:#9fe0b5; border-radius:10px; padding:6px 8px; font:10px/1.35 ui-monospace, Menlo, monospace; pointer-events:auto; }
-  .menu-log pre { margin:0; white-space:pre-wrap; user-select:text; -webkit-user-select:text; }
-  .menu-log button { float:right; font:600 11px system-ui; color:#fff; background:rgba(255,255,255,.18); border:0; border-radius:8px; padding:6px 10px; }
-  @media (max-width:860px) { .menu-log { display:block; } }
   .viewer-stage.comparing img { pointer-events:none; }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; } }
 
@@ -1604,38 +1600,11 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     void badge.offsetWidth; // restart the pop on every flip
     badge.classList.add("pop");
   }
-  // Temporary on-screen event log for the press-and-hold share, shown on phones only. Remove once it works.
-  const menuLog = [], menuT0 = performance.now();
-  const menuLogBox = document.createElement("div");
-  menuLogBox.className = "menu-log";
-  menuLogBox.innerHTML = '<button type="button">Copy log</button><pre></pre>';
-  dialog.append(menuLogBox);
-  const mlog = (text) => {
-    menuLog.push(String(Math.round(performance.now() - menuT0)).padStart(6) + "  " + text);
-    menuLogBox.querySelector("pre").textContent = menuLog.slice(-8).join("\\n");
-  };
-  menuLogBox.querySelector("button").addEventListener("click", (e) => {
-    e.stopPropagation();
-    const text = navigator.userAgent.replace(/\\s*\\(KHTML.*$/, "") + (matchMedia("(display-mode: standalone)").matches || navigator.standalone ? " standalone" : "") + "\\n" + menuLog.join("\\n");
-    const label = e.currentTarget;
-    const done = () => { label.textContent = "Copied"; };
-    const fallback = () => { const pre = menuLogBox.querySelector("pre"); pre.textContent = text; const range = document.createRange(); range.selectNodeContents(pre); getSelection().removeAllRanges(); getSelection().addRange(range); label.textContent = "Selected"; };
-    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
-  });
-  for (const type of ["pointerdown", "pointerup", "pointercancel", "gotpointercapture", "lostpointercapture", "touchstart", "touchend", "touchcancel", "contextmenu", "click"]) {
-    document.addEventListener(type, (e) => {
-      if (!dialog.open || e.target.closest?.(".menu-log")) return;
-      const t = e.target === img ? "photo" : e.target === stage ? "stage" : (e.target.className || e.target.tagName || "doc");
-      mlog(type + " " + t + (type === "pointerdown" ? " mv=" + mobileViewer.matches + " zoom=" + zoom.s : ""));
-    }, { capture:true, passive:true });
-  }
-  for (const type of ["focus", "blur", "resize", "pageshow", "pagehide", "orientationchange"]) window.addEventListener(type, () => { if (dialog.open) mlog("window " + type); });
-  document.addEventListener("visibilitychange", () => { if (dialog.open) mlog("visibility " + document.visibilityState); });
   // Phones: press and hold the photo, then let go, to open the share sheet with the image file. Safari
   // only allows sharing from a release, and not after an await, so the file is fetched ahead of time.
   const canShare = typeof navigator.share === "function";
   if (!canShare) dialog.classList.add("native-callout");
-  let shareFile = null;
+  let shareFile = null, shareUntil = 0;
   function prepareShare(item) {
     if (!canShare || !mobileViewer.matches) return;
     const source = imageSource(item);
@@ -1645,15 +1614,17 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
       const type = blob.type || "image/png";
       const name = item.dataset.label.replace(/ · /g, " - ").replace(/[\\/:*?"<>|]/g, "") + "." + (type.split("/")[1] || "png").replace("jpeg", "jpg");
       current.file = new File([blob], name, { type });
-      mlog("share file ready " + name + " " + Math.round(blob.size / 1024) + "KB");
-    }).catch((err) => mlog("share file failed " + (err?.message || err)));
+    }).catch(() => {});
   }
   function shareImage() {
     const item = items[index], file = shareFile?.source === imageSource(item) ? shareFile.file : null;
     const data = file && navigator.canShare?.({ files: [file] }) ? { files: [file] }
       : { title: item.dataset.label, url: new URL(imageSource(item), location.href).href };
-    mlog("share call " + (data.files ? "file" : "link only (file " + (file ? "not shareable" : "not ready") + ")"));
-    navigator.share(data).then(() => mlog("share done"), (err) => mlog("share " + (err?.name || err)));
+    // The tap that dismisses the share sheet reaches the page before the sheet reports it closed, so
+    // taps are ignored until a moment after it settles.
+    shareUntil = Infinity;
+    const settled = () => { shareUntil = performance.now() + 350; };
+    navigator.share(data).then(settled, settled);
   }
   const title = dialog.querySelector("#viewer-title");
   const statusEl = dialog.querySelector("#viewer-status");
@@ -1997,7 +1968,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     stage.setPointerCapture(e.pointerId);
     // A still hold on the photo arms the share sheet, which opens when the finger lifts.
     if (canShare && mobileViewer.matches && drag.touch && drag.image && !drag.actual && !drag.zoomed) {
-      holdTimer = setTimeout(() => { if (drag && !drag.moved) { drag.share = true; stage.classList.add("share-ready"); mlog("share-ready"); } }, 450);
+      holdTimer = setTimeout(() => { if (drag && !drag.moved) { drag.share = true; stage.classList.add("share-ready"); } }, 450);
     }
   });
   stage.addEventListener("pointermove", (e) => {
@@ -2019,7 +1990,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     if (drag.axis === "split") { moveSplit(drag.splitStart + dx); return; }
     if (Math.hypot(dx, dy) > 8) {
       drag.moved = true; clearTimeout(holdTimer);
-      if (drag.share) { drag.share = false; stage.classList.remove("share-ready"); mlog("moved, share cancelled"); }
+      if (drag.share) { drag.share = false; stage.classList.remove("share-ready"); }
     }
     if (drag.actual && drag.moved) {
       stage.classList.add("dragging");
@@ -2087,7 +2058,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     // Phones: a tap on the right half flips to the next version of this photo (listing photo, then
     // each redesign), a tap on the left half to the previous one.
     if (!gesture.moved && gesture.touch && mobileViewer.matches) {
-      if (performance.now() - gesture.time >= 450) return;
+      if (performance.now() - gesture.time >= 450 || performance.now() < shareUntil) return;
       const box = stage.getBoundingClientRect();
       if (items.length > 1) show(index + (e.clientX < box.left + box.width / 2 ? -1 : 1), true);
       return;
