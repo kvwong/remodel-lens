@@ -1797,20 +1797,21 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   }
   function prefetchNearby() {
     prefetchQueue = [];
-    // This room's versions first, in tap order (the next one up first), then the split comparison.
+    // The rooms either side, nearest first, four each way (both directions interleaved so a swipe
+    // back is as ready as a swipe forward).
+    const neighbors = [];
+    for (let step = 1; step <= 4; step++) {
+      for (const direction of [step, -step]) neighbors.push(adjacentPhoto(direction));
+    }
+    // The small previews go first: they are what a neighbouring room shows while it slides in, so a
+    // missing one is a black panel.
+    for (const neighbor of neighbors) prefetchImage(previewSource(neighbor));
+    // This room's versions next, in tap order (the next one up first), then the split comparison.
     for (let n = 1; n < items.length; n++) prefetchImage(imageSource(items[(index + n) % items.length]));
     prefetchImage(imageSource(items[comparisonIndex()]));
     // On metered connections, warm this room only.
     if (navigator.connection?.saveData) return;
-    // Then the rooms either side, nearest first, four each way (both directions interleaved so a
-    // swipe back is as ready as a swipe forward).
-    for (let step = 1; step <= 4; step++) {
-      for (const direction of [step, -step]) {
-        const neighbor = adjacentPhoto(direction);
-        prefetchImage(imageSource(neighbor));
-        if (step === 1) prefetchImage(previewSource(neighbor));
-      }
-    }
+    for (const neighbor of neighbors) prefetchImage(imageSource(neighbor));
   }
   function prefetchIntent(e) {
     const target = e.target.closest?.(".zoom");
