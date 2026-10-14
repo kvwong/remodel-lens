@@ -1917,7 +1917,9 @@ function startReel() {
   const track = $(".reel-track", reel);
   const listeners = new AbortController();
   const { signal } = listeners;
-  let offset = 0, snaps = [0], max = 0, speed = 0, target = 0, springing = false, drag = null, dragged = false, wheelTimer = 0;
+  // A reel put back by a kept page starts where it was left.
+  let offset = -parseFloat(track.style.transform.match(/translateX\((-?[\d.]+)px\)/)?.[1] ?? "0") || 0;
+  let snaps = [0], max = 0, speed = 0, target = offset, springing = false, drag = null, dragged = false, wheelTimer = 0;
   const still = () => reducedMotion.matches;
   const place = () => {
     track.style.transform = still() ? "" : `translateX(${-offset}px)`;
@@ -4265,8 +4267,29 @@ new MutationObserver(() => {
   }
 }).observe($("#content"), {childList:true});
 
+// Tab pages already visited stay alive: leaving one keeps its rendered nodes (photos decoded, listeners
+// attached), and coming back puts the same nodes back at once instead of rebuilding the page. Fresh data
+// still loads behind it and redraws only what changed.
+const KEPT_VIEWS = new Set(["home", "listings", "tastes", "reports"]);
+const keptPages = new Map(); // view -> { nodes, title, data }
+function keepPage(content, key) {
+  const from = content.dataset.loadedKey;
+  if (from === key || !KEPT_VIEWS.has(from) || content.querySelector("[data-skeleton]")) return;
+  keptPages.set(from, { nodes: [...content.childNodes], title: document.title, data: collectionSignature(from) });
+}
+const collectionSignature = (view) => view === "listings" ? JSON.stringify(state.listings) : view === "tastes" ? JSON.stringify(state.tasteProfiles) : null;
+function restorePage(view) {
+  const kept = keptPages.get(view);
+  if (!kept) return null;
+  $("#content").replaceChildren(...kept.nodes);
+  document.title = kept.title;
+  if (view === "home") startReel(); // its listeners stopped when the page was left; the link box kept its own
+  return kept;
+}
+
 async function load(position) {
   const key = loadingKey(), content = $("#content"), seq = loadSeq;
+  keepPage(content, key);
   renderMobileTabs(keyView(key));
   // Moving between views keeps the old page (inert) for a moment, so a quick
   // load swaps straight to the new page instead of flashing its skeleton.
@@ -4330,9 +4353,11 @@ async function loadView() {
   };
   const seen = (state.viewCache ??= savedViews());
   const cached = top ? seen.get(view) : undefined;
-  const paintNow = cached !== undefined || (collection && (state.listings.length > 0 || state.tasteProfiles.length > 0));
+  const kept = (top || collection) && restorePage(view);
+  const paintNow = !!kept || cached !== undefined || (collection && (state.listings.length > 0 || state.tasteProfiles.length > 0));
   if (paintNow) {
-    if (cached !== undefined) showTop(cached); else renderCollection(view);
+    if (kept) watchRunning();
+    else if (cached !== undefined) showTop(cached); else renderCollection(view);
     state.paintedSeq = seq;
     const content = $("#content");
     content.inert = false;
@@ -4349,7 +4374,7 @@ async function loadView() {
       if (!(cached !== undefined && JSON.stringify(cached) === JSON.stringify(data))) showTop(data);
     } else if (collection) {
       if (paintNow) { await shell.catch(() => {}); if (!current()) return false; }
-      renderCollection(view);
+      if (!kept || kept.data !== collectionSignature(view)) renderCollection(view);
     }
     else if (view === "taste") {
       state.taste = data;

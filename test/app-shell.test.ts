@@ -19,6 +19,7 @@ function routeContext(api: (path: string) => Promise<unknown>) {
     renderProfilesNav: vi.fn(), renderListing: vi.fn(), renderTaste: vi.fn(), renderSettings: vi.fn(),
     renderHome: vi.fn(), renderReports: vi.fn(), renderCollection: vi.fn(), pollJob: vi.fn(),
     setParams: vi.fn(), $: vi.fn(() => ({ innerHTML: "", dataset: {} })), esc: String,
+    restorePage: vi.fn(() => null), watchRunning: vi.fn(), collectionSignature: vi.fn(() => null),
   });
   vm.runInContext(routeSource, context);
   return context;
