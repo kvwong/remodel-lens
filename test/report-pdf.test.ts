@@ -82,6 +82,15 @@ describe("report PDF", () => {
     expect(both).not.toContain('aria-controls="dl-html"');
     expect(renderReport({ title: "12 Maple St", photos, profileSummary: "" })).not.toContain("data-download=");
   });
+
+  it("opens the app viewer on the full-size WebP preview and keeps the original for sharing", () => {
+    const original = photos[0]!.original;
+    const app = renderReport({ title: "12 Maple St", photos, profileSummary: "", previewBase: "/thumb/runs/maple/r1" });
+    expect(app).toContain(`data-src="/thumb/runs/maple/r1/${original.split("/").map(encodeURIComponent).join("/")}?w=1600" data-full="${original}"`);
+    const standalone = renderReport({ title: "12 Maple St", photos, profileSummary: "" });
+    expect(standalone).toContain(`data-src="${original}"`);
+    expect(standalone).not.toContain("data-full=");
+  });
 });
 
 describe("report HTML", () => {

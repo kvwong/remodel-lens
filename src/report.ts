@@ -521,17 +521,22 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
 
 /* ---------- Pieces ---------- */
 
-/** App previews keep the same aspect ratio; full source remains the viewer target. */
+/** App previews keep the same aspect ratio as the full photo. */
 export function previewAttributes(src: string, base?: string): string {
   if (!base) return `src="${esc(src)}"`;
-  const url = `${base}/${src.split("/").map(encodeURIComponent).join("/")}`;
+  const url = previewUrl(src, base);
   return `src="${esc(url)}?w=960" srcset="${esc(url)}?w=480 480w, ${esc(url)}?w=960 960w, ${esc(url)}?w=1600 1600w" sizes="(max-width: 700px) 100vw, 50vw"`;
 }
+
+const previewUrl = (src: string, base: string) => `${base}/${src.split("/").map(encodeURIComponent).join("/")}`;
 
 /** Clickable image that opens the viewer; every image of one room shares a group for ←/→ comparison. */
 function renderZoomable(input: { previewBase?: string | undefined; src: string; alt: string; group: string; label: string; status?: Status; eager?: boolean; room?: string; tier?: Tier; version?: string; edit?: boolean }): string {
   const iter = input.room && input.tier ? ` data-room="${esc(input.room)}" data-tier="${input.tier}" data-version="${esc(input.version ?? ORIGINAL)}"` : "";
-  return `<button class="zoom" type="button" data-group="${esc(input.group)}" data-src="${esc(input.src)}" data-label="${esc(input.label)}"${input.status ? ` data-status="${input.status}"` : ""}${iter} aria-label="${input.edit ? "Open and change" : "Enlarge"} ${esc(input.label)}">
+  // Photos are at most 1536px, so the 1600 preview is the full picture as a WebP a tenth the size of the
+  // PNG. The viewer shows that (often already loaded by the page); sharing still sends the original.
+  const source = input.previewBase ? `data-src="${esc(previewUrl(input.src, input.previewBase))}?w=1600" data-full="${esc(input.src)}"` : `data-src="${esc(input.src)}"`;
+  return `<button class="zoom" type="button" data-group="${esc(input.group)}" ${source} data-label="${esc(input.label)}"${input.status ? ` data-status="${input.status}"` : ""}${iter} aria-label="${input.edit ? "Open and change" : "Enlarge"} ${esc(input.label)}">
       <img ${previewAttributes(input.src, input.previewBase)} alt="${esc(input.alt)}" loading="${input.eager ? "eager" : "lazy"}" decoding="async">
     </button>`;
 }
@@ -1623,19 +1628,19 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
   let shareFile = null, shareUntil = 0;
   function prepareShare(item) {
     if (!canShare || !mobileViewer.matches) return;
-    const source = imageSource(item);
+    const source = fullSource(item);
     if (shareFile?.source === source) return;
     const current = shareFile = { source, file: null };
-    fetch(source).then((r) => r.ok ? r.blob() : Promise.reject(new Error("fetch " + r.status))).then((blob) => {
+    fetch(source, { priority: "low" }).then((r) => r.ok ? r.blob() : Promise.reject(new Error("fetch " + r.status))).then((blob) => {
       const type = blob.type || "image/png";
       const name = item.dataset.label.replace(/ · /g, " - ").replace(/[\\/:*?"<>|]/g, "") + "." + (type.split("/")[1] || "png").replace("jpeg", "jpg");
       current.file = new File([blob], name, { type });
     }).catch(() => {});
   }
   function shareImage() {
-    const item = items[index], file = shareFile?.source === imageSource(item) ? shareFile.file : null;
+    const item = items[index], file = shareFile?.source === fullSource(item) ? shareFile.file : null;
     const data = file && navigator.canShare?.({ files: [file] }) ? { files: [file] }
-      : { title: item.dataset.label, url: new URL(imageSource(item), location.href).href };
+      : { title: item.dataset.label, url: new URL(fullSource(item), location.href).href };
     // The tap that dismisses the share sheet reaches the page before the sheet reports it closed, so
     // taps are ignored until a moment after it settles.
     shareUntil = Infinity;
@@ -1781,6 +1786,7 @@ ${back ? `${mobileTabsHtml("reports")}\n<script>${mobileTabsScript}</script>\n` 
     applyZoom();
   }
   const imageSource = (item) => item?.dataset.src || item?.querySelector("img")?.src;
+  const fullSource = (item) => item?.dataset.full || imageSource(item);
   const previewSource = (item) => {
     const source = imageSource(item), warmed = warmedImages.get(source);
     return warmed?.complete && warmed.naturalWidth ? source : item?.querySelector("img")?.currentSrc || item?.querySelector("img")?.src || source;

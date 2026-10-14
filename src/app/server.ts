@@ -20,6 +20,7 @@ import { scrapeListing } from "../listing/scrape.js";
 import { assessListingPhotos, keepInteriorPhotos } from "../listing/sort.js";
 import { motionScript } from "../motion.js";
 import { brandAppHtml } from "../branding.js";
+import { compressResponses } from "./compress.js";
 import { homeView } from "./home-api.js";
 import { isSameOrigin } from "./origin.js";
 import { labelAttempt, settingsView, testKey, tuningView, updateSettings } from "./settings-api.js";
@@ -161,13 +162,27 @@ function safeJoin(base: string, relative: string): string | null {
   return full.startsWith(base + path.sep) ? full : null;
 }
 
+// Run folders are written once (each run and each spot change gets a new folder), so their photos never
+// change under the same URL and can stay cached for good: no revalidation round trip on a later visit.
+// Listing and profile photos can reuse a file name, so they are served from cache while revalidating.
 const IMAGE_CACHE = "private, max-age=300, stale-while-revalidate=86400";
+const RUN_IMAGE_CACHE = "private, max-age=31536000, immutable";
+const imageCache = (file: string) => (file.startsWith(RUNS_DIR + path.sep) ? RUN_IMAGE_CACHE : IMAGE_CACHE);
 
 async function sendFile(res: ServerResponse, file: string | null) {
-  if (!file || !existsSync(file) || !(await stat(file)).isFile()) return send(res, 404, { error: "Not found" });
+  const info = file && existsSync(file) ? await stat(file) : null;
+  if (!file || !info?.isFile()) return send(res, 404, { error: "Not found" });
   const type = CONTENT_TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream";
-  // Photos are served from the browser cache while it revalidates in the background, so tabbing around never re-fetches them in view.
-  res.writeHead(200, { "content-type": type, "cache-control": type.startsWith("image/") ? IMAGE_CACHE : "no-cache" });
+  if (!type.startsWith("image/")) {
+    res.writeHead(200, { "content-type": type, "cache-control": "no-cache" });
+    return res.end(await readFile(file));
+  }
+  // A validator lets a stale full-size photo come back as a 304 instead of downloading again.
+  const headers = { "cache-control": imageCache(file), etag: `"${info.size.toString(36)}-${Math.round(info.mtimeMs).toString(36)}"`, "last-modified": info.mtime.toUTCString() };
+  if (res.req.headers["if-none-match"] === headers.etag) {
+    res.writeHead(304, headers); return res.end();
+  }
+  res.writeHead(200, { ...headers, "content-type": type });
   res.end(await readFile(file));
 }
 
@@ -175,7 +190,7 @@ async function sendThumb(res: ServerResponse, file: string | null, width: number
   if (!file || !existsSync(file)) return send(res, 404, { error: "Not found" });
   const preview = await imagePreview(file, width);
   const etag = `"${preview.version}-${preview.width}-v1"`;
-  const headers = { "cache-control": IMAGE_CACHE, etag };
+  const headers = { "cache-control": imageCache(file), etag };
   if (res.req.headers["if-none-match"] === etag) {
     res.writeHead(304, headers); return res.end();
   }
@@ -496,7 +511,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         const job = startJob("redesign", listing.id, async () => {
           if (body.interiorsOnly) await keepInteriorPhotos(dir, resolveModels().reasoning);
           else await assessImportedPhotos(dir);
-          return runListingRedesign({ listingDir: dir, profilePath: profileJsonPath(body.profile), tiers: body.tiers });
+          return runListingRedesign({ listingDir: dir, profilePath: profileJsonPath(body.profile), tiers: body.tiers, warmPreviews: true });
         });
         job.info = { tiers: body.tiers, profileName: runProfile.name };
         return send(res, 202, jobView(job));
@@ -747,6 +762,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
 
 loadEnv();
 createServer((req, res) => {
+  compressResponses(req, res);
   handle(req, res).catch((error) => {
     const status = error instanceof z.ZodError || error instanceof SyntaxError ? 400 : ((error as { status?: number }).status ?? 500);
     send(res, status, { error: error instanceof z.ZodError ? "Invalid request" : (error as Error).message });
