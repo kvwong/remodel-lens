@@ -3407,6 +3407,12 @@ document.addEventListener("click", (e) => {
   e.preventDefault();
   const isTab = a.matches(".mobile-tab");
   if (isTab) lightMobileTab(a); // keyboard and mouse taps too, not only touches
+  // The page already showing: scroll back to the top, as iOS tab bars do, instead of rebuilding the page
+  // (which re-inserts every photo and makes them fade in again).
+  if (url.search === location.search) {
+    scrollTo({ top: 0, behavior: motion.reduce.matches ? "instant" : "smooth" });
+    return;
+  }
   if (state.textEdit?.saving) { announce("Wait for the edit to finish saving."); if (isTab) renderMobileTabs(); return; }
   if ((state.briefDirty || state.rulesDirty || state.textEdit) && !confirm("Leave without saving your changes?")) { if (isTab) renderMobileTabs(); return; }
   flushSave();
