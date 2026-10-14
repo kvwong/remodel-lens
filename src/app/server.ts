@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
-import { imagePreview } from "../image-cache.js";
+import { imagePreview, warmPreviews } from "../image-cache.js";
 import { z } from "zod";
 
 import { loadEnv, requireKeys, resolveModels } from "../config.js";
@@ -293,12 +293,21 @@ async function loadReportInput(runDir: string) {
   };
 }
 
+// Reports made before previews were warmed at run time get their full-size previews built on first open.
+const warmedRuns = new Set<string>();
+function warmRunOnce(runDir: string, results: PhotoResult[]) {
+  if (warmedRuns.has(runDir)) return;
+  warmedRuns.add(runDir);
+  void warmPreviews(results.flatMap((r) => [r.original, ...r.tiers.map((t) => t.image)]).filter((f): f is string => !!f).map((f) => path.join(runDir, f)), [1600]);
+}
+
 /** Re-render a run's report from its saved results so past runs pick up report improvements. */
 async function freshReport(runDir: string, scope: string | null = null): Promise<string | null> {
   try {
     const input = await loadReportInput(runDir);
     if (!input) return null;
     const runPath = path.relative(RUNS_DIR, runDir).split(path.sep).map(encodeURIComponent).join("/");
+    warmRunOnce(runDir, input.originals);
     const scopeQuery = scope === "cosmetic" || scope === "moderate" || scope === "major" ? `&scope=${scope}` : "";
     const pdfBase = `/pdf/runs/${runPath}`;
     const htmlBase = `/html/runs/${runPath}`;

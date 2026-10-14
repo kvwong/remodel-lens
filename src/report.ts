@@ -333,7 +333,11 @@ const ITER_SCRIPT = String.raw`/* Change panel: a conversation per room and scop
     if (!e || !e.image || e.status === "running") return;
     viewed = id;
     if (!img.isConnected) stage.append(img);
-    loadViewerImage(e.image, ITER.thumb + "/" + e.image + "?w=960");
+    // The full picture as the 1600 preview (photos are 1536px at most), standing in with whichever size of it
+    // the page already loaded, so the stage never waits on the multi-MB PNG.
+    const base = ITER.thumb + "/" + e.image + "?w=";
+    const loaded = [...document.images].find((i) => i.complete && i.naturalWidth && i.currentSrc.includes(base));
+    loadViewerImage(base + "1600", loaded ? loaded.currentSrc : base + "960");
     title.textContent = room().name + " · " + original().name;
     img.alt = title.textContent + (versions().length ? " · " + label(id) : "");
     renderVersionMenu();
