@@ -11,7 +11,7 @@ beforeAll(async () => {
   server = createServer((req, res) => {
     compressResponses(req, res);
     if (req.url === "/png") { res.writeHead(200, { "content-type": "image/png" }); return res.end(Buffer.alloc(4096)); }
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" });
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", "content-length": Buffer.byteLength(page) });
     res.end(page);
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -31,6 +31,7 @@ it("gzips text pages and answers an unchanged page with a 304", async () => {
   expect(first.headers["content-encoding"]).toBe("gzip");
   expect(first.body.length).toBeLessThan(page.length / 5);
   expect(gunzipSync(first.body).toString()).toBe(page);
+  expect(Number(first.headers["content-length"])).toBe(first.body.length);
   const again = await get("/", { "accept-encoding": "gzip", "if-none-match": String(first.headers.etag) });
   expect([again.status, again.body.length]).toEqual([304, 0]);
   const plain = await get("/");

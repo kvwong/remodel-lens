@@ -32,6 +32,8 @@ export function compressResponses(req: IncomingMessage, res: ServerResponse) {
       writeHead(status, headers);
       return bytes ? end(bytes) : end();
     }
+    // The body may shrink below, so a length set by the route is replaced with the length actually sent.
+    delete headers["content-length"];
     if (headers["cache-control"] === "no-cache" && !headers.etag) {
       const etag = `W/"${createHash("sha1").update(bytes).digest("base64url").slice(0, 22)}"`;
       headers.etag = etag;
@@ -43,10 +45,11 @@ export function compressResponses(req: IncomingMessage, res: ServerResponse) {
     }
     headers.vary = "accept-encoding";
     if (gzip && bytes.length >= MIN_BYTES) {
-      writeHead(status, { ...headers, "content-encoding": "gzip" });
-      return end(gzipSync(bytes));
+      const zipped = gzipSync(bytes);
+      writeHead(status, { ...headers, "content-encoding": "gzip", "content-length": zipped.length });
+      return end(zipped);
     }
-    writeHead(status, headers);
+    writeHead(status, { ...headers, "content-length": bytes.length });
     return end(bytes);
   }) as ServerResponse["end"];
 }
