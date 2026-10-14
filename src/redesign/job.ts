@@ -5,6 +5,7 @@ import path from "node:path";
 import { requireKeys, resolveModels, ROOT } from "../config.js";
 import { spentOnRun } from "../costs.js";
 import { loadImages, log, progressContext, runId, writeArtifact, writeJson } from "../files.js";
+import { warmPreviews } from "../image-cache.js";
 import { readListing } from "../listing/listing.js";
 import { renderReport } from "../report.js";
 import { TasteProfile } from "../taste/schema.js";
@@ -69,6 +70,8 @@ export async function runListingRedesign(input: {
   imageModel?: string | undefined;
   /** Overrides the reasoning model for inventory and planning, e.g. to compare a lighter model on the same listing. */
   plannerModel?: string | undefined;
+  /** The app server builds the report's photo previews in the background once results are in. */
+  warmPreviews?: boolean | undefined;
 }): Promise<RunSummary & { outDir: string }> {
   const models = {
     ...resolveModels(),
@@ -117,6 +120,8 @@ export async function runListingRedesign(input: {
   }
 
   await writeJson(outDir, "results.json", results);
+  // Widths the report (phone and desktop), its room list and Home's reel and rows pick most often.
+  if (input.warmPreviews) void warmPreviews(results.flatMap((r) => [r.original, ...r.tiers.map((t) => t.image)]).filter((f): f is string => !!f).map((f) => path.join(outDir, f)), [1600, 960, 240, 160]);
   await writeArtifact(outDir, "report.html", renderReport({ title: listing.name, photos: results, profileSummary: profile.summary, location: listing.location, run: { startedAt: summary.startedAt, profileName: null } }));
   summary.counts = results.flatMap((r) => r.tiers).reduce<Record<string, number>>((acc, t) => ({ ...acc, [t.status]: (acc[t.status] ?? 0) + 1 }), {});
   summary.apiCost = Math.round(spentOnRun(results) * 100) / 100;

@@ -50,3 +50,12 @@ export async function imagePreview(file: string, requestedWidth: number) {
   const key = `webp-v1:${version}:${width}`;
   return { version, width, bytes: await cachedImage(key, () => sharp(file).rotate().resize({ width, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer()) };
 }
+
+/** Build the previews a new report will ask for, one at a time in the background, so opening it right after a run doesn't wait on resizing. */
+export async function warmPreviews(files: string[], widths: number[]): Promise<void> {
+  for (const width of widths) {
+    for (const file of files) {
+      try { await imagePreview(file, width); } catch { /* the page builds it on demand instead */ }
+    }
+  }
+}
