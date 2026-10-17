@@ -1316,12 +1316,13 @@ ${appearanceScript}
   .iter-status:empty { display:none; }
   .iter-status.error { color:#ee9d90; }
   /* One rounded composer box: photos on top, the prompt, then tools and send inside it. */
-  .iter-box { display:grid; gap:6px; padding:10px 8px 8px; border:1px solid rgba(255,255,255,.12); border-radius:22px; background:#232322; }
-  .iter-box:focus-within { border-color:rgba(255,255,255,.3); }
+  .iter-box { display:grid; gap:6px; padding:10px 8px 8px; border:1px solid transparent; border-radius:16px; background:#242321; box-shadow:0 1px 2px rgba(0,0,0,.3), 0 2px 4px rgba(0,0,0,.2), 0 0 0 .5px rgba(255,255,255,.18); --motion:border-color var(--base) var(--ease); }
+  .iter-box:focus-within { border-color:color-mix(in srgb, #ecebe8 40%, rgba(236,235,232,.42)); }
   .iter-box .iter-refs { padding:0 4px; }
   .iter-compose textarea { width:100%; font:inherit; font-size:14px; line-height:1.45; color:#efede9; background:transparent; border:0; padding:2px 6px; resize:none; outline:none; }
   .iter-pins input:focus { outline:2px solid #efede9; outline-offset:-1px; }
-  .iter-compose textarea::placeholder, .iter-pins input::placeholder { color:rgba(239,237,233,.45); }
+  .iter-compose textarea::placeholder { color:#b5b0a9; }
+  .iter-pins input::placeholder { color:rgba(239,237,233,.45); }
   .iter-pins { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
   .iter-pins:empty, .iter-refs:empty { display:none; }
   /* Pin row: badge and item name on one line, the note and its remove button lined up below. */
